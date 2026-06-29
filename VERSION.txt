@@ -1,0 +1,3 @@
+EntretienConnect GitHub Starter v115
+GitHub app: https://joelschartz.github.io/EntretienConnect/
+Change: setup starts with no mode selected when no work session exists.

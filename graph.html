@@ -640,7 +640,7 @@
 <script>
 "use strict";
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 111;
+const APP_VERSION = 115;
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -1049,13 +1049,23 @@ function loadState(){
     options.reminderDaysBefore = Math.min(3, Math.max(1, Number(options.reminderDaysBefore)||1));
     if(!/^\d{2}:\d{2}$/.test(String(options.reminderTime||""))) options.reminderTime="15:00";
     const oldHasWork = !!((Array.isArray(s.students) && s.students.some(st=>st && ((st.name||"").trim() || (st.email1||"").trim() || (st.email2||"").trim()))) || (s.config && Array.isArray(s.config.dates) && s.config.dates.length) || (s.assignments && Object.keys(s.assignments).length));
-    if((s.appVersion||0) < 89 && !oldHasWork && !(s.options && s.options.setupDone)){
-      options.emailEnabled=false; options.ebichelchenEnabled=false; options.workflowMode=""; options.setupDone=false;
+    // v115: Une page de départ vide doit toujours rester neutre.
+    // Si aucune donnée de travail n'existe encore, on ne reprend pas un ancien mode
+    // simplement parce qu'il est resté dans le localStorage du navigateur.
+    // S'il y a déjà des élèves/dates/attributions, on garde le mode pour permettre
+    // de continuer une session commencée.
+    if(!oldHasWork){
+      options.emailEnabled=false;
+      options.ebichelchenEnabled=false;
+      options.workflowMode="";
+      options.setupDone=false;
+      options.templateMode="confirmation";
+    } else {
+      if(!options.workflowMode){
+        options.workflowMode = options.emailEnabled && options.ebichelchenEnabled ? "both" : (options.ebichelchenEnabled ? "ebichelchen" : (options.emailEnabled ? "email" : ""));
+      }
+      if(options.workflowMode && options.setupDone!==false) options.setupDone=true;
     }
-    if(!options.workflowMode){
-      options.workflowMode = options.emailEnabled && options.ebichelchenEnabled ? "both" : (options.ebichelchenEnabled ? "ebichelchen" : (options.emailEnabled ? "email" : ""));
-    }
-    if(options.workflowMode && options.setupDone!==false) options.setupDone=true;
     if(!options.logoMode){ options.logoMode = (options.includeLogo===false ? "none" : "unesco"); }
     if(needsSignatureWindowMigration){ options.useSig = true; options.includeLogo = true; options.logoMode = "unesco"; }
     // v13: Signatur-Logo als feste Auswahl: UNESCO / Eigenes Logo / Aucun logo.

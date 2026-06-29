@@ -44,3 +44,6 @@ Start:
 1. ZIP komplett entpacken.
 2. `0_START_HIER_EntretienConnect.vbs` starten.
 3. Wenn das nicht klappt: `0_START_DIAGNOSE_EntretienConnect.bat` starten und Screenshot vom ganzen Fenster schicken.
+
+
+Mac v115: GitHub-Update-Fallback fuer Macs mit fehlerhaftem Python-Zertifikatsspeicher.
