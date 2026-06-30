@@ -362,7 +362,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v140</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v141</span></p>
 </header>
 
 <nav class="tabs">
@@ -649,7 +649,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 140;
+const APP_VERSION = 141;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2932,7 +2932,7 @@ function buildEmailMessages(){
           html=state.overrides[ovk];
           if(state.template.logo && state.template.logo.dataUrl){ html=html.split(state.template.logo.dataUrl).join("cid:siglogo"); }
         }
-        msgs.push({id:ovk,student:fullStudent,studentDisplay:displayStudentName(fullStudent),parentLabel:labelWithLang(label,lang),to,subject,defaultSubject,html,previewHtml,lang});
+        msgs.push({id:ovk,student:fullStudent,studentDisplay:displayStudentName(fullStudent),parentLabel:labelWithLang(label,lang),to,subject,defaultSubject,html,previewHtml,lang,date:d,slotStart:s.start});
       };
       const groups=contactGroupsByLang(details);
       Object.keys(groups).forEach(lang=>{
@@ -3290,8 +3290,8 @@ function ebRowHtml(m, openId){
         <label class="check" title="${unmatched?'élève non lié à e-Bichelchen — corrigez la correspondance ci-dessus':'inclure ce message'}"><input type="checkbox" class="mail-select" ${done?'checked disabled':(unmatched?'disabled':(sel?'checked':''))}></label>
         <div class="mail-main">
           <span class="who" title="${esc(m.student)}">${esc(m.studentDisplay||displayStudentName(m.student))}</span>
-          <span class="parent-label">${esc(m.ebTitle)}</span>
-          <span class="recipient-line">e-Bichelchen · ${esc(langMeta(m.lang).short)} · ${esc(formatFrenchDate(m.date))} ${esc(m.slotStart)}</span>
+          <span class="parent-label">${esc(labelWithLang("Contact", m.lang))}</span>
+          <span class="recipient-line">e-Bichelchen · le ${esc(formatFrenchDate(m.date))}</span>
         </div>
         <span class="status">
           ${edited?'<span class="pill warn">modifié</span>':''}
@@ -3413,7 +3413,7 @@ function renderMails(openId){
         <div class="mail-main">
           <span class="who" title="${esc(m.student)}">${esc(m.studentDisplay||displayStudentName(m.student))}</span>
           <span class="parent-label">${esc(m.parentLabel)}</span>
-          <span class="recipient-line">À : ${esc(m.to.join(", "))}</span>
+          <span class="recipient-line">Confirmation · le ${esc(formatFrenchDate(m.date))} à ${esc(m.slotStart)} · À : ${esc(m.to.join(", "))}</span>
         </div>
         <span class="status">
           ${edited?'<span class="pill warn">modifié</span>':''}
