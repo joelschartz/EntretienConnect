@@ -356,7 +356,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v126</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v127</span></p>
 </header>
 
 <nav class="tabs">
@@ -1668,6 +1668,18 @@ document.addEventListener("click", function(ev){
   if(btn || card){
     const mode=(btn && btn.dataset.chooseMode) || (card && card.dataset.mode) || "";
     if(mode){ ev.preventDefault(); ev.stopPropagation(); ecSafeChooseMode(mode); }
+  }
+}, true);
+
+// v127: les boutons de choix de classe e-Bichelchen sont liés par délégation,
+// pour rester actifs même quand la liste est injectée dynamiquement dans Démarrage ou Envoi.
+document.addEventListener("click", function(ev){
+  const gbtn = ev.target && ev.target.closest ? ev.target.closest("[data-eb-group-id]") : null;
+  if(gbtn){
+    ev.preventDefault();
+    ev.stopPropagation();
+    const id=gbtn.getAttribute("data-eb-group-id");
+    ebChooseGroup(id);
   }
 }, true);
 
@@ -3486,7 +3498,7 @@ function refreshSelectionUI(){
 /* ============================ e-Bichelchen-Kanal ============================
    Optionaler zweiter Versandkanal. Solange der Schalter aus ist, wird nichts
    geladen und kein Login verlangt. */
-let ebData=(state.ebichelchenData && typeof state.ebichelchenData==="object") ? state.ebichelchenData : null, ebAutoTimer=null, ebAutoStart=0;
+let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v127: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
@@ -3496,8 +3508,32 @@ function ebHtmlToPlain(html){
   const d=document.createElement("div"); d.innerHTML=s;
   return (d.textContent||"").replace(/ /g," ").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
 }
-async function ebGet(path){ const res=await fetch(path,{cache:"no-store"}); return res.json(); }
-async function ebPost(path, body){ const res=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})}); return res.json(); }
+function localBackendAvailable(){
+  const h=String(location.hostname||"").toLowerCase();
+  return h==="127.0.0.1" || h==="localhost" || h==="::1";
+}
+function localBackendMissingMessage(){
+  return "Cette fonction e-Bichelchen nécessite le dossier de démarrage local. Ouvrez l’app avec 0_START_HIER_EntretienConnect.vbs ou Starten.command, pas directement depuis GitHub.";
+}
+async function readJsonResponse(res){
+  const text=await res.text();
+  try{ return JSON.parse(text); }
+  catch(e){
+    const t=String(text||"").trim();
+    if(t.startsWith("<")) throw new Error(localBackendMissingMessage());
+    throw new Error("Réponse locale invalide : "+t.slice(0,160));
+  }
+}
+async function ebGet(path){
+  if(!localBackendAvailable()) throw new Error(localBackendMissingMessage());
+  const res=await fetch(path,{cache:"no-store"});
+  return readJsonResponse(res);
+}
+async function ebPost(path, body){
+  if(!localBackendAvailable()) throw new Error(localBackendMissingMessage());
+  const res=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});
+  return readJsonResponse(res);
+}
 function setEbStatus(msg, cls){
   const c=cls||"info";
   const el=document.getElementById("ebStatus");
@@ -3511,7 +3547,7 @@ function ebNeedsGroupSelection(){ return !!(ebData && ebData.needsGroupSelection
 function ebGroupChoiceHtml(){
   if(!ebNeedsGroupSelection()) return "";
   return '<div class="eb-inline-classes"><b>Plusieurs classes e-Bichelchen trouvées.</b><div class="hint" style="margin:4px 0 8px">Choisissez la classe à utiliser pour importer les élèves et publier les messages.</div>'+
-    ebData.groups.map(g=>`<div class="eb-classbox"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(String(g.id))} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm" type="button" onclick="ebChooseGroup(${Number(g.id)})">Choisir cette classe</button></div>`).join("")+
+    ebData.groups.map(g=>`<div class="eb-classbox"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(String(g.id))} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm" type="button" data-eb-group-id="${esc(String(g.id))}">Choisir cette classe</button></div>`).join("")+
   '</div>';
 }
 function ebBrowserPref(){ const s=document.getElementById("ebBrowser"); return s ? s.value : "auto"; }
@@ -3661,6 +3697,7 @@ function renderEbGroupChooser(){
   box.innerHTML='<h3>Plusieurs classes trouvées — choisir ici</h3>'+ebGroupChoiceHtml();
 }
 async function ebChooseGroup(id){ await ebRead(false, id); }
+try{ window.ebChooseGroup=ebChooseGroup; }catch(e){}
 function renderEbMatch(){
   const box=document.getElementById("ebMatchBox"); if(!box) return;
   if(!ebData || ebData.needsGroupSelection || !ebData.group){ box.innerHTML=""; return; }
@@ -3698,10 +3735,22 @@ async function ebConnectFlow(){
     setEbStatus("Connexion e-Bichelchen déjà en cours …","info");
     return;
   }
+  if(!localBackendAvailable()){
+    setEbStatus(localBackendMissingMessage(),"warn");
+    return;
+  }
   ebConnectBusy=true;
   const btn=document.getElementById("ebConnect");
   if(btn) btn.disabled=true;
   ebStopAuto();
+  // v127: repartir proprement. Les anciennes classes mises en cache ne doivent pas
+  // donner l’impression que l’utilisateur est encore connecté.
+  ebData=null;
+  state.ebichelchenData=null;
+  state.ebichelchenMap=state.ebichelchenMap||{};
+  saveState();
+  renderSetup(); renderEbPanel(); applyChannelVisibility();
+  try{ await ebGet("/api/eb/clear"); }catch(_){}
   setEbStatus("Ouverture de la fenêtre de connexion e-Bichelchen …","info");
   try{
     const j=await ebGet("/api/eb/open-browser?browser="+encodeURIComponent(ebBrowserPref()));
@@ -3711,7 +3760,7 @@ async function ebConnectFlow(){
     ebAutoTimer=setInterval(ebAutoAttempt, 2600);
     ebAutoAttempt();
   }catch(e){
-    setEbStatus("Impossible d’ouvrir e-Bichelchen : "+esc(e.message||e)+". Chrome ou Edge est-il installé ?","err");
+    setEbStatus("Impossible d’ouvrir e-Bichelchen : "+esc(e.message||e),"err");
   }finally{
     ebConnectBusy=false;
     if(btn) btn.disabled=false;
