@@ -356,7 +356,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v119</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v125</span></p>
 </header>
 
 <nav class="tabs">
@@ -1604,7 +1604,7 @@ function bindSetup(){
   });
 }
 
-// v122: fallback global pour garantir que les cartes de démarrage restent cliquables,
+// v125: fallback global pour garantir que les cartes de démarrage restent cliquables,
 // même si un navigateur ignore un ancien handler attaché avant un rendu partiel.
 document.addEventListener("click", function(ev){
   const btn = ev.target && ev.target.closest ? ev.target.closest("[data-choose-mode]") : null;
@@ -3669,7 +3669,7 @@ async function ebAutoAttempt(){
   if(Date.now()-ebAutoStart>600000){ ebStopAuto(); setEbStatus("Connexion non terminée (10 min). Cliquez de nouveau sur « Connecter e-Bichelchen » après vous être connecté.","warn"); return; }
   let j=null;
   try{ j=await ebGet("/api/eb/read-browser?quiet=1"); }
-  catch(e){ setEbStatus("En attente de la connexion e-Bichelchen … <span class="hint">"+esc(String(e.message||e).slice(0,140))+"</span>","info"); return; }
+  catch(e){ setEbStatus("En attente de la connexion e-Bichelchen … <span class=\"hint\">"+esc(String(e.message||e).slice(0,140))+"</span>","info"); return; }
   if(j && j.ok && j.data){
     ebStopAuto();
     ebApplyRead(j.data);
