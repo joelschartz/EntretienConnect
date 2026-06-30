@@ -354,16 +354,15 @@
     .mail-template-head{align-items:flex-start;flex-wrap:wrap}.template-toggle-zone{flex:1 1 100%}.logo-mode-buttons{width:100%}.logo-mode-btn{flex:1 1 auto}
   }
 
-  .students-eb-only .student-grid th:nth-child(3),
-  .students-eb-only .student-grid td:nth-child(3){text-align:left}
-  .students-eb-only .student-grid .lang-select{width:82px;min-width:82px}
+  .source-lang-inline{justify-content:flex-end}
+  .source-lang-inline .source-pill{margin-right:auto}
 
 </style>
 </head>
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v138</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v139</span></p>
 </header>
 
 <nav class="tabs">
@@ -650,7 +649,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 138;
+const APP_VERSION = 139;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1839,13 +1838,12 @@ function renderStudents(){
     return;
   }
   if(eb && !em){
-    let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th style="width:43%">Élève</th><th style="width:35%">Source</th><th style="width:90px">Langue</th><th style="width:62px"></th></tr></thead><tbody>';
+    let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th>Élève</th><th class="contact-group" style="width:210px">Source</th><th style="width:62px"></th></tr></thead><tbody>';
     state.students.forEach((s,idx)=>{
       if(!s.lang1) s.lang1="fr";
       const linked=ebMatchedIdFor(s);
       html += `<tr data-id="${s.id}"><td><div class="student-name-inline"><span class="student-index">${idx+1}</span><input class="st-name" value="${esc(s.name)}" placeholder="Prénom et nom de l’élève"></div></td>`+
-        `<td><span class="source-pill">${linked?'e-Bichelchen ✓':'manuel'}</span></td>`+
-        `<td class="contact-cell"><select class="st-l1 lang-select" title="Langue du message e-Bichelchen">${langOptionsHtml(s.lang1, true)}</select></td>`+
+        `<td class="contact-cell"><div class="contact-inline source-lang-inline"><span class="source-pill">${linked?'e-Bichelchen ✓':'manuel'}</span><select class="st-l1 lang-select" title="Langue du message e-Bichelchen">${langOptionsHtml(s.lang1, true)}</select></div></td>`+
         `<td class="actions-cell"><button class="danger sm st-del">✕</button></td></tr>`;
     });
     html+='</tbody></table><div id="studentEmailWarnings" class="student-email-warning"></div>'; wrap.innerHTML=html;
@@ -4201,6 +4199,11 @@ try{
       var mode=ecCurrentMode();
       if(mode!=="ebichelchen") return; // complet/e-mail behalten die bestehenden Kontakt-Sprachfelder
       ecEnsureEbLangDefaults();
+      // v139: la liste des élèves e-Bichelchen affiche désormais le sélecteur de langue
+      // directement dans la colonne « Source » (rendu par renderStudents, aligné comme
+      // la vue e-mail). On n'ajoute donc plus le second sélecteur ec-eb-lang-select :
+      // une seule langue + un seul ✕ par ligne, avec le même espacement que les e-mails.
+      return;
       var table = document.querySelector("#studentsTable, .students-table, table");
       var rows = Array.from(document.querySelectorAll('[data-student-id], tr, .student-row')).filter(function(r){
         return r.querySelector && r.querySelector('input');
