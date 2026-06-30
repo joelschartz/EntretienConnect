@@ -1559,6 +1559,11 @@ function ebConnectedSummaryHtml(){
   const n=ebStudents().length;
   return '<div class="banner ok compact">e-Bichelchen connecté ✓ — classe « '+esc(name)+' », '+n+' élève'+(n===1?'':'s')+' lu'+(n===1?'':'s')+'. <button type="button" class="ghost sm" data-eb-connect style="margin-left:8px">Reconnecter e-Bichelchen</button></div>';
 }
+function msConnectedSummaryHtml(){
+  if(!account) return "";
+  const who=[account.name||"", account.email||""].filter(Boolean).join(" · ");
+  return '<div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+esc(who):'')+'. <button type="button" class="ghost sm" id="setupMsReconnect" style="margin-left:8px">Reconnecter Microsoft</button></div>';
+}
 function previewHintText(){
   const em=emailEnabled(), eb=ebichelchenEnabled();
   if(eb && !em) return "Ouvrez uniquement le message e-Bichelchen que vous souhaitez contrôler ou adapter. Les modifications sont enregistrées automatiquement.";
@@ -3012,18 +3017,28 @@ async function api(path, body){ const res=await fetch(path,{method:"POST",header
 
 function startLocalAppHeartbeat(){
   // Maintient le helper local en vie tant que l’onglet EntretienConnect est ouvert.
-  // Si l’onglet est fermé, le helper Windows/Mac s’arrête automatiquement après un court délai.
+  // À la fermeture de l’onglet, on demande aussi l’arrêt du helper local.
   try{
     if(window.__ecHeartbeatTimer) return;
     const beat=function(){
       try{ fetch("/api/app/heartbeat", {method:"POST", cache:"no-store", keepalive:true}).catch(function(){}); }catch(e){}
     };
+    const askShutdown=function(){
+      try{
+        if(navigator.sendBeacon){
+          navigator.sendBeacon("/api/app/shutdown", new Blob(["{}"], {type:"application/json"}));
+        }else{
+          fetch("/api/app/shutdown", {method:"POST", cache:"no-store", keepalive:true}).catch(function(){});
+        }
+      }catch(e){}
+    };
     beat();
     window.__ecHeartbeatTimer=setInterval(beat, 15000);
-    window.addEventListener("pagehide", beat);
     window.addEventListener("beforeunload", function(){
       try{ if(navigator.sendBeacon) navigator.sendBeacon("/api/app/heartbeat", new Blob(["{}"], {type:"application/json"})); }catch(e){}
+      askShutdown();
     });
+    window.addEventListener("unload", askShutdown);
   }catch(e){}
 }
 
