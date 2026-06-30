@@ -356,7 +356,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v125</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v126</span></p>
 </header>
 
 <nav class="tabs">
@@ -639,8 +639,11 @@
 
 <script>
 "use strict";
+window.__EC_BOOT_ERROR="";
+window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
+window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 122;
+const APP_VERSION = 126;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1604,21 +1607,70 @@ function bindSetup(){
   });
 }
 
-// v125: fallback global pour garantir que les cartes de démarrage restent cliquables,
-// même si un navigateur ignore un ancien handler attaché avant un rendu partiel.
+
+// v126: garde-fou renforcé pour les trois cartes du démarrage.
+// Même si un ancien gestionnaire échoue, un clic doit sélectionner visiblement le mode.
+function ecVisualSelectMode(mode){
+  try{
+    document.querySelectorAll(".setup-mode-card[data-mode]").forEach(card=>{
+      const active=card.dataset.mode===mode;
+      card.classList.toggle("active", active);
+      const btn=card.querySelector("[data-choose-mode]");
+      if(btn){
+        btn.textContent=active ? "✓ Sélectionné" : "Choisir";
+        btn.classList.toggle("selected-mode-btn", active);
+        btn.disabled=!!active;
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+      }
+    });
+    const cur=document.getElementById("setupCurrent");
+    if(cur){ cur.innerHTML='<div class="banner info compact"><span class="pill ok">Mode : '+esc(modeLabel(mode))+'</span></div>'; }
+    const nav=document.getElementById("setupNavHint"); if(nav) nav.style.display="inline";
+  }catch(e){ console.error(e); }
+}
+function ecSafeChooseMode(mode){
+  mode=(mode==="ebichelchen"||mode==="email"||mode==="both") ? mode : "";
+  if(!mode) return;
+  try{
+    if(typeof setWorkflowMode==="function"){
+      setWorkflowMode(mode);
+      ecVisualSelectMode(mode);
+      return;
+    }
+  }catch(err){
+    console.error("setWorkflowMode a échoué", err);
+  }
+  try{
+    if(window.state && state.options){
+      state.options.workflowMode=mode;
+      state.options.setupDone=true;
+      state.options.emailEnabled=(mode==="email"||mode==="both");
+      state.options.ebichelchenEnabled=(mode==="ebichelchen"||mode==="both");
+      if(typeof saveState==="function") saveState();
+    }else{
+      const raw=localStorage.getItem(LS_KEY);
+      const st=raw?JSON.parse(raw):{};
+      st.options=st.options||{};
+      st.options.workflowMode=mode;
+      st.options.setupDone=true;
+      st.options.emailEnabled=(mode==="email"||mode==="both");
+      st.options.ebichelchenEnabled=(mode==="ebichelchen"||mode==="both");
+      localStorage.setItem(LS_KEY, JSON.stringify(st));
+    }
+  }catch(e){ console.error(e); }
+  ecVisualSelectMode(mode);
+  try{ applyChannelVisibility(); renderStudents(); renderMails(); renderEbPanel(); }catch(e){ console.error(e); }
+}
+try{ window.setWorkflowMode=setWorkflowMode; window.workflowMode=workflowMode; }catch(e){}
 document.addEventListener("click", function(ev){
   const btn = ev.target && ev.target.closest ? ev.target.closest("[data-choose-mode]") : null;
-  if(btn){
-    ev.preventDefault();
-    ev.stopPropagation();
-    if(!btn.disabled) setWorkflowMode(btn.dataset.chooseMode||"");
-    return;
-  }
   const card = ev.target && ev.target.closest ? ev.target.closest(".setup-mode-card[data-mode]") : null;
-  if(card && !card.classList.contains("active")){
-    setWorkflowMode(card.dataset.mode||"");
+  if(btn || card){
+    const mode=(btn && btn.dataset.chooseMode) || (card && card.dataset.mode) || "";
+    if(mode){ ev.preventDefault(); ev.stopPropagation(); ecSafeChooseMode(mode); }
   }
 }, true);
+
 
 /* Tabs */
 let studentEmailValidationAll=false;
@@ -3890,7 +3942,14 @@ document.getElementById("confirmGo").onclick=async()=>{
 };
 
 /* Init */
-bindSetup(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); checkAccount(); showStartupSessionChoice();
+try{ window.setWorkflowMode=setWorkflowMode; window.workflowMode=workflowMode; window.ecSafeChooseMode=ecSafeChooseMode; }catch(e){}
+try{
+  bindSetup(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); checkAccount(); showStartupSessionChoice();
+}catch(e){
+  console.error("Erreur init EntretienConnect", e);
+  try{ var b=document.getElementById("setupCurrent"); if(b) b.innerHTML='<div class="banner warn compact">Erreur au démarrage : '+esc(String(e&&e.message||e))+'</div>'; }catch(_){}
+  try{ bindSetup(); }catch(_){}
+}
 </script>
 </body>
 </html>
