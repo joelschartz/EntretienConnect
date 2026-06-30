@@ -356,13 +356,17 @@
 
   .source-lang-inline{justify-content:flex-end}
   .source-lang-inline .source-pill{margin-right:auto}
+  /* Mode complet : séparer le canal e-Bichelchen (1 langue) du canal e-mail (2 contacts). */
+  .student-contact-grid th.eb-lang-head,.student-contact-grid td.eb-lang-cell{border-right:1px solid var(--line);padding-right:16px!important}
+  .student-contact-grid th.eb-lang-head{white-space:nowrap}
+  .student-contact-grid td.eb-lang-cell .lang-select{margin:0}
 
 </style>
 </head>
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v142</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v143</span></p>
 </header>
 
 <nav class="tabs">
@@ -649,7 +653,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 142;
+const APP_VERSION = 143;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1851,16 +1855,17 @@ function renderStudents(){
     });
     html+='</tbody></table><div id="studentEmailWarnings" class="student-email-warning"></div>'; wrap.innerHTML=html;
   } else if(em && eb){
-    // Mode complet : 2 langues e-mail (un par contact) + 1 langue propre au message e-Bichelchen.
-    let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th style="width:22%">Élève</th><th class="contact-group" style="width:30%">Contact 1</th><th class="contact-group contact2-start" style="width:30%">Contact 2</th><th class="contact-group eb-lang-head" style="width:120px">e-Bichelchen</th><th style="width:62px"></th></tr></thead><tbody>';
+    // Mode complet : 1 langue propre au message e-Bichelchen (en premier, comme dans l'envoi)
+    // + 2 langues e-mail (un par contact).
+    let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th style="width:22%">Élève</th><th class="contact-group eb-lang-head" style="width:142px">e-Bichelchen</th><th class="contact-group" style="width:30%">Contact 1</th><th class="contact-group contact2-start" style="width:30%">Contact 2</th><th style="width:62px"></th></tr></thead><tbody>';
     state.students.forEach((s,idx)=>{
       if(!s.lang1) s.lang1=state.options.defaultLang||"fr";
       if(!s.lang2) s.lang2=state.options.defaultLang||"fr";
       if(!s.langEb) s.langEb=s.lang1||state.options.defaultLang||"fr";
       html += `<tr data-id="${s.id}"><td><div class="student-name-inline"><span class="student-index">${idx+1}</span><input class="st-name" value="${esc(s.name)}" placeholder="Prénom et nom de l’élève"></div></td>`+
+        `<td class="contact-cell eb-lang-cell"><select class="st-leb lang-select" title="Langue du message e-Bichelchen">${langOptionsHtml(s.langEb, true)}</select></td>`+
         `<td class="contact-cell"><div class="contact-inline"><input class="st-e1" value="${esc(s.email1)}" placeholder="contact1@..."><select class="st-l1 lang-select" title="Langue du contact 1">${langOptionsHtml(s.lang1, true)}</select></div></td>`+
         `<td class="contact-cell contact2-start"><div class="contact-inline"><input class="st-e2" value="${esc(s.email2)}" placeholder="contact2@..."><select class="st-l2 lang-select" title="Langue du contact 2">${langOptionsHtml(s.lang2, true)}</select></div></td>`+
-        `<td class="contact-cell eb-lang-cell"><select class="st-leb lang-select" title="Langue du message e-Bichelchen">${langOptionsHtml(s.langEb, true)}</select></td>`+
         `<td class="actions-cell"><button class="danger sm st-del">✕</button></td></tr>`;
     });
     html+='</tbody></table><div id="studentEmailWarnings" class="student-email-warning"></div>'; wrap.innerHTML=html;
