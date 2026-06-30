@@ -2892,7 +2892,12 @@ function buildEbOnlyMessages(){
       const ov=(state.ebOverrides&&state.ebOverrides[apptKey])||null;
       const title=ov&&Object.prototype.hasOwnProperty.call(ov,"title") ? String(ov.title||"") : defaultTitle;
       const desc=ov&&Object.prototype.hasOwnProperty.call(ov,"desc") ? String(ov.desc||"") : defaultDesc;
-      const matchedId=ebReady()?ebMatchedIdFor(stu):"";
+      // v139: le lien e-Bichelchen vient d'abord de la correspondance enregistrée
+      // (state.ebichelchenMap). Ainsi, si l'assistant local devient inaccessible après
+      // un certain temps, les élèves déjà importés restent « liés » : les cases et le
+      // « Tout sélectionner » restent disponibles. La publication réelle reste protégée
+      // par ebReady() au moment de l'envoi.
+      const matchedId=ebMatchedIdFor(stu);
       msgs.push({id:apptKey, kind:"eb", student:full, studentDisplay:displayStudentName(full), date:d, slotStart:s.start, slotEnd:s.end, lang, ebTitle:title, ebDesc:desc, defaultEbTitle:defaultTitle, defaultEbDesc:defaultDesc, matchedId});
     });
   });
@@ -3286,7 +3291,7 @@ function ebRowHtml(m, openId){
         <div class="mail-main">
           <span class="who" title="${esc(m.student)}">${esc(m.studentDisplay||displayStudentName(m.student))}</span>
           <span class="parent-label">${esc(m.ebTitle)}</span>
-          <span class="recipient-line">e-Bichelchen · ${esc(formatFrenchDate(m.date))} ${esc(m.slotStart)}</span>
+          <span class="recipient-line">e-Bichelchen · ${esc(langMeta(m.lang).short)} · ${esc(formatFrenchDate(m.date))} ${esc(m.slotStart)}</span>
         </div>
         <span class="status">
           ${edited?'<span class="pill warn">modifié</span>':''}
