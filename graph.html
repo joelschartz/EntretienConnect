@@ -356,7 +356,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v118</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v119</span></p>
 </header>
 
 <nav class="tabs">
@@ -640,7 +640,7 @@
 <script>
 "use strict";
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 118;
+const APP_VERSION = 119;
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -1564,7 +1564,7 @@ function renderSetup(){
       if(ebNeedsGroupSelection()){
         cards.push('<div class="banner warn compact">'+ebGroupChoiceHtml()+'</div>');
       }else{
-        cards.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button></div>');
+        cards.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button><div id="setupEbLiveStatus" class="hint" style="margin-top:8px"></div></div>');
       }
     }
     if(modeNeedsEmail(mode) && !account){
@@ -3418,7 +3418,13 @@ function ebHtmlToPlain(html){
 }
 async function ebGet(path){ const res=await fetch(path,{cache:"no-store"}); return res.json(); }
 async function ebPost(path, body){ const res=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})}); return res.json(); }
-function setEbStatus(msg, cls){ const el=document.getElementById("ebStatus"); if(!el) return; el.className="banner compact "+(cls||"info"); el.innerHTML=msg; }
+function setEbStatus(msg, cls){
+  const c=cls||"info";
+  const el=document.getElementById("ebStatus");
+  if(el){ el.className="banner compact "+c; el.innerHTML=msg; }
+  const live=document.getElementById("setupEbLiveStatus");
+  if(live){ live.className="banner compact "+c; live.style.marginTop="10px"; live.innerHTML=msg; }
+}
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
 function ebNeedsGroupSelection(){ return !!(ebData && ebData.needsGroupSelection && Array.isArray(ebData.groups) && ebData.groups.length>1); }
@@ -3632,14 +3638,16 @@ async function ebConnectFlow(){
   }
 }
 async function ebAutoAttempt(){
-  if(Date.now()-ebAutoStart>600000){ ebStopAuto(); setEbStatus("Connexion non terminée (10 min). Cliquez sur « Relire les données » après vous être connecté.","warn"); return; }
-  const j=await ebGet("/api/eb/read-browser?quiet=1");
+  if(Date.now()-ebAutoStart>600000){ ebStopAuto(); setEbStatus("Connexion non terminée (10 min). Cliquez de nouveau sur « Connecter e-Bichelchen » après vous être connecté.","warn"); return; }
+  let j=null;
+  try{ j=await ebGet("/api/eb/read-browser?quiet=1"); }
+  catch(e){ setEbStatus("En attente de la connexion e-Bichelchen … <span class="hint">"+esc(String(e.message||e).slice(0,140))+"</span>","info"); return; }
   if(j && j.ok && j.data){
     ebStopAuto();
     ebApplyRead(j.data);
     if(!j.data.needsGroupSelection){ fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
   }
-  else { setEbStatus("En attente de la connexion e-Bichelchen … "+(j&&j.error?('<span class="hint">'+esc(String(j.error).slice(0,120))+'</span>'):''),"info"); }
+  else { setEbStatus("En attente de la connexion e-Bichelchen … "+(j&&j.error?('<span class="hint">'+esc(String(j.error).slice(0,220))+'</span>'):''),"info"); }
 }
 async function ebRead(quiet, groupId){
   setEbStatus("Lecture des données e-Bichelchen …","info");
