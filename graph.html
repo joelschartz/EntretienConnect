@@ -358,7 +358,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v133</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v134</span></p>
 </header>
 
 <nav class="tabs">
@@ -645,7 +645,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 130;
+const APP_VERSION = 134;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1101,7 +1101,7 @@ function loadState(){
       overrides: s.overrides||{},
       subjectOverrides: s.subjectOverrides||{},
       ebOverrides: (s.ebOverrides && typeof s.ebOverrides==="object") ? s.ebOverrides : {},
-      ebichelchenData: null, // v133: ne jamais reprendre d’anciennes données e-Bichelchen depuis le localStorage
+      ebichelchenData: null, // v134: ne jamais reprendre d’anciennes données e-Bichelchen depuis le localStorage
       sent: Array.isArray(s.sent)? s.sent : [],
       reminderSent: Array.isArray(s.reminderSent)? s.reminderSent : [],
       ebichelchenSent: Array.isArray(s.ebichelchenSent)? s.ebichelchenSent : [],
@@ -1596,21 +1596,29 @@ function renderSetup(){
   if(status){
     const cards=[];
     if(modeNeedsEb(mode)){
+      const ebParts=[];
+      if(ebReady()) ebParts.push(ebConnectedSummaryHtml());
       if(ebHasMultipleKnownGroups()){
         const selected=!!ebSelectedGroupId();
-        cards.push('<div class="banner '+(selected?'ok':'warn')+' compact">'+ebGroupChoiceHtml()+'</div>');
-      }else if(ebReady()){
-        cards.push(ebConnectedSummaryHtml());
-      }else{
-        cards.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button><div id="setupEbLiveStatus" class="hint" style="margin-top:8px"></div></div>');
+        ebParts.push('<div class="banner '+(selected?'info':'warn')+' compact">'+ebGroupChoiceHtml()+'</div>');
+      }else if(!ebReady()){
+        ebParts.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button><div id="setupEbLiveStatus" class="hint" style="margin-top:8px"></div></div>');
       }
+      if(ebParts.length) cards.push('<div>'+ebParts.join("")+'</div>');
     }
-    if(modeNeedsEmail(mode) && !account){
-      cards.push('<div class="banner warn compact">Microsoft n’est pas encore connecté. Ce n’est nécessaire qu’au moment d’envoyer des e-mails. <button type="button" class="ghost sm" id="setupMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div>');
+    if(modeNeedsEmail(mode)){
+      if(account){
+        const who=[account.name||"", account.email||""].filter(Boolean).join(" · ");
+        cards.push('<div><div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+esc(who):'')+'. <button type="button" class="ghost sm" id="setupMsReconnect" style="margin-left:8px">Reconnecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
+      }else{
+        cards.push('<div><div class="banner warn compact">Microsoft n’est pas encore connecté. Ce n’est nécessaire qu’au moment d’envoyer des e-mails. <button type="button" class="ghost sm" id="setupMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
+      }
     }
     status.innerHTML=cards.join("");
     const ebBtn=document.getElementById("setupEbConnect"); if(ebBtn) ebBtn.onclick=ebConnectFlow;
+    status.querySelectorAll('[data-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
     const msBtn=document.getElementById("setupMsConnect"); if(msBtn) msBtn.onclick=()=>startMicrosoftLogin("setupLoginBox","setupMsConnect");
+    const msRe=document.getElementById("setupMsReconnect"); if(msRe) msRe.onclick=()=>startMicrosoftLogin("setupLoginBox","setupMsReconnect");
   }
 }
 function bindSetup(){
@@ -1631,7 +1639,7 @@ function bindSetup(){
 }
 
 
-// v133: garde-fou renforcé pour les trois cartes du démarrage.
+// v134: garde-fou renforcé pour les trois cartes du démarrage.
 // Même si un ancien gestionnaire échoue, un clic doit sélectionner visiblement le mode.
 function ecVisualSelectMode(mode){
   try{
@@ -1694,7 +1702,7 @@ document.addEventListener("click", function(ev){
   }
 }, true);
 
-// v133: les boutons de choix de classe e-Bichelchen sont liés par délégation,
+// v134: les boutons de choix de classe e-Bichelchen sont liés par délégation,
 // pour rester actifs même quand la liste est injectée dynamiquement dans Démarrage ou Envoi.
 document.addEventListener("click", function(ev){
   const gbtn = ev.target && ev.target.closest ? ev.target.closest("[data-eb-group-id]") : null;
@@ -3017,28 +3025,20 @@ async function api(path, body){ const res=await fetch(path,{method:"POST",header
 
 function startLocalAppHeartbeat(){
   // Maintient le helper local en vie tant que l’onglet EntretienConnect est ouvert.
-  // À la fermeture de l’onglet, on demande aussi l’arrêt du helper local.
+  // Important: ne PAS arrêter le helper sur beforeunload, sinon Ctrl+Shift+R recharge
+  // la page après avoir coupé 127.0.0.1. Si l’onglet est vraiment fermé, le helper
+  // s’arrête automatiquement après le délai de heartbeat côté Windows.
   try{
     if(window.__ecHeartbeatTimer) return;
     const beat=function(){
       try{ fetch("/api/app/heartbeat", {method:"POST", cache:"no-store", keepalive:true}).catch(function(){}); }catch(e){}
     };
-    const askShutdown=function(){
-      try{
-        if(navigator.sendBeacon){
-          navigator.sendBeacon("/api/app/shutdown", new Blob(["{}"], {type:"application/json"}));
-        }else{
-          fetch("/api/app/shutdown", {method:"POST", cache:"no-store", keepalive:true}).catch(function(){});
-        }
-      }catch(e){}
-    };
     beat();
     window.__ecHeartbeatTimer=setInterval(beat, 15000);
+    window.addEventListener("pagehide", beat);
     window.addEventListener("beforeunload", function(){
       try{ if(navigator.sendBeacon) navigator.sendBeacon("/api/app/heartbeat", new Blob(["{}"], {type:"application/json"})); }catch(e){}
-      askShutdown();
     });
-    window.addEventListener("unload", askShutdown);
   }catch(e){}
 }
 
@@ -3555,7 +3555,7 @@ function refreshSelectionUI(){
 /* ============================ e-Bichelchen-Kanal ============================
    Optionaler zweiter Versandkanal. Solange der Schalter aus ist, wird nichts
    geladen und kein Login verlangt. */
-let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v133: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
+let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v134: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
@@ -3723,7 +3723,7 @@ function ebToggleHandler(on){
   if(on && !ebData) ebFetchStatus();
 }
 async function ebFetchStatus(){
-  // v133: ne plus restaurer automatiquement d’anciennes données e-Bichelchen
+  // v134: ne plus restaurer automatiquement d’anciennes données e-Bichelchen
   // depuis le cache local. Cela évite qu’une ancienne liste de classes soit affichée
   // comme si l’utilisateur était encore connecté. Les données e-Bichelchen ne sont
   // appliquées qu’après un clic explicite sur « Connecter e-Bichelchen » ou
@@ -3801,7 +3801,7 @@ async function ebConnectFlow(){
   const btn=document.getElementById("ebConnect");
   if(btn) btn.disabled=true;
   ebStopAuto();
-  // v133: repartir proprement. Les anciennes classes mises en cache ne doivent pas
+  // v134: repartir proprement. Les anciennes classes mises en cache ne doivent pas
   // donner l’impression que l’utilisateur est encore connecté.
   ebData=null;
   state.ebichelchenData=null;
@@ -3860,7 +3860,7 @@ function ebApplyRead(data){
     }
     if(ebData.group && ebData.group.id){ state.ebichelchenSelectedGroupId=String(ebData.group.id); }
   }
-  state.ebichelchenData=null; // v133: ne pas persister des classes potentiellement anciennes dans le navigateur
+  state.ebichelchenData=null; // v134: ne pas persister des classes potentiellement anciennes dans le navigateur
   saveState();
   autofillEbMap();
   let imported=0;
@@ -4069,123 +4069,6 @@ try{
   try{ var b=document.getElementById("setupCurrent"); if(b) b.innerHTML='<div class="banner warn compact">Erreur au démarrage : '+esc(String(e&&e.message||e))+'</div>'; }catch(_){}
   try{ bindSetup(); }catch(_){}
 }
-</script>
-
-<script>
-// v133: Démarrage-Verbindungen robust anzeigen.
-// Bei e-mail und complet muss Microsoft sichtbar sein, solange es nicht verbunden ist.
-// Bei e-Bichelchen und complet muss e-Bichelchen sichtbar sein, solange es nicht verbunden ist.
-// Bei complet stehen beide Karten nebeneinander.
-(function(){
-  function ecEsc(s){ try { return String(s==null?"":s).replace(/[&<>"']/g, function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); } catch(e){ return ""; } }
-  function ecModeNeedsEmail(m){ return m==="email" || m==="both"; }
-  function ecModeNeedsEb(m){ return m==="ebichelchen" || m==="both"; }
-  function ecModeLabel(m){
-    return m==="email" ? "Uniquement e-mail" : (m==="ebichelchen" ? "Uniquement e-Bichelchen" : (m==="both" ? "e-Bichelchen + e-mail" : ""));
-  }
-  function ecWorkflowMode(){
-    try {
-      if (typeof workflowMode === "function") return workflowMode();
-      if (window.state && state.options) return state.options.workflowMode || (state.options.emailEnabled && state.options.ebichelchenEnabled ? "both" : (state.options.emailEnabled ? "email" : (state.options.ebichelchenEnabled ? "ebichelchen" : "")));
-    } catch(e){}
-    return "";
-  }
-  function ecEbConnected(){
-    try { return typeof ebReady==="function" && ebReady(); } catch(e){ return false; }
-  }
-  function ecEbClassName(){
-    try {
-      if(window.ebData && ebData.group) return String(ebData.group.classAlias || ebData.group.name || ebData.group.id || "");
-    } catch(e){}
-    return "";
-  }
-  function ecEbStudentCount(){
-    try { if(typeof ebStudents==="function") return ebStudents().length; } catch(e){}
-    return 0;
-  }
-  function ecMsConnected(){
-    try { return !!window.account; } catch(e){ return false; }
-  }
-  function ecMsWho(){
-    try {
-      if(!window.account) return "";
-      return [account.name||"", account.email||""].filter(Boolean).join(" · ");
-    } catch(e){ return ""; }
-  }
-  function ecGroupHtml(){
-    try { if(typeof ebGroupChoiceHtml==="function") return ebGroupChoiceHtml(); } catch(e){}
-    return "";
-  }
-  function ecKnownMulti(){
-    try { return typeof ebHasMultipleKnownGroups==="function" && ebHasMultipleKnownGroups(); } catch(e){ return false; }
-  }
-  function ecSelectedGroup(){
-    try { return typeof ebSelectedGroupId==="function" && !!ebSelectedGroupId(); } catch(e){ return false; }
-  }
-  function ecStatusHtml(){
-    var mode = ecWorkflowMode();
-    if(!mode) return '<div class="banner info compact">Commencez par choisir comment vous voulez contacter les parents.</div>';
-    var cards = [];
-    if(ecModeNeedsEb(mode)){
-      var ebParts = [];
-      if(ecEbConnected()){
-        var n = ecEbStudentCount(), cls = ecEbClassName();
-        ebParts.push('<div class="banner ok compact">e-Bichelchen connecté ✓'+(cls?' — classe « '+ecEsc(cls)+' »':'')+', '+n+' élève'+(n===1?'':'s')+' lu'+(n===1?'':'s')+'. <button type="button" class="ghost sm" id="setupEbReconnect" style="margin-left:8px">Reconnecter e-Bichelchen</button></div>');
-      }
-      if(ecKnownMulti()){
-        ebParts.push('<div class="banner '+(ecSelectedGroup()?'info':'warn')+' compact">'+ecGroupHtml()+'</div>');
-      } else if(!ecEbConnected()){
-        ebParts.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button><div id="setupEbLiveStatus" class="hint" style="margin-top:8px"></div></div>');
-      }
-      cards.push('<div>'+ebParts.join("")+'</div>');
-    }
-    if(ecModeNeedsEmail(mode)){
-      if(ecMsConnected()){
-        var who = ecMsWho();
-        cards.push('<div><div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+ecEsc(who):'')+'. <button type="button" class="ghost sm" id="setupMsReconnect" style="margin-left:8px">Reconnecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
-      }else{
-        cards.push('<div><div class="banner warn compact">Microsoft n’est pas encore connecté. Ce n’est nécessaire qu’au moment d’envoyer des e-mails. <button type="button" class="ghost sm" id="setupMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
-      }
-    }
-    return cards.join("");
-  }
-  function ecRenderSetupStatus(){
-    try{
-      var mode = ecWorkflowMode();
-      var cur = document.getElementById("setupCurrent");
-      if(cur){
-        cur.innerHTML = mode ? '<div class="banner info compact"><span class="pill ok">Mode : '+ecEsc(ecModeLabel(mode))+'</span></div>' : '<div class="banner info compact">Commencez par choisir comment vous voulez contacter les parents.</div>';
-      }
-      var status = document.getElementById("setupStatusGrid");
-      if(status){
-        status.innerHTML = ecStatusHtml();
-        var eb1 = document.getElementById("setupEbConnect"); if(eb1 && typeof ebConnectFlow==="function") eb1.onclick = ebConnectFlow;
-        var eb2 = document.getElementById("setupEbReconnect"); if(eb2 && typeof ebConnectFlow==="function") eb2.onclick = ebConnectFlow;
-        var ms1 = document.getElementById("setupMsConnect"); if(ms1 && typeof startMicrosoftLogin==="function") ms1.onclick = function(){ startMicrosoftLogin("setupLoginBox","setupMsConnect"); };
-        var ms2 = document.getElementById("setupMsReconnect"); if(ms2 && typeof startMicrosoftLogin==="function") ms2.onclick = function(){ startMicrosoftLogin("setupLoginBox","setupMsReconnect"); };
-        status.querySelectorAll("[data-eb-group-id]").forEach(function(btn){
-          btn.onclick = function(){
-            var id = btn.getAttribute("data-eb-group-id");
-            if(id && typeof ebChooseGroup==="function") ebChooseGroup(id);
-          };
-        });
-      }
-    }catch(e){ console.error("v133 render setup status failed", e); }
-  }
-  var oldRenderSetup = window.renderSetup || (typeof renderSetup==="function" ? renderSetup : null);
-  window.renderSetup = function(){
-    try { if(oldRenderSetup) oldRenderSetup.apply(this, arguments); } catch(e){ console.error(e); }
-    ecRenderSetupStatus();
-  };
-  document.addEventListener("click", function(ev){
-    var t = ev.target && ev.target.closest ? ev.target.closest("[data-choose-mode], .setup-mode-card[data-mode]") : null;
-    if(t) setTimeout(ecRenderSetupStatus, 80);
-  }, true);
-  setInterval(function(){
-    if(document.getElementById("setupStatusGrid")) ecRenderSetupStatus();
-  }, 2500);
-  setTimeout(ecRenderSetupStatus, 200);
-})();
 </script>
 
 </body>
