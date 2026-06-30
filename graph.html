@@ -356,7 +356,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v111</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v118</span></p>
 </header>
 
 <nav class="tabs">
@@ -640,7 +640,7 @@
 <script>
 "use strict";
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 115;
+const APP_VERSION = 118;
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -1561,7 +1561,11 @@ function renderSetup(){
   if(status){
     const cards=[];
     if(modeNeedsEb(mode) && !ebReady()){
-      cards.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button></div>');
+      if(ebNeedsGroupSelection()){
+        cards.push('<div class="banner warn compact">'+ebGroupChoiceHtml()+'</div>');
+      }else{
+        cards.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button></div>');
+      }
     }
     if(modeNeedsEmail(mode) && !account){
       cards.push('<div class="banner warn compact">Microsoft n’est pas encore connecté. Ce n’est nécessaire qu’au moment d’envoyer des e-mails. <button type="button" class="ghost sm" id="setupMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div>');
@@ -3417,6 +3421,13 @@ async function ebPost(path, body){ const res=await fetch(path,{method:"POST",hea
 function setEbStatus(msg, cls){ const el=document.getElementById("ebStatus"); if(!el) return; el.className="banner compact "+(cls||"info"); el.innerHTML=msg; }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
+function ebNeedsGroupSelection(){ return !!(ebData && ebData.needsGroupSelection && Array.isArray(ebData.groups) && ebData.groups.length>1); }
+function ebGroupChoiceHtml(){
+  if(!ebNeedsGroupSelection()) return "";
+  return '<div class="eb-inline-classes"><b>Plusieurs classes e-Bichelchen trouvées.</b><div class="hint" style="margin:4px 0 8px">Choisissez la classe à utiliser pour importer les élèves et publier les messages.</div>'+
+    ebData.groups.map(g=>`<div class="eb-classbox"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(String(g.id))} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm" type="button" onclick="ebChooseGroup(${Number(g.id)})">Choisir cette classe</button></div>`).join("")+
+  '</div>';
+}
 function ebBrowserPref(){ const s=document.getElementById("ebBrowser"); return s ? s.value : "auto"; }
 function ebMatchedIdFor(stu){
   if(!stu) return "";
@@ -3480,7 +3491,13 @@ function applyChannelVisibility(){
     const bits=[];
     if(!em && !eb) bits.push('<div class="banner warn compact" style="margin:10px 0 0">Choisissez au moins un canal pour pouvoir envoyer.</div>');
     if(em && !account) bits.push('<div class="banner warn compact" style="margin:10px 0 0">Microsoft n’est pas connecté. Les e-mails ne pourront pas partir. <button type="button" class="ghost sm" id="sendMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="sendInlineLoginBox" style="display:none;margin-top:10px"></div></div>');
-    if(eb && !ebReady()) bits.push('<div class="banner warn compact" style="margin:10px 0 0">e-Bichelchen n’est pas connecté. Les messages e-Bichelchen ne pourront pas être publiés. <button type="button" class="ghost sm" id="sendEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button></div>');
+    if(eb && !ebReady()){
+      if(ebNeedsGroupSelection()){
+        bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+ebGroupChoiceHtml()+'</div>');
+      }else{
+        bits.push('<div class="banner warn compact" style="margin:10px 0 0">e-Bichelchen n’est pas connecté. Les messages e-Bichelchen ne pourront pas être publiés. <button type="button" class="ghost sm" id="sendEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button></div>');
+      }
+    }
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
     const ms=document.getElementById("sendMsConnect"); if(ms) ms.onclick=()=>startMicrosoftLogin("sendInlineLoginBox","sendMsConnect");
@@ -3554,10 +3571,8 @@ function renderEbPanel(){
 }
 function renderEbGroupChooser(){
   const box=document.getElementById("ebGroupChooser"); if(!box) return;
-  if(!ebData || !ebData.needsGroupSelection || !Array.isArray(ebData.groups)){ box.innerHTML=""; return; }
-  box.innerHTML='<h3>Plusieurs classes trouvées — choisir ici</h3>'+ebData.groups.map(g=>
-    `<div class="eb-classbox"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(String(g.id))} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm" type="button" onclick="ebChooseGroup(${Number(g.id)})">Choisir cette classe</button></div>`
-  ).join("");
+  if(!ebNeedsGroupSelection()){ box.innerHTML=""; return; }
+  box.innerHTML='<h3>Plusieurs classes trouvées — choisir ici</h3>'+ebGroupChoiceHtml();
 }
 async function ebChooseGroup(id){ await ebRead(false, id); }
 function renderEbMatch(){
@@ -3619,7 +3634,11 @@ async function ebConnectFlow(){
 async function ebAutoAttempt(){
   if(Date.now()-ebAutoStart>600000){ ebStopAuto(); setEbStatus("Connexion non terminée (10 min). Cliquez sur « Relire les données » après vous être connecté.","warn"); return; }
   const j=await ebGet("/api/eb/read-browser?quiet=1");
-  if(j && j.ok && j.data){ ebStopAuto(); ebApplyRead(j.data); fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
+  if(j && j.ok && j.data){
+    ebStopAuto();
+    ebApplyRead(j.data);
+    if(!j.data.needsGroupSelection){ fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
+  }
   else { setEbStatus("En attente de la connexion e-Bichelchen … "+(j&&j.error?('<span class="hint">'+esc(String(j.error).slice(0,120))+'</span>'):''),"info"); }
 }
 async function ebRead(quiet, groupId){
@@ -3629,7 +3648,7 @@ async function ebRead(quiet, groupId){
     const j=await ebGet("/api/eb/read-browser"+(p.toString()?("?"+p.toString()):""));
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebApplyRead(j.data);
-    fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{});
+    if(!j.data || !j.data.needsGroupSelection){ fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
   }catch(e){ setEbStatus("Lecture impossible : "+esc(e.message||e),"err"); }
 }
 function ebApplyRead(data){
@@ -3639,7 +3658,7 @@ function ebApplyRead(data){
   autofillEbMap();
   let imported=0;
   if(ebReady()) imported=importEbStudentsToList(true);
-  if(ebData && ebData.needsGroupSelection){ setEbStatus("Plusieurs classes trouvées. Choisissez la bonne classe ci-dessous.","warn"); }
+  if(ebData && ebData.needsGroupSelection){ setEbStatus("Plusieurs classes trouvées. Choisissez la bonne classe dans la liste affichée.","warn"); }
   else if(ebReady()){ setEbStatus("Connecté ✓ — classe « "+esc(String(ebData.group.classAlias||ebData.group.name||ebData.group.id))+" », "+ebStudents().length+" élève(s) lus."+(imported?" "+imported+" nouvel élève importé.":"")+" La fenêtre e-Bichelchen peut se fermer automatiquement après la lecture.","ok"); }
   else if(ebData){ setEbStatus("Données lues, mais la catégorie « Message » est introuvable. La publication restera bloquée.","warn"); }
   renderSetup(); renderStudents(); renderEbPanel(); applyChannelVisibility(); renderMails();
