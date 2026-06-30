@@ -358,7 +358,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v135</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v137</span></p>
 </header>
 
 <nav class="tabs">
@@ -645,7 +645,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 135;
+const APP_VERSION = 137;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1101,7 +1101,7 @@ function loadState(){
       overrides: s.overrides||{},
       subjectOverrides: s.subjectOverrides||{},
       ebOverrides: (s.ebOverrides && typeof s.ebOverrides==="object") ? s.ebOverrides : {},
-      ebichelchenData: null, // v135: ne jamais reprendre d’anciennes données e-Bichelchen depuis le localStorage
+      ebichelchenData: null, // v137: ne jamais reprendre d’anciennes données e-Bichelchen depuis le localStorage
       sent: Array.isArray(s.sent)? s.sent : [],
       reminderSent: Array.isArray(s.reminderSent)? s.reminderSent : [],
       ebichelchenSent: Array.isArray(s.ebichelchenSent)? s.ebichelchenSent : [],
@@ -1639,7 +1639,7 @@ function bindSetup(){
 }
 
 
-// v135: garde-fou renforcé pour les trois cartes du démarrage.
+// v137: garde-fou renforcé pour les trois cartes du démarrage.
 // Même si un ancien gestionnaire échoue, un clic doit sélectionner visiblement le mode.
 function ecVisualSelectMode(mode){
   try{
@@ -1702,7 +1702,7 @@ document.addEventListener("click", function(ev){
   }
 }, true);
 
-// v135: les boutons de choix de classe e-Bichelchen sont liés par délégation,
+// v137: les boutons de choix de classe e-Bichelchen sont liés par délégation,
 // pour rester actifs même quand la liste est injectée dynamiquement dans Démarrage ou Envoi.
 document.addEventListener("click", function(ev){
   const gbtn = ev.target && ev.target.closest ? ev.target.closest("[data-eb-group-id]") : null;
@@ -1908,7 +1908,7 @@ document.getElementById("addStudent").onclick=()=>{
     alert("Dans les modes e-Bichelchen, la liste des élèves vient de la classe e-Bichelchen. Changez de mode si vous voulez gérer les élèves manuellement.");
     return;
   }
-  const dl=normalizeLang(state.options.defaultLang||"fr");
+  const dl=normalizeLang("fr");
   state.students.push({id:uid(),name:"",email1:"",email2:"",lang1:dl,lang2:dl});
   saveState(); renderStudents(); renderSetup();
 };
@@ -1924,7 +1924,7 @@ document.getElementById("csvFile").onchange=e=>{
       const c=line.split(/[,;\t]/).map(x=>x.trim());
       if(i===0 && /^(name|nom|prénom[ _-]et[ _-]nom[ _-]de[ _-]l[’']?élève|prenom[ _-]et[ _-]nom[ _-]de[ _-]l[’']?eleve|nom[_ -]de[_ -]l[’']?élève|nom[_ -]de[_ -]l[’']?eleve|schüler|eleve|élève)$/i.test(c[0]||"")) return;
       if(!c[0]) return;
-      const dl=normalizeLang(state.options.defaultLang||"fr");
+      const dl=normalizeLang("fr");
       const looksLikeLang2=c.length>=5 || ["fr","de","en","lb","lu","deutsch","english","lëtzebuergesch","letzebuergesch"].includes(String(c[2]||"").trim().toLowerCase());
       const email1=c[1]||"";
       const lang1=looksLikeLang2 ? normalizeLang(c[2]||dl) : dl;
@@ -3555,7 +3555,7 @@ function refreshSelectionUI(){
 /* ============================ e-Bichelchen-Kanal ============================
    Optionaler zweiter Versandkanal. Solange der Schalter aus ist, wird nichts
    geladen und kein Login verlangt. */
-let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v135: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
+let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v137: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
@@ -3643,7 +3643,7 @@ function autofillEbMap(){
 function importEbStudentsToList(auto=false){
   const arr=ebStudents();
   if(!arr.length) return 0;
-  const dl=normalizeLang(state.options.defaultLang||"fr");
+  const dl=normalizeLang("fr");
   state.students=state.students||[];
   state.ebichelchenMap=state.ebichelchenMap||{};
   const existing=new Set(state.students.map(st=>ebNormName(st.name)));
@@ -3723,7 +3723,7 @@ function ebToggleHandler(on){
   if(on && !ebData) ebFetchStatus();
 }
 async function ebFetchStatus(){
-  // v135: ne plus restaurer automatiquement d’anciennes données e-Bichelchen
+  // v137: ne plus restaurer automatiquement d’anciennes données e-Bichelchen
   // depuis le cache local. Cela évite qu’une ancienne liste de classes soit affichée
   // comme si l’utilisateur était encore connecté. Les données e-Bichelchen ne sont
   // appliquées qu’après un clic explicite sur « Connecter e-Bichelchen » ou
@@ -3801,7 +3801,7 @@ async function ebConnectFlow(){
   const btn=document.getElementById("ebConnect");
   if(btn) btn.disabled=true;
   ebStopAuto();
-  // v135: repartir proprement. Les anciennes classes mises en cache ne doivent pas
+  // v137: repartir proprement. Les anciennes classes mises en cache ne doivent pas
   // donner l’impression que l’utilisateur est encore connecté.
   ebData=null;
   state.ebichelchenData=null;
@@ -3860,7 +3860,7 @@ function ebApplyRead(data){
     }
     if(ebData.group && ebData.group.id){ state.ebichelchenSelectedGroupId=String(ebData.group.id); }
   }
-  state.ebichelchenData=null; // v135: ne pas persister des classes potentiellement anciennes dans le navigateur
+  state.ebichelchenData=null; // v137: ne pas persister des classes potentiellement anciennes dans le navigateur
   saveState();
   autofillEbMap();
   let imported=0;
@@ -4073,7 +4073,7 @@ try{
 
 
 <script>
-// v135: kleine UI-Korrekturen für Démarrage und e-Bichelchen-Vorlage.
+// v137: kleine UI-Korrekturen für Démarrage und e-Bichelchen-Vorlage.
 (function(){
   function normPlain(s){
     return String(s==null?"":s)
@@ -4150,6 +4150,272 @@ try{
     }
   }, true);
   setTimeout(updateEbResetVisibility, 500);
+})();
+</script>
+
+
+<script>
+// v137: Sprache auch für e-Bichelchen-Schüler im Reiter Élèves anzeigen.
+// e-Bichelchen benötigt keine E-Mail-Adresse, aber die Nachrichtenvorlage braucht weiterhin
+// eine Sprache pro Schüler. Importierte e-Bichelchen-Schüler starten standardmäßig mit FR.
+(function(){
+  function ecLangOptions(cur){
+    cur = String(cur||"FR").toUpperCase();
+    return ["FR","DE","EN","LU"].map(function(l){
+      return '<option value="'+l+'"'+(l===cur?' selected':'')+'>'+l+'</option>';
+    }).join("");
+  }
+  function ecCurrentMode(){
+    try { if(typeof workflowMode==="function") return workflowMode(); } catch(e){}
+    try { return state && state.options && state.options.workflowMode || ""; } catch(e){}
+    return "";
+  }
+  function ecStudentById(id){
+    try { return (state.students||[]).find(function(s){ return String(s.id)===String(id); }); } catch(e){ return null; }
+  }
+  function ecEnsureEbLangDefaults(){
+    try{
+      var changed=false;
+      (state.students||[]).forEach(function(s){
+        if(!s.lang1){ s.lang1="FR"; changed=true; }
+      });
+      if(changed && typeof saveState==="function") saveState();
+    }catch(e){}
+  }
+  function ecEnhanceEbStudentLanguages(){
+    try{
+      var mode=ecCurrentMode();
+      if(mode!=="ebichelchen") return; // complet/e-mail behalten die bestehenden Kontakt-Sprachfelder
+      ecEnsureEbLangDefaults();
+      var table = document.querySelector("#studentsTable, .students-table, table");
+      var rows = Array.from(document.querySelectorAll('[data-student-id], tr, .student-row')).filter(function(r){
+        return r.querySelector && r.querySelector('input');
+      });
+      rows.forEach(function(row){
+        if(row.querySelector(".ec-eb-lang-select")) return;
+        var id = row.getAttribute("data-student-id") || (row.querySelector("[data-student-id]") && row.querySelector("[data-student-id]").getAttribute("data-student-id"));
+        if(!id){
+          var inp = row.querySelector("input[data-id], input[data-student], input[data-sid]");
+          if(inp) id = inp.getAttribute("data-id") || inp.getAttribute("data-student") || inp.getAttribute("data-sid");
+        }
+        // Fallback: match by visible name/input value
+        var stu=null;
+        if(id) stu=ecStudentById(id);
+        if(!stu){
+          var nameInput=row.querySelector("input");
+          var name=nameInput ? String(nameInput.value||"").trim() : "";
+          try { stu=(state.students||[]).find(function(s){ return String(s.name||"").trim()===name; }); } catch(e){}
+        }
+        if(!stu) return;
+        if(!stu.lang1){ stu.lang1="FR"; if(typeof saveState==="function") saveState(); }
+        var selectHtml='<select class="ec-eb-lang-select" title="Langue du message e-Bichelchen">'+ecLangOptions(stu.lang1||"FR")+'</select>';
+        var source = Array.from(row.querySelectorAll("span,button,div,td")).find(function(el){
+          return /e-Bichelchen/i.test(el.textContent||"") && !el.querySelector("select");
+        });
+        var holder=document.createElement("span");
+        holder.className="ec-eb-lang-holder";
+        holder.style.marginLeft="10px";
+        holder.innerHTML=selectHtml;
+        if(source && source.parentNode){
+          source.parentNode.insertBefore(holder, source.nextSibling);
+        }else{
+          row.appendChild(holder);
+        }
+        var sel=holder.querySelector("select");
+        sel.onchange=function(){
+          stu.lang1=sel.value;
+          stu.lang2=stu.lang2||sel.value;
+          if(typeof saveState==="function") saveState();
+          try{ if(typeof renderMails==="function") renderMails(); }catch(e){}
+        };
+      });
+    }catch(e){ console.error("v137 e-Bichelchen language UI failed", e); }
+  }
+  var oldRenderStudents = window.renderStudents || (typeof renderStudents==="function" ? renderStudents : null);
+  window.renderStudents = function(){
+    var r;
+    try{ if(oldRenderStudents) r=oldRenderStudents.apply(this, arguments); }catch(e){ console.error(e); }
+    setTimeout(ecEnhanceEbStudentLanguages, 0);
+    return r;
+  };
+  document.addEventListener("input", function(){ setTimeout(ecEnhanceEbStudentLanguages, 80); }, true);
+  document.addEventListener("change", function(){ setTimeout(ecEnhanceEbStudentLanguages, 80); }, true);
+  setTimeout(ecEnhanceEbStudentLanguages, 500);
+})();
+</script>
+
+
+<script>
+// v137: "réinitialiser" bei Message e-Bichelchen nur anzeigen, wenn die Vorlage wirklich geändert wurde.
+(function(){
+  function norm(s){
+    return String(s==null?"":s)
+      .replace(/\r\n/g,"\n")
+      .replace(/\u00a0/g," ")
+      .replace(/[ \t]+\n/g,"\n")
+      .replace(/[ \t]{2,}/g," ")
+      .replace(/\n{3,}/g,"\n\n")
+      .trim();
+  }
+  function mode(){
+    try { return (window.state && state.options && state.options.templateMode) || ""; } catch(e){ return ""; }
+  }
+  function lang(){
+    try { return (window.state && state.options && (state.options.templateLang || state.options.defaultLang)) || "fr"; } catch(e){ return "fr"; }
+  }
+  function findResetButtons(){
+    return Array.from(document.querySelectorAll("button")).filter(function(b){
+      var t=(b.textContent||"").trim();
+      return /réinitialiser|reinitialiser|standard|zurücksetzen/i.test(t);
+    });
+  }
+  function valueOf(el){
+    if(!el) return "";
+    if("value" in el) return el.value || "";
+    return el.innerText || el.textContent || "";
+  }
+  function currentEb(){
+    var subj="", body="";
+    try{
+      // Prefer visible subject/body fields in the active template editor.
+      var subjectCandidates = [
+        document.getElementById("tplSubject"),
+        document.getElementById("templateSubject"),
+        document.getElementById("ebSubject"),
+        document.querySelector("[data-template-subject='ebichelchen']"),
+        document.querySelector("input[name='ebichelchenSubject']"),
+        document.querySelector("input[name='subject']")
+      ].filter(Boolean);
+      for(var i=0;i<subjectCandidates.length;i++){
+        var v=valueOf(subjectCandidates[i]);
+        if(v){ subj=v; break; }
+      }
+      var bodyCandidates = [
+        document.getElementById("tplBody"),
+        document.getElementById("templateBody"),
+        document.getElementById("ebBody"),
+        document.querySelector("[data-template-body='ebichelchen']"),
+        document.querySelector("textarea[name='ebichelchenBody']"),
+        document.querySelector("textarea"),
+        document.querySelector("[contenteditable='true']")
+      ].filter(Boolean);
+      for(var j=0;j<bodyCandidates.length;j++){
+        var vb=valueOf(bodyCandidates[j]);
+        if(vb){ body=vb; break; }
+      }
+    }catch(e){}
+    try{
+      // Fall back to state if the editor is not represented by standard inputs.
+      var l=lang();
+      var paths=[
+        state.templates && state.templates[l] && state.templates[l].ebichelchen,
+        state.template && state.template.ebichelchen,
+        state.template && state.template.eb,
+        state.options && state.options.ebichelchenTemplate
+      ];
+      for(var k=0;k<paths.length;k++){
+        var t=paths[k];
+        if(t){
+          if(!subj) subj=t.subject||t.objet||"";
+          if(!body) body=t.body||t.text||t.message||"";
+          break;
+        }
+      }
+    }catch(e){}
+    return {subject:subj, body:body};
+  }
+  function defaultEb(){
+    var l=lang();
+    var candidates=[];
+    try{ if(window.DEFAULT_TEMPLATES && DEFAULT_TEMPLATES[l] && DEFAULT_TEMPLATES[l].ebichelchen) candidates.push(DEFAULT_TEMPLATES[l].ebichelchen); }catch(e){}
+    try{ if(window.defaultTemplates && defaultTemplates[l] && defaultTemplates[l].ebichelchen) candidates.push(defaultTemplates[l].ebichelchen); }catch(e){}
+    try{ if(typeof getDefaultTemplate==="function") candidates.push(getDefaultTemplate("ebichelchen", l)); }catch(e){}
+    try{ if(typeof defaultTemplate==="function") candidates.push(defaultTemplate("ebichelchen", l)); }catch(e){}
+    try{ if(typeof buildDefaultTemplate==="function") candidates.push(buildDefaultTemplate("ebichelchen", l)); }catch(e){}
+    try{ if(typeof standardTemplate==="function") candidates.push(standardTemplate("ebichelchen", l)); }catch(e){}
+    for(var i=0;i<candidates.length;i++){
+      var d=candidates[i];
+      if(d) return {subject:d.subject||d.objet||"", body:d.body||d.text||d.message||""};
+    }
+    // Known standard fallback for the simple e-Bichelchen message. This is intentionally broad:
+    // if current equals this, reset must be hidden.
+    return null;
+  }
+  function isModified(){
+    if(mode()!=="ebichelchen") return false;
+    var d=defaultEb();
+    var c=currentEb();
+    if(d && (d.subject || d.body)){
+      return norm(c.subject)!==norm(d.subject) || norm(c.body)!==norm(d.body);
+    }
+    // If the app tracks modification in state, use it; otherwise be conservative and hide
+    // at startup until actual input happens.
+    try{
+      if(state && state.templateModified && Object.prototype.hasOwnProperty.call(state.templateModified,"ebichelchen")){
+        return !!state.templateModified.ebichelchen;
+      }
+      if(state && state.modifiedTemplates && Object.prototype.hasOwnProperty.call(state.modifiedTemplates,"ebichelchen")){
+        return !!state.modifiedTemplates.ebichelchen;
+      }
+    }catch(e){}
+    return false;
+  }
+  function update(){
+    try{
+      var active = mode()==="ebichelchen";
+      findResetButtons().forEach(function(b){
+        if(!active) return;
+        b.style.display = isModified() ? "" : "none";
+      });
+    }catch(e){}
+  }
+  function markModifiedOnInput(ev){
+    try{
+      if(mode()!=="ebichelchen") return;
+      if(ev && ev.target && ev.target.closest && ev.target.closest("button")) return;
+      setTimeout(update, 80);
+    }catch(e){}
+  }
+  function hideAfterReset(ev){
+    try{
+      var b = ev.target && ev.target.closest ? ev.target.closest("button") : null;
+      if(!b) return;
+      if(/réinitialiser|reinitialiser|standard|zurücksetzen/i.test(b.textContent||"")){
+        setTimeout(function(){
+          if(mode()==="ebichelchen"){
+            try{
+              if(state && state.templateModified) state.templateModified.ebichelchen=false;
+              if(state && state.modifiedTemplates) state.modifiedTemplates.ebichelchen=false;
+              if(typeof saveState==="function") saveState();
+            }catch(e){}
+            update();
+          }
+        }, 250);
+      }
+    }catch(e){}
+  }
+  var oldRenderMails = window.renderMails || (typeof renderMails==="function" ? renderMails : null);
+  window.renderMails=function(){
+    var r;
+    try{ if(oldRenderMails) r=oldRenderMails.apply(this, arguments); }catch(e){ console.error(e); }
+    setTimeout(update, 0);
+    setTimeout(update, 200);
+    return r;
+  };
+  var oldReload = window._reloadTemplateEditor;
+  if(typeof oldReload==="function"){
+    window._reloadTemplateEditor=function(){
+      var r=oldReload.apply(this, arguments);
+      setTimeout(update, 0);
+      setTimeout(update, 200);
+      return r;
+    };
+  }
+  document.addEventListener("input", markModifiedOnInput, true);
+  document.addEventListener("change", markModifiedOnInput, true);
+  document.addEventListener("click", function(ev){ hideAfterReset(ev); setTimeout(update,100); }, true);
+  setInterval(update, 1000);
+  setTimeout(update, 300);
 })();
 </script>
 
