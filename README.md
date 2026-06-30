@@ -1,7 +1,10 @@
 # EntretienConnect
 
-Interface Web pour EntretienConnect.
+Interface web publiée via GitHub Pages.
 
-Version v118.
+Le dossier local Starter lance un petit serveur local qui charge cette interface puis permet les fonctions Microsoft et e-Bichelchen.
 
-Cette version corrige le choix de classe e-Bichelchen quand plusieurs classes sont disponibles.
+
+## Version v122
+- Sélection du mode de démarrage rendue plus robuste.
+- Les boutons Choisir ont maintenant un fallback direct si un handler de clic est ignoré.

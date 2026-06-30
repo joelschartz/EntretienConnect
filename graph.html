@@ -379,21 +379,21 @@
           <h3>Uniquement e-Bichelchen</h3>
           <p>Idéal si vous publiez les rendez-vous dans e-Bichelchen et ne voulez pas gérer les adresses e-mail.</p>
           <ul><li>Connexion e-Bichelchen</li><li>Import automatique des élèves</li><li>Aucune adresse e-mail requise</li></ul>
-          <div class="setup-card-actions"><button type="button" data-choose-mode="ebichelchen">Choisir</button></div>
+          <div class="setup-card-actions"><button type="button" data-choose-mode="ebichelchen" onclick="setWorkflowMode('ebichelchen')">Choisir</button></div>
         </div>
         <div class="setup-mode-card" data-mode="email">
           <span class="setup-chip">Classique</span>
           <h3>Uniquement e-mail</h3>
           <p>Pour envoyer les confirmations via Microsoft 365. Les rappels se règlent plus tard dans « Envoi ».</p>
           <ul><li>Élèves saisis ou importés par CSV</li><li>Adresses e-mail nécessaires seulement pour l’e-mail</li><li>Rappel réglé plus tard dans « Envoi »</li></ul>
-          <div class="setup-card-actions"><button type="button" data-choose-mode="email">Choisir</button></div>
+          <div class="setup-card-actions"><button type="button" data-choose-mode="email" onclick="setWorkflowMode('email')">Choisir</button></div>
         </div>
         <div class="setup-mode-card" data-mode="both">
           <span class="setup-chip warn">Complet</span>
           <h3>e-Bichelchen + e-mail</h3>
           <p>Les noms viennent d’e-Bichelchen, puis vous complétez les adresses pour envoyer aussi des e-mails.</p>
           <ul><li>Import automatique des élèves</li><li>Adresses e-mail à compléter seulement si vous envoyez aussi par e-mail</li><li>Publication e-Bichelchen possible même sans e-mail</li></ul>
-          <div class="setup-card-actions"><button type="button" data-choose-mode="both">Choisir</button></div>
+          <div class="setup-card-actions"><button type="button" data-choose-mode="both" onclick="setWorkflowMode('both')">Choisir</button></div>
         </div>
       </div>
       <div id="setupCurrent" class="setup-current"></div>
@@ -640,7 +640,19 @@
 <script>
 "use strict";
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 119;
+const APP_VERSION = 122;
+
+window.addEventListener("error", function(ev){
+  try{
+    const host=document.getElementById("setupCurrent") || document.body;
+    const msg=(ev && ev.message) ? ev.message : "Erreur JavaScript inconnue";
+    const div=document.createElement("div");
+    div.className="banner warn compact";
+    div.style.marginTop="10px";
+    div.textContent="Erreur dans l’interface : "+msg;
+    if(host && host.parentNode) host.parentNode.insertBefore(div, host.nextSibling);
+  }catch(e){}
+});
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -1591,6 +1603,22 @@ function bindSetup(){
     };
   });
 }
+
+// v122: fallback global pour garantir que les cartes de démarrage restent cliquables,
+// même si un navigateur ignore un ancien handler attaché avant un rendu partiel.
+document.addEventListener("click", function(ev){
+  const btn = ev.target && ev.target.closest ? ev.target.closest("[data-choose-mode]") : null;
+  if(btn){
+    ev.preventDefault();
+    ev.stopPropagation();
+    if(!btn.disabled) setWorkflowMode(btn.dataset.chooseMode||"");
+    return;
+  }
+  const card = ev.target && ev.target.closest ? ev.target.closest(".setup-mode-card[data-mode]") : null;
+  if(card && !card.classList.contains("active")){
+    setWorkflowMode(card.dataset.mode||"");
+  }
+}, true);
 
 /* Tabs */
 let studentEmailValidationAll=false;

@@ -1,3 +1,1 @@
-EntretienConnect GitHub Starter v118 slim
-UI source: https://joelschartz.github.io/EntretienConnect/
-Fix: choix de classe e-Bichelchen visible quand plusieurs classes existent; la fenêtre e-Bichelchen reste ouverte jusqu’au choix.
+v122
