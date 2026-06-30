@@ -358,7 +358,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v134</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v135</span></p>
 </header>
 
 <nav class="tabs">
@@ -402,7 +402,7 @@
       <div id="setupReminderChoice" class="setup-reminder-choice" style="display:none"></div>
       <div id="setupStatusGrid" class="setup-status-grid"></div>
       <div class="setup-actions">
-        <span class="hint" id="setupNavHint" style="display:none">Ensuite, utilisez les onglets en haut : Élèves → Calendrier → Envoi.</span>
+        <span class="hint" id="setupNavHint" style="display:none"></span>
       </div>
     </div>
   </section>
@@ -645,7 +645,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 134;
+const APP_VERSION = 135;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1101,7 +1101,7 @@ function loadState(){
       overrides: s.overrides||{},
       subjectOverrides: s.subjectOverrides||{},
       ebOverrides: (s.ebOverrides && typeof s.ebOverrides==="object") ? s.ebOverrides : {},
-      ebichelchenData: null, // v134: ne jamais reprendre d’anciennes données e-Bichelchen depuis le localStorage
+      ebichelchenData: null, // v135: ne jamais reprendre d’anciennes données e-Bichelchen depuis le localStorage
       sent: Array.isArray(s.sent)? s.sent : [],
       reminderSent: Array.isArray(s.reminderSent)? s.reminderSent : [],
       ebichelchenSent: Array.isArray(s.ebichelchenSent)? s.ebichelchenSent : [],
@@ -1557,12 +1557,12 @@ function ebConnectedSummaryHtml(){
   const g=ebData.group||{};
   const name=String(g.classAlias||g.name||g.id||"");
   const n=ebStudents().length;
-  return '<div class="banner ok compact">e-Bichelchen connecté ✓ — classe « '+esc(name)+' », '+n+' élève'+(n===1?'':'s')+' lu'+(n===1?'':'s')+'. <button type="button" class="ghost sm" data-eb-connect style="margin-left:8px">Reconnecter e-Bichelchen</button></div>';
+  return '<div class="banner ok compact">e-Bichelchen connecté ✓ — classe « '+esc(name)+' », '+n+' élève'+(n===1?'':'s')+' lu'+(n===1?'':'s')+'.</div>';
 }
 function msConnectedSummaryHtml(){
   if(!account) return "";
   const who=[account.name||"", account.email||""].filter(Boolean).join(" · ");
-  return '<div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+esc(who):'')+'. <button type="button" class="ghost sm" id="setupMsReconnect" style="margin-left:8px">Reconnecter Microsoft</button></div>';
+  return '<div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+esc(who):'')+'.</div>';
 }
 function previewHintText(){
   const em=emailEnabled(), eb=ebichelchenEnabled();
@@ -1591,7 +1591,7 @@ function renderSetup(){
   }); }
   if(current) current.innerHTML=setupProgressHtml();
   if(change) change.style.display="none";
-  if(navHint) navHint.style.display=mode?"inline":"none";
+  if(navHint) navHint.style.display="none";
   if(reminderChoice){ reminderChoice.style.display="none"; reminderChoice.innerHTML=""; }
   if(status){
     const cards=[];
@@ -1609,7 +1609,7 @@ function renderSetup(){
     if(modeNeedsEmail(mode)){
       if(account){
         const who=[account.name||"", account.email||""].filter(Boolean).join(" · ");
-        cards.push('<div><div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+esc(who):'')+'. <button type="button" class="ghost sm" id="setupMsReconnect" style="margin-left:8px">Reconnecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
+        cards.push('<div><div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+esc(who):'')+'.<div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
       }else{
         cards.push('<div><div class="banner warn compact">Microsoft n’est pas encore connecté. Ce n’est nécessaire qu’au moment d’envoyer des e-mails. <button type="button" class="ghost sm" id="setupMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
       }
@@ -1639,7 +1639,7 @@ function bindSetup(){
 }
 
 
-// v134: garde-fou renforcé pour les trois cartes du démarrage.
+// v135: garde-fou renforcé pour les trois cartes du démarrage.
 // Même si un ancien gestionnaire échoue, un clic doit sélectionner visiblement le mode.
 function ecVisualSelectMode(mode){
   try{
@@ -1702,7 +1702,7 @@ document.addEventListener("click", function(ev){
   }
 }, true);
 
-// v134: les boutons de choix de classe e-Bichelchen sont liés par délégation,
+// v135: les boutons de choix de classe e-Bichelchen sont liés par délégation,
 // pour rester actifs même quand la liste est injectée dynamiquement dans Démarrage ou Envoi.
 document.addEventListener("click", function(ev){
   const gbtn = ev.target && ev.target.closest ? ev.target.closest("[data-eb-group-id]") : null;
@@ -3555,7 +3555,7 @@ function refreshSelectionUI(){
 /* ============================ e-Bichelchen-Kanal ============================
    Optionaler zweiter Versandkanal. Solange der Schalter aus ist, wird nichts
    geladen und kein Login verlangt. */
-let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v134: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
+let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v135: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
@@ -3723,7 +3723,7 @@ function ebToggleHandler(on){
   if(on && !ebData) ebFetchStatus();
 }
 async function ebFetchStatus(){
-  // v134: ne plus restaurer automatiquement d’anciennes données e-Bichelchen
+  // v135: ne plus restaurer automatiquement d’anciennes données e-Bichelchen
   // depuis le cache local. Cela évite qu’une ancienne liste de classes soit affichée
   // comme si l’utilisateur était encore connecté. Les données e-Bichelchen ne sont
   // appliquées qu’après un clic explicite sur « Connecter e-Bichelchen » ou
@@ -3801,7 +3801,7 @@ async function ebConnectFlow(){
   const btn=document.getElementById("ebConnect");
   if(btn) btn.disabled=true;
   ebStopAuto();
-  // v134: repartir proprement. Les anciennes classes mises en cache ne doivent pas
+  // v135: repartir proprement. Les anciennes classes mises en cache ne doivent pas
   // donner l’impression que l’utilisateur est encore connecté.
   ebData=null;
   state.ebichelchenData=null;
@@ -3860,7 +3860,7 @@ function ebApplyRead(data){
     }
     if(ebData.group && ebData.group.id){ state.ebichelchenSelectedGroupId=String(ebData.group.id); }
   }
-  state.ebichelchenData=null; // v134: ne pas persister des classes potentiellement anciennes dans le navigateur
+  state.ebichelchenData=null; // v135: ne pas persister des classes potentiellement anciennes dans le navigateur
   saveState();
   autofillEbMap();
   let imported=0;
@@ -4069,6 +4069,88 @@ try{
   try{ var b=document.getElementById("setupCurrent"); if(b) b.innerHTML='<div class="banner warn compact">Erreur au démarrage : '+esc(String(e&&e.message||e))+'</div>'; }catch(_){}
   try{ bindSetup(); }catch(_){}
 }
+</script>
+
+
+<script>
+// v135: kleine UI-Korrekturen für Démarrage und e-Bichelchen-Vorlage.
+(function(){
+  function normPlain(s){
+    return String(s==null?"":s)
+      .replace(/\r\n/g,"\n")
+      .replace(/[ \t]+\n/g,"\n")
+      .replace(/\n{3,}/g,"\n\n")
+      .trim();
+  }
+  function getTemplateMode(){
+    try { return (window.state && state.options && state.options.templateMode) || ""; } catch(e){ return ""; }
+  }
+  function currentEbTemplate(){
+    try {
+      var lang = (window.state && state.options && state.options.templateLang) || "fr";
+      var tpl = state.templates && state.templates[lang] && state.templates[lang].ebichelchen;
+      if(tpl) return {subject: tpl.subject || "", body: tpl.body || tpl.text || ""};
+    } catch(e){}
+    try {
+      return {
+        subject: (document.getElementById("ebSubject")||document.querySelector('[data-template-subject="ebichelchen"]')||{}).value || "",
+        body: (document.getElementById("ebBody")||document.querySelector('[data-template-body="ebichelchen"]')||{}).value || ""
+      };
+    } catch(e){ return {subject:"", body:""}; }
+  }
+  function defaultEbTemplate(){
+    try {
+      var lang = (window.state && state.options && state.options.templateLang) || "fr";
+      if(window.DEFAULT_TEMPLATES && DEFAULT_TEMPLATES[lang] && DEFAULT_TEMPLATES[lang].ebichelchen){
+        var d = DEFAULT_TEMPLATES[lang].ebichelchen;
+        return {subject:d.subject||"", body:d.body||d.text||""};
+      }
+      if(window.defaultTemplates && defaultTemplates[lang] && defaultTemplates[lang].ebichelchen){
+        var d2 = defaultTemplates[lang].ebichelchen;
+        return {subject:d2.subject||"", body:d2.body||d2.text||""};
+      }
+      if(typeof getDefaultTemplate==="function"){
+        var d3 = getDefaultTemplate("ebichelchen", lang);
+        return {subject:d3.subject||"", body:d3.body||d3.text||""};
+      }
+    } catch(e){}
+    return null;
+  }
+  function updateEbResetVisibility(){
+    try{
+      if(getTemplateMode()!=="ebichelchen") return;
+      var resetButtons = Array.from(document.querySelectorAll('button, .ghost, .btn')).filter(function(b){
+        return /réinitialiser|reinitialiser|standard|zurücksetzen/i.test((b.textContent||"").trim());
+      });
+      if(!resetButtons.length) return;
+      var def = defaultEbTemplate();
+      var cur = currentEbTemplate();
+      var changed = true;
+      if(def){
+        changed = normPlain(cur.subject)!==normPlain(def.subject) || normPlain(cur.body)!==normPlain(def.body);
+      }else{
+        // fallback: nur zeigen, wenn die App selbst explizit "modifié" meldet
+        changed = !!document.querySelector(".modified, .is-modified, [data-modified='true']");
+      }
+      resetButtons.forEach(function(b){ b.style.display = changed ? "" : "none"; });
+    }catch(e){}
+  }
+  var oldRenderMails = window.renderMails || (typeof renderMails==="function" ? renderMails : null);
+  window.renderMails = function(){
+    var r;
+    try { if(oldRenderMails) r = oldRenderMails.apply(this, arguments); } catch(e){ console.error(e); }
+    setTimeout(updateEbResetVisibility, 0);
+    return r;
+  };
+  document.addEventListener("input", function(){ setTimeout(updateEbResetVisibility, 50); }, true);
+  document.addEventListener("click", function(ev){
+    var t = ev.target && ev.target.closest ? ev.target.closest("button") : null;
+    if(t && /réinitialiser|reinitialiser|standard|zurücksetzen/i.test(t.textContent||"")){
+      setTimeout(updateEbResetVisibility, 150);
+    }
+  }, true);
+  setTimeout(updateEbResetVisibility, 500);
+})();
 </script>
 
 </body>
