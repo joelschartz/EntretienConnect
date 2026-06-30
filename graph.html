@@ -358,7 +358,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v128</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v130</span></p>
 </header>
 
 <nav class="tabs">
@@ -645,7 +645,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 126;
+const APP_VERSION = 130;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1552,6 +1552,13 @@ function setupProgressHtml(){
   if(!mode) return '<div class="banner info compact">Commencez par choisir comment vous voulez contacter les parents.</div>';
   return '<div class="banner info compact"><span class="pill ok">Mode : '+esc(modeLabel(mode))+'</span></div>';
 }
+function ebConnectedSummaryHtml(){
+  if(!ebReady()) return "";
+  const g=ebData.group||{};
+  const name=String(g.classAlias||g.name||g.id||"");
+  const n=ebStudents().length;
+  return '<div class="banner ok compact">e-Bichelchen connecté ✓ — classe « '+esc(name)+' », '+n+' élève'+(n===1?'':'s')+' lu'+(n===1?'':'s')+'. <button type="button" class="ghost sm" data-eb-connect style="margin-left:8px">Reconnecter e-Bichelchen</button></div>';
+}
 function previewHintText(){
   const em=emailEnabled(), eb=ebichelchenEnabled();
   if(eb && !em) return "Ouvrez uniquement le message e-Bichelchen que vous souhaitez contrôler ou adapter. Les modifications sont enregistrées automatiquement.";
@@ -1585,8 +1592,11 @@ function renderSetup(){
     const cards=[];
     if(modeNeedsEb(mode)){
       if(ebHasMultipleKnownGroups()){
-        cards.push('<div class="banner warn compact">'+ebGroupChoiceHtml()+'</div>');
-      }else if(!ebReady()){
+        const selected=!!ebSelectedGroupId();
+        cards.push('<div class="banner '+(selected?'ok':'warn')+' compact">'+ebGroupChoiceHtml()+'</div>');
+      }else if(ebReady()){
+        cards.push(ebConnectedSummaryHtml());
+      }else{
         cards.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button><div id="setupEbLiveStatus" class="hint" style="margin-top:8px"></div></div>');
       }
     }
@@ -1689,6 +1699,12 @@ document.addEventListener("click", function(ev){
     const id=gbtn.getAttribute("data-eb-group-id");
     ebChooseGroup(id);
   }
+}, true);
+document.addEventListener("click", function(ev){
+  const connect = ev.target && ev.target.closest ? ev.target.closest("[data-eb-connect]") : null;
+  const readNow = ev.target && ev.target.closest ? ev.target.closest("[data-eb-read-now]") : null;
+  if(connect){ ev.preventDefault(); ev.stopPropagation(); ebConnectFlow(); }
+  if(readNow){ ev.preventDefault(); ev.stopPropagation(); ebRead(false); }
 }, true);
 
 
@@ -2993,6 +3009,24 @@ function plannedReminderMessagesForConfirmations(confirmMsgs){
 /* Microsoft Graph */
 let account=null, pollTimer=null;
 async function api(path, body){ const res=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:body?JSON.stringify(body):"{}"}); return res.json(); }
+
+function startLocalAppHeartbeat(){
+  // Maintient le helper local en vie tant que l’onglet EntretienConnect est ouvert.
+  // Si l’onglet est fermé, le helper Windows/Mac s’arrête automatiquement après un court délai.
+  try{
+    if(window.__ecHeartbeatTimer) return;
+    const beat=function(){
+      try{ fetch("/api/app/heartbeat", {method:"POST", cache:"no-store", keepalive:true}).catch(function(){}); }catch(e){}
+    };
+    beat();
+    window.__ecHeartbeatTimer=setInterval(beat, 15000);
+    window.addEventListener("pagehide", beat);
+    window.addEventListener("beforeunload", function(){
+      try{ if(navigator.sendBeacon) navigator.sendBeacon("/api/app/heartbeat", new Blob(["{}"], {type:"application/json"})); }catch(e){}
+    });
+  }catch(e){}
+}
+
 async function checkAccount(){ try{ const res=await fetch("/api/graph/account"); const d=await res.json(); account=d.signedIn?d.account:null; }catch(e){ account=null; } renderAuth(); renderSetup(); renderMails(); checkDueRemindersSoon(); }
 function renderAuth(){
   const box=document.getElementById("authBox"), inBtn=document.getElementById("signIn"), outBtn=document.getElementById("signOut");
@@ -3567,7 +3601,7 @@ function ebGroupChoiceHtml(){
   const title=ebReady() ? "Classe e-Bichelchen utilisée" : "Plusieurs classes e-Bichelchen trouvées.";
   const text=ebReady() ? "Vous pouvez changer de classe si besoin ; la liste des élèves sera alors relue." : "Choisissez la classe à utiliser pour importer les élèves et publier les messages.";
   return '<div class="eb-inline-classes"><b>'+esc(title)+'</b><div class="hint" style="margin:4px 0 8px">'+esc(text)+'</div>'+
-    groups.map(g=>{ const gid=String(g.id); const selected=selectedId && gid===selectedId; return `<div class="eb-classbox${selected?' selected':''}"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(gid)} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm${selected?' selected-class-btn':''}" type="button" data-eb-group-id="${esc(gid)}" ${selected?'aria-pressed="true"':''}>${selected?'✓ Sélectionné':'Choisir cette classe'}</button></div>`; }).join("")+
+    groups.map(g=>{ const gid=String(g.id); const selected=selectedId && gid===selectedId; return `<div class="eb-classbox${selected?' selected':''}"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(gid)} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm${selected?' selected-class-btn':''}" type="button" data-eb-group-id="${esc(gid)}" ${selected?'aria-pressed="true" disabled':''}>${selected?'✓ Sélectionné':'Choisir cette classe'}</button></div>`; }).join("")+
   '</div>';
 }
 function ebBrowserPref(){ const s=document.getElementById("ebBrowser"); return s ? s.value : "auto"; }
@@ -3674,23 +3708,12 @@ function ebToggleHandler(on){
   if(on && !ebData) ebFetchStatus();
 }
 async function ebFetchStatus(){
-  let changed=false;
-  try{
-    const j=await ebGet("/api/eb/status");
-    if(j.ok && j.hasData && j.data){
-      ebData=j.data;
-      state.ebichelchenData=ebData;
-      autofillEbMap();
-      saveState();
-      changed=true;
-    }
-  }catch(e){}
+  // v130: ne plus restaurer automatiquement d’anciennes données e-Bichelchen
+  // depuis le cache local. Cela évite qu’une ancienne liste de classes soit affichée
+  // comme si l’utilisateur était encore connecté. Les données e-Bichelchen ne sont
+  // appliquées qu’après un clic explicite sur « Connecter e-Bichelchen » ou
+  // « Choisir cette classe ».
   renderEbPanel();
-  if(changed){
-    applyChannelVisibility();
-    renderStudents();
-    renderMails();
-  }
 }
 function renderEbPanel(){
   const card=document.getElementById("ebCard"); if(!card) return;
@@ -3777,7 +3800,7 @@ async function ebConnectFlow(){
   try{
     const j=await ebGet("/api/eb/open-browser?browser="+encodeURIComponent(ebBrowserPref()));
     if(!j.ok) throw new Error(j.error||"Erreur");
-    setEbStatus("Connectez-vous dans la fenêtre e-Bichelchen ouverte. La lecture des élèves démarre automatiquement …","info");
+    setEbStatus("Connectez-vous dans la fenêtre e-Bichelchen ouverte. La lecture des élèves démarre automatiquement … <button type=\"button\" class=\"ghost sm\" data-eb-read-now style=\"margin-left:8px\">Relire maintenant</button>","info");
     ebAutoStart=Date.now();
     ebAutoTimer=setInterval(ebAutoAttempt, 2600);
     ebAutoAttempt();
@@ -3798,7 +3821,7 @@ async function ebAutoAttempt(){
     ebApplyRead(j.data);
     if(!j.data.needsGroupSelection){ fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
   }
-  else { setEbStatus("En attente de la connexion e-Bichelchen … "+(j&&j.error?('<span class="hint">'+esc(String(j.error).slice(0,220))+'</span>'):''),"info"); }
+  else { setEbStatus("En attente de la connexion e-Bichelchen … "+(j&&j.error?('<span class="hint">'+esc(String(j.error).slice(0,220))+'</span>'):'')+' <button type="button" class="ghost sm" data-eb-read-now style="margin-left:8px">Relire maintenant</button>',"info"); }
 }
 async function ebRead(quiet, groupId){
   setEbStatus("Lecture des données e-Bichelchen …","info");
@@ -4025,7 +4048,7 @@ document.getElementById("confirmGo").onclick=async()=>{
 /* Init */
 try{ window.setWorkflowMode=setWorkflowMode; window.workflowMode=workflowMode; window.ecSafeChooseMode=ecSafeChooseMode; }catch(e){}
 try{
-  bindSetup(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); checkAccount(); showStartupSessionChoice();
+  startLocalAppHeartbeat(); bindSetup(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); checkAccount(); showStartupSessionChoice();
 }catch(e){
   console.error("Erreur init EntretienConnect", e);
   try{ var b=document.getElementById("setupCurrent"); if(b) b.innerHTML='<div class="banner warn compact">Erreur au démarrage : '+esc(String(e&&e.message||e))+'</div>'; }catch(_){}
