@@ -321,7 +321,9 @@
   .eb-connect-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0 10px}
   .eb-browser{width:auto;min-width:150px;height:36px;padding:6px 10px;border-radius:10px}
   #ebStatus{margin:0}
-  .eb-classbox{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin:8px 0;background:var(--surface-soft)}
+  .eb-classbox{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin:8px 0;background:var(--surface-soft);transition:border-color .15s,background .15s,box-shadow .15s}
+  .eb-classbox.selected{border:2px solid var(--accent);background:linear-gradient(180deg,#f8fbff,#edf4ff);box-shadow:0 10px 24px rgba(47,95,215,.14)}
+  .eb-classbox .selected-class-btn{background:var(--ok);border-color:var(--ok);color:#fff;cursor:default}
   .eb-classbox strong{font-size:15px}
   .eb-match-table{margin-top:10px}
   .eb-match-table td,.eb-match-table th{padding:7px 10px}
@@ -356,7 +358,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v127</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v128</span></p>
 </header>
 
 <nav class="tabs">
@@ -959,6 +961,8 @@ function defaultState(){
     assignments: {}, sent: [], reminderSent: [], subjectOverrides: {},
     ebOverrides: {},
     ebichelchenData: null,
+    ebichelchenGroups: [],
+    ebichelchenSelectedGroupId: "",
     // e-Bichelchen-Kanal (optional): publie en plus un message dans e-Bichelchen.
     ebichelchenSent: [],            // clés "date__slot" déjà publiées
     ebichelchenMap: {},             // id élève EntretienConnect -> id élève e-Bichelchen
@@ -1097,11 +1101,13 @@ function loadState(){
       overrides: s.overrides||{},
       subjectOverrides: s.subjectOverrides||{},
       ebOverrides: (s.ebOverrides && typeof s.ebOverrides==="object") ? s.ebOverrides : {},
-      ebichelchenData: (s.ebichelchenData && typeof s.ebichelchenData==="object") ? s.ebichelchenData : null,
+      ebichelchenData: null, // v128: ne jamais reprendre d’anciennes données e-Bichelchen depuis le localStorage
       sent: Array.isArray(s.sent)? s.sent : [],
       reminderSent: Array.isArray(s.reminderSent)? s.reminderSent : [],
       ebichelchenSent: Array.isArray(s.ebichelchenSent)? s.ebichelchenSent : [],
       ebichelchenMap: (s.ebichelchenMap && typeof s.ebichelchenMap==="object") ? s.ebichelchenMap : {},
+      ebichelchenGroups: [],
+      ebichelchenSelectedGroupId: "",
       options,
       graph: Object.assign(d.graph, s.graph||{}),
       account: Object.assign(d.account, s.account||{}),
@@ -1140,6 +1146,8 @@ function clearWorkSession(){
   state.ebichelchenSent=[];
   state.ebichelchenMap={};
   state.ebichelchenData=null;
+  state.ebichelchenGroups=[];
+  state.ebichelchenSelectedGroupId="";
   try{ ebData=null; }catch(e){}
   state.options.workflowMode="";
   state.options.setupDone=false;
@@ -1575,10 +1583,10 @@ function renderSetup(){
   if(reminderChoice){ reminderChoice.style.display="none"; reminderChoice.innerHTML=""; }
   if(status){
     const cards=[];
-    if(modeNeedsEb(mode) && !ebReady()){
-      if(ebNeedsGroupSelection()){
+    if(modeNeedsEb(mode)){
+      if(ebHasMultipleKnownGroups()){
         cards.push('<div class="banner warn compact">'+ebGroupChoiceHtml()+'</div>');
-      }else{
+      }else if(!ebReady()){
         cards.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button><div id="setupEbLiveStatus" class="hint" style="margin-top:8px"></div></div>');
       }
     }
@@ -1671,7 +1679,7 @@ document.addEventListener("click", function(ev){
   }
 }, true);
 
-// v127: les boutons de choix de classe e-Bichelchen sont liés par délégation,
+// v128: les boutons de choix de classe e-Bichelchen sont liés par délégation,
 // pour rester actifs même quand la liste est injectée dynamiquement dans Démarrage ou Envoi.
 document.addEventListener("click", function(ev){
   const gbtn = ev.target && ev.target.closest ? ev.target.closest("[data-eb-group-id]") : null;
@@ -3498,7 +3506,7 @@ function refreshSelectionUI(){
 /* ============================ e-Bichelchen-Kanal ============================
    Optionaler zweiter Versandkanal. Solange der Schalter aus ist, wird nichts
    geladen und kein Login verlangt. */
-let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v127: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
+let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v128: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
@@ -3543,11 +3551,23 @@ function setEbStatus(msg, cls){
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
-function ebNeedsGroupSelection(){ return !!(ebData && ebData.needsGroupSelection && Array.isArray(ebData.groups) && ebData.groups.length>1); }
+function ebKnownGroups(){
+  const groups = (ebData && Array.isArray(ebData.groups) && ebData.groups.length) ? ebData.groups : (Array.isArray(state.ebichelchenGroups) ? state.ebichelchenGroups : []);
+  return groups.filter(Boolean);
+}
+function ebSelectedGroupId(){
+  return String((ebData && ebData.group && ebData.group.id) || state.ebichelchenSelectedGroupId || "");
+}
+function ebNeedsGroupSelection(){ return !!((ebData && ebData.needsGroupSelection) && ebKnownGroups().length>1); }
+function ebHasMultipleKnownGroups(){ return ebKnownGroups().length>1; }
 function ebGroupChoiceHtml(){
-  if(!ebNeedsGroupSelection()) return "";
-  return '<div class="eb-inline-classes"><b>Plusieurs classes e-Bichelchen trouvées.</b><div class="hint" style="margin:4px 0 8px">Choisissez la classe à utiliser pour importer les élèves et publier les messages.</div>'+
-    ebData.groups.map(g=>`<div class="eb-classbox"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(String(g.id))} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm" type="button" data-eb-group-id="${esc(String(g.id))}">Choisir cette classe</button></div>`).join("")+
+  const groups=ebKnownGroups();
+  if(groups.length<2) return "";
+  const selectedId=ebSelectedGroupId();
+  const title=ebReady() ? "Classe e-Bichelchen utilisée" : "Plusieurs classes e-Bichelchen trouvées.";
+  const text=ebReady() ? "Vous pouvez changer de classe si besoin ; la liste des élèves sera alors relue." : "Choisissez la classe à utiliser pour importer les élèves et publier les messages.";
+  return '<div class="eb-inline-classes"><b>'+esc(title)+'</b><div class="hint" style="margin:4px 0 8px">'+esc(text)+'</div>'+
+    groups.map(g=>{ const gid=String(g.id); const selected=selectedId && gid===selectedId; return `<div class="eb-classbox${selected?' selected':''}"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(gid)} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm${selected?' selected-class-btn':''}" type="button" data-eb-group-id="${esc(gid)}" ${selected?'aria-pressed="true"':''}>${selected?'✓ Sélectionné':'Choisir cette classe'}</button></div>`; }).join("")+
   '</div>';
 }
 function ebBrowserPref(){ const s=document.getElementById("ebBrowser"); return s ? s.value : "auto"; }
@@ -3693,8 +3713,8 @@ function renderEbPanel(){
 }
 function renderEbGroupChooser(){
   const box=document.getElementById("ebGroupChooser"); if(!box) return;
-  if(!ebNeedsGroupSelection()){ box.innerHTML=""; return; }
-  box.innerHTML='<h3>Plusieurs classes trouvées — choisir ici</h3>'+ebGroupChoiceHtml();
+  if(!ebHasMultipleKnownGroups()){ box.innerHTML=""; return; }
+  box.innerHTML='<h3>Classe e-Bichelchen</h3>'+ebGroupChoiceHtml();
 }
 async function ebChooseGroup(id){ await ebRead(false, id); }
 try{ window.ebChooseGroup=ebChooseGroup; }catch(e){}
@@ -3743,10 +3763,12 @@ async function ebConnectFlow(){
   const btn=document.getElementById("ebConnect");
   if(btn) btn.disabled=true;
   ebStopAuto();
-  // v127: repartir proprement. Les anciennes classes mises en cache ne doivent pas
+  // v128: repartir proprement. Les anciennes classes mises en cache ne doivent pas
   // donner l’impression que l’utilisateur est encore connecté.
   ebData=null;
   state.ebichelchenData=null;
+  state.ebichelchenGroups=[];
+  state.ebichelchenSelectedGroupId="";
   state.ebichelchenMap=state.ebichelchenMap||{};
   saveState();
   renderSetup(); renderEbPanel(); applyChannelVisibility();
@@ -3789,8 +3811,18 @@ async function ebRead(quiet, groupId){
   }catch(e){ setEbStatus("Lecture impossible : "+esc(e.message||e),"err"); }
 }
 function ebApplyRead(data){
+  const previousGroups=ebKnownGroups();
   ebData=data||null;
-  state.ebichelchenData=ebData;
+  if(ebData){
+    if(Array.isArray(ebData.groups) && ebData.groups.length){
+      state.ebichelchenGroups=ebData.groups;
+    }else if(previousGroups.length){
+      ebData.groups=previousGroups;
+      state.ebichelchenGroups=previousGroups;
+    }
+    if(ebData.group && ebData.group.id){ state.ebichelchenSelectedGroupId=String(ebData.group.id); }
+  }
+  state.ebichelchenData=null; // v128: ne pas persister des classes potentiellement anciennes dans le navigateur
   saveState();
   autofillEbMap();
   let imported=0;
