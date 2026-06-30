@@ -356,17 +356,13 @@
 
   .source-lang-inline{justify-content:flex-end}
   .source-lang-inline .source-pill{margin-right:auto}
-  /* Mode complet : séparer le canal e-Bichelchen (1 langue) du canal e-mail (2 contacts). */
-  .student-contact-grid th.eb-lang-head,.student-contact-grid td.eb-lang-cell{border-right:1px solid var(--line);padding-right:16px!important}
-  .student-contact-grid th.eb-lang-head{white-space:nowrap}
-  .student-contact-grid td.eb-lang-cell .lang-select{margin:0}
 
 </style>
 </head>
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v143</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v144</span></p>
 </header>
 
 <nav class="tabs">
@@ -437,7 +433,8 @@
         <button class="ghost sm email-only" id="importCsvBtn">Importer un CSV</button>
         <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
       </div>
-      <p class="hint csv-hint">CSV (en-tête facultatif) : <code class="k">Prénom et nom de l’élève,contact1@...,langue1,contact2@...,langue2</code> — 1 élève par ligne. Langues : FR, DE, EN, LU.</p>
+      <p class="hint csv-hint">CSV (en-tête facultatif) : <code class="k">Prénom et nom de l’élève,contact1@...,langue1,contact2@...,langue2,langue e-Bichelchen</code> — 1 élève par ligne. La langue e-Bichelchen est facultative (par défaut celle du contact 1). Langues : FR, DE, EN, LU.</p>
+      <div class="mail-reset" id="resetStudentsRow" style="display:none;text-align:center;margin-top:12px"><a href="#" id="resetStudents" title="Supprimer tous les élèves de la liste">↺ Réinitialiser la liste d’élèves</a></div>
     </div>
   </section>
 
@@ -653,7 +650,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 143;
+const APP_VERSION = 144;
 
 window.addEventListener("error", function(ev){
   try{
@@ -820,6 +817,20 @@ function sendActionSentence(emailN, reminderN){
 function appointmentCount(n){ return countFr(n,"rendez-vous","rendez-vous"); }
 function trimesterNumber(){ const n=Number(state && state.options ? state.options.trimester : 3); return Math.min(3, Math.max(1, n||3)); }
 function reminderDaysBefore(){ const n=Number(state && state.options ? state.options.reminderDaysBefore : 1); return Math.min(3, Math.max(1, n||1)); }
+// Dimanche de Pâques (algorithme de Gauss/Meeus) pour situer les vacances de Pâques.
+function easterSunday(Y){ const a=Y%19,b=Math.floor(Y/100),c=Y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mon=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1; return new Date(Y,mon-1,day); }
+// Trimestre de l'année scolaire luxembourgeoise (~15 sept -> 15 juil) selon la date :
+// T1 : 15 sept -> vacances de Noël ; T2 : après Noël -> vacances de Pâques (~2 semaines) ;
+// T3 : après Pâques -> 15 juil. Approximation ; l'utilisateur peut toujours ajuster.
+function computeTrimesterForDate(d){
+  d=d||new Date();
+  const y=d.getFullYear();
+  const sep15=new Date(y,8,15), jul15=new Date(y,6,15);
+  const E=easterSunday(y); const easterBreakEnd=new Date(y,E.getMonth(),E.getDate()+7);
+  if(d>=sep15) return 1;                         // 15 sept -> 31 déc
+  if(d<jul15) return d<=easterBreakEnd ? 2 : 3;  // janv -> Pâques : T2 ; après Pâques -> 15 juil : T3
+  return 1;                                      // été (15 juil -> 14 sept) : nouvelle année scolaire
+}
 function reminderTimeValue(){ return /^\d{2}:\d{2}$/.test(String(state && state.options ? state.options.reminderTime : "")) ? state.options.reminderTime : "15:00"; }
 function reminderScheduleSummary(){ const d=reminderDaysBefore(); return d+" jour"+(d>1?"s":"")+" avant, à "+reminderTimeValue(); }
 function formatReminderDueLabel(iso){
@@ -922,24 +933,24 @@ function messageMap(ds, hhmm, stu, lang){
 }
 const TEMPLATE_DEFAULTS={
   fr:{
-    confirmation:{subject:"Rendez-vous individuel — bilan du {TRIMESTRE}",body:"Chers parents,\n\nJe vous confirme notre rendez-vous individuel au sujet du {TRIMESTRE} et du bilan intermédiaire de votre enfant {ENFANT}, fixé au {DATE} à {TIME}.\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
-    reminder:{subject:"Rappel — rendez-vous individuel",body:"Chers parents,\n\nJe me permets de vous rappeler notre rendez-vous individuel prévu {RAPPEL_DELAI}, le {DATE}, à {TIME}, concernant votre enfant {ENFANT}.\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
-    ebichelchen:{subject:"Rendez-vous individuel — {ENFANT}",body:"Chers parents,\n\nJe vous confirme notre rendez-vous individuel au sujet du {TRIMESTRE} de votre enfant {ENFANT}, fixé au {DATE} à {TIME}, dans ma salle de classe.\n\nBien cordialement"}
+    confirmation:{subject:"Confirmation de rendez-vous – bilan intermédiaire de {ENFANT}",body:"Chers parents,\n\nJe vous confirme notre rendez-vous individuel concernant le bilan intermédiaire du {TRIMESTRE} de votre enfant {ENFANT}, prévu le {DATE} à {TIME}.\n\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
+    reminder:{subject:"Rappel de rendez-vous – bilan intermédiaire de {ENFANT}",body:"Chers parents,\n\nJe me permets de vous rappeler notre rendez-vous individuel prévu {RAPPEL_DELAI}, le {DATE}, à {TIME}, concernant votre enfant {ENFANT}.\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
+    ebichelchen:{subject:"Rendez-vous individuel – bilan intermédiaire",body:"Chers parents,\n\nJe vous confirme notre rendez-vous individuel concernant le bilan intermédiaire du {TRIMESTRE} de votre enfant {ENFANT}, prévu le {DATE} à {TIME}, dans ma salle de classe.\n\nBien cordialement"}
   },
   de:{
-    confirmation:{subject:"Einzelgespräch — Bilanz zum {TRIMESTRE}",body:"Liebe Eltern,\n\nich bestätige Ihnen hiermit unseren Termin für ein individuelles Gespräch zum {TRIMESTRE} und zum Zwischenbericht Ihres Kindes {ENFANT}. Der Termin findet am {DATE} um {TIME} statt.\nDas Gespräch dauert ungefähr zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihre Anwesenheit."},
-    reminder:{subject:"Erinnerung — individuelles Gespräch",body:"Liebe Eltern,\n\nich möchte Sie gerne an unser individuelles Gespräch {RAPPEL_DELAI}, am {DATE} um {TIME}, bezüglich Ihres Kindes {ENFANT} erinnern.\nDas Gespräch dauert ungefähr zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihre Anwesenheit."},
-    ebichelchen:{subject:"Einzelgespräch — {ENFANT}",body:"Liebe Eltern,\n\nich bestätige Ihnen unser individuelles Gespräch zum {TRIMESTRE} Ihres Kindes {ENFANT} am {DATE} um {TIME} in meinem Klassensaal.\n\nMit freundlichen Grüßen"}
+    confirmation:{subject:"Terminbestätigung – Zwischenbilanz von {ENFANT}",body:"Liebe Eltern,\n\nich bestätige Ihnen unseren Einzeltermin zur Zwischenbilanz im {TRIMESTRE} Ihres Kindes {ENFANT}, vorgesehen am {DATE} um {TIME}.\n\nDas Gespräch dauert ungefähr zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihre Anwesenheit."},
+    reminder:{subject:"Terminerinnerung – Zwischenbilanz von {ENFANT}",body:"Liebe Eltern,\n\nich möchte Sie gerne an unser individuelles Gespräch {RAPPEL_DELAI}, am {DATE} um {TIME}, bezüglich Ihres Kindes {ENFANT} erinnern.\nDas Gespräch dauert ungefähr zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihre Anwesenheit."},
+    ebichelchen:{subject:"Einzelgespräch – Zwischenbilanz",body:"Liebe Eltern,\n\nich bestätige Ihnen unseren Einzeltermin zur Zwischenbilanz im {TRIMESTRE} Ihres Kindes {ENFANT}, vorgesehen am {DATE} um {TIME}, in meinem Klassensaal.\n\nMit freundlichen Grüßen"}
   },
   en:{
-    confirmation:{subject:"Individual meeting — {TRIMESTRE} report",body:"Dear parents,\n\nI confirm our individual meeting about the {TRIMESTRE} and the interim report of your child {ENFANT}, scheduled for {DATE} at {TIME}.\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for your attendance."},
-    reminder:{subject:"Reminder — individual meeting",body:"Dear parents,\n\nI would like to remind you of our individual meeting scheduled for {RAPPEL_DELAI}, on {DATE} at {TIME}, concerning your child {ENFANT}.\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for your attendance."},
-    ebichelchen:{subject:"Individual meeting — {ENFANT}",body:"Dear parents,\n\nI confirm our individual meeting about the {TRIMESTRE} of your child {ENFANT} on {DATE} at {TIME}, in my classroom.\n\nKind regards"}
+    confirmation:{subject:"Appointment confirmation – interim report for {ENFANT}",body:"Dear parents,\n\nI confirm our individual meeting regarding the interim report of the {TRIMESTRE} for your child {ENFANT}, scheduled for {DATE} at {TIME}.\n\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for your attendance."},
+    reminder:{subject:"Appointment reminder – interim report for {ENFANT}",body:"Dear parents,\n\nI would like to remind you of our individual meeting scheduled for {RAPPEL_DELAI}, on {DATE} at {TIME}, concerning your child {ENFANT}.\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for your attendance."},
+    ebichelchen:{subject:"Individual meeting – interim report",body:"Dear parents,\n\nI confirm our individual meeting regarding the interim report of the {TRIMESTRE} for your child {ENFANT}, scheduled for {DATE} at {TIME}, in my classroom.\n\nKind regards"}
   },
   lb:{
-    confirmation:{subject:"Individuellt Gespréich — Bilan vum {TRIMESTRE}",body:"Léif Elteren,\n\nEch confirméieren Iech eist individuellt Gespréich zum {TRIMESTRE} an zum Zwëschebilan vun Ärem Kand {ENFANT}, festgeluecht op {DATE} um {TIME}.\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Är Presenz."},
-    reminder:{subject:"Rappel — individuellt Gespréich",body:"Léif Elteren,\n\nEch erënneren Iech gär un eist individuellt Gespréich {RAPPEL_DELAI}, den {DATE} um {TIME}, betreffend Äert Kand {ENFANT}.\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Är Presenz."},
-    ebichelchen:{subject:"Individuellt Gespréich — {ENFANT}",body:"Léif Elteren,\n\nEch confirméieren Iech eist individuellt Gespréich zum {TRIMESTRE} vun Ärem Kand {ENFANT} den {DATE} um {TIME} a mengem Klassesall.\n\nMat frëndleche Gréiss"}
+    confirmation:{subject:"Confirmatioun vum Rendez-vous – Zwëschebilan vun {ENFANT}",body:"Léif Elteren,\n\nEch confirméieren Iech eist individuellt Gespréich iwwer de Zwëschebilan vum {TRIMESTRE} vun Ärem Kand {ENFANT}, virgesinn den {DATE} um {TIME}.\n\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Är Presenz."},
+    reminder:{subject:"Rappel vum Rendez-vous – Zwëschebilan vun {ENFANT}",body:"Léif Elteren,\n\nEch erënneren Iech gär un eist individuellt Gespréich {RAPPEL_DELAI}, den {DATE} um {TIME}, betreffend Äert Kand {ENFANT}.\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Är Presenz."},
+    ebichelchen:{subject:"Individuellt Gespréich – Zwëschebilan",body:"Léif Elteren,\n\nEch confirméieren Iech eist individuellt Gespréich iwwer de Zwëschebilan vum {TRIMESTRE} vun Ärem Kand {ENFANT}, virgesinn den {DATE} um {TIME}, a mengem Klassesall.\n\nMat frëndleche Gréiss"}
   }
 };
 function normalizeTemplateMode(mode){ return (mode==="reminder"||mode==="ebichelchen") ? mode : "confirmation"; }
@@ -974,7 +985,7 @@ function defaultState(){
     // e-Bichelchen-Kanal (optional): publie en plus un message dans e-Bichelchen.
     ebichelchenSent: [],            // clés "date__slot" déjà publiées
     ebichelchenMap: {},             // id élève EntretienConnect -> id élève e-Bichelchen
-    options: { combine:false, useSig:true, includeLogo:true, logoMode:"unesco", templateCollapsed:false, templateMode:"confirmation", templateLang:"fr", defaultLang:"fr", trimester:3, reminderEnabled:true, reminderDaysBefore:1, reminderTime:"15:00", emailEnabled:false, ebichelchenEnabled:false, workflowMode:"", setupDone:false },
+    options: { combine:false, useSig:true, includeLogo:true, logoMode:"unesco", templateCollapsed:false, templateMode:"confirmation", templateLang:"fr", defaultLang:"fr", trimester:computeTrimesterForDate(), reminderEnabled:false, reminderDaysBefore:1, reminderTime:"15:00", emailEnabled:false, ebichelchenEnabled:false, workflowMode:"", setupDone:false },
     graph: { clientId:"", tenant:"organizations" },
     account: { name:"", email:"" },
     // Vom Nutzer selbst festgelegter Standard (überschreibt den Werks-Standard beim Zurücksetzen).
@@ -1055,6 +1066,12 @@ function loadState(){
     if((s.appVersion||0) < 73){
       migrateTemplateDefaultsToVariables(tpl);
     }
+    // v144: nouveaux textes standard. On rafraîchit la confirmation tant que l'utilisateur
+    // n'a pas enregistré ses propres textes par défaut (userDefaults).
+    if((s.appVersion||0) < 144 && !s.userDefaults){
+      const f=factoryTemplate("fr","confirmation");
+      tpl.subject=f.subject; tpl.bodyHtml=f.bodyHtml; tpl.body=f.body;
+    }
     delete tpl.sigFields;
     tpl.v = 17;
     const reminderTpl = Object.assign({}, d.reminderTemplate, s.reminderTemplate||{});
@@ -1067,6 +1084,10 @@ function loadState(){
         const rf=factoryTemplate("fr","reminder");
         reminderTpl.subject=rf.subject; reminderTpl.bodyHtml=rf.bodyHtml; reminderTpl.body=rf.body;
       }
+    }
+    if((s.appVersion||0) < 144 && !s.userDefaults){
+      const rf=factoryTemplate("fr","reminder");
+      reminderTpl.subject=rf.subject; reminderTpl.bodyHtml=rf.bodyHtml; reminderTpl.body=rf.body;
     }
     reminderTpl.v = 1;
     const options = Object.assign({}, d.options, s.options||{});
@@ -1087,6 +1108,10 @@ function loadState(){
       options.workflowMode="";
       options.setupDone=false;
       options.templateMode="confirmation";
+      // v144: au démarrage d'une session vide, on présente les valeurs par défaut fraîches :
+      // trimestre déduit de la date, rappel décoché.
+      options.trimester=computeTrimesterForDate();
+      options.reminderEnabled=false;
     } else {
       if(!options.workflowMode){
         options.workflowMode = options.emailEnabled && options.ebichelchenEnabled ? "both" : (options.ebichelchenEnabled ? "ebichelchen" : (options.emailEnabled ? "email" : ""));
@@ -1100,6 +1125,12 @@ function loadState(){
     const config = Object.assign({}, d.config, s.config||{});
     if((s.appVersion||0) < 82 && config.start==="14:00" && config.end==="16:00" && Number(config.durationMin||20)===20){
       config.end="18:00";
+    }
+    // v144: appliquer une fois les nouveaux réglages par défaut (même pour une session en cours) :
+    // trimestre déduit de la date et rappel décoché.
+    if((s.appVersion||0) < 144){
+      options.trimester=computeTrimesterForDate();
+      options.reminderEnabled=false;
     }
     return {
       appVersion: APP_VERSION,
@@ -1122,8 +1153,8 @@ function loadState(){
       userDefaults: migrateUserDefaultsToVariables(s.userDefaults || null),
       template: tpl,
       reminderTemplate: reminderTpl,
-      ebichelchenTemplate: (function(){ const f=factoryTemplate("fr","ebichelchen"); const t=Object.assign({}, f, s.ebichelchenTemplate||{}); if(!t.bodyHtml) t.bodyHtml=bodyHtmlFromPlain(t.body||f.body); t.body=textFromHtml(t.bodyHtml)||t.body||f.body; if(!t.subject) t.subject=f.subject; t.v=1; return t; })(),
-      localizedTemplates: normalizeLocalizedTemplates(s.localizedTemplates||{})
+      ebichelchenTemplate: (function(){ const f=factoryTemplate("fr","ebichelchen"); const refresh=((s.appVersion||0) < 144 && !s.userDefaults); const t=Object.assign({}, f, refresh ? {} : (s.ebichelchenTemplate||{})); if(!t.bodyHtml) t.bodyHtml=bodyHtmlFromPlain(t.body||f.body); t.body=textFromHtml(t.bodyHtml)||t.body||f.body; if(!t.subject) t.subject=f.subject; t.v=1; return t; })(),
+      localizedTemplates: normalizeLocalizedTemplates(((s.appVersion||0) < 144 && !s.userDefaults) ? {} : (s.localizedTemplates||{}))
     };
   }catch(e){ return defaultState(); }
 }
@@ -1830,6 +1861,8 @@ function renderStudents(){
     if(!mode) note.innerHTML='<div class="banner info compact">Choisissez d’abord le mode dans « Démarrage ».</div>';
     else note.innerHTML='';
   }
+  const resetStudentsRow=document.getElementById("resetStudentsRow");
+  if(resetStudentsRow) resetStudentsRow.style.display = state.students.length>0 ? "" : "none";
   if(importEbBtn){
     const missingCount = eb ? ebMissingImportCount() : 0;
     const canImportMissing = eb && ebReady() && missingCount>0;
@@ -1857,7 +1890,7 @@ function renderStudents(){
   } else if(em && eb){
     // Mode complet : 1 langue propre au message e-Bichelchen (en premier, comme dans l'envoi)
     // + 2 langues e-mail (un par contact).
-    let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th style="width:22%">Élève</th><th class="contact-group eb-lang-head" style="width:142px">e-Bichelchen</th><th class="contact-group" style="width:30%">Contact 1</th><th class="contact-group contact2-start" style="width:30%">Contact 2</th><th style="width:62px"></th></tr></thead><tbody>';
+    let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th style="width:26%">Élève</th><th class="contact-group eb-lang-head" style="width:84px">E-Bich</th><th class="contact-group" style="width:30%">Contact 1</th><th class="contact-group contact2-start" style="width:30%">Contact 2</th><th style="width:62px"></th></tr></thead><tbody>';
     state.students.forEach((s,idx)=>{
       if(!s.lang1) s.lang1=state.options.defaultLang||"fr";
       if(!s.lang2) s.lang2=state.options.defaultLang||"fr";
@@ -1944,11 +1977,13 @@ document.getElementById("addStudent").onclick=()=>{
     alert("Dans les modes e-Bichelchen, la liste des élèves vient de la classe e-Bichelchen. Changez de mode si vous voulez gérer les élèves manuellement.");
     return;
   }
-  const dl=normalizeLang("fr");
+  const dl=normalizeLang(state.options.defaultLang||"fr");
   state.students.push({id:uid(),name:"",email1:"",email2:"",lang1:dl,lang2:dl,langEb:dl});
   saveState(); renderStudents(); renderSetup();
 };
 const _importEbStudentsBtn=document.getElementById("importEbStudentsBtn"); if(_importEbStudentsBtn){ _importEbStudentsBtn.onclick=()=>{ const added=importEbStudentsToList(); alert(added ? (added+" élève(s) réimporté(s) depuis e-Bichelchen.") : "Aucun nouvel élève à importer."); }; }
+const _resetStudents=document.getElementById("resetStudents");
+if(_resetStudents){ _resetStudents.onclick=(e)=>{ if(e) e.preventDefault(); if(!state.students.length){ return; } if(!confirm("Voulez-vous vraiment supprimer tous les élèves de la liste ?\n\nLes rendez-vous attribués à ces élèves seront aussi retirés. Le modèle et la signature sont conservés.")) return; state.students=[]; state.ebichelchenMap={}; state.assignments={}; saveState(); renderStudents(); renderSetup(); renderMails(); }; }
 document.getElementById("importCsvBtn").onclick=()=>document.getElementById("csvFile").click();
 document.getElementById("csvFile").onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -1960,22 +1995,24 @@ document.getElementById("csvFile").onchange=e=>{
       const c=line.split(/[,;\t]/).map(x=>x.trim());
       if(i===0 && /^(name|nom|prénom[ _-]et[ _-]nom[ _-]de[ _-]l[’']?élève|prenom[ _-]et[ _-]nom[ _-]de[ _-]l[’']?eleve|nom[_ -]de[_ -]l[’']?élève|nom[_ -]de[_ -]l[’']?eleve|schüler|eleve|élève)$/i.test(c[0]||"")) return;
       if(!c[0]) return;
-      const dl=normalizeLang("fr");
+      const dl=normalizeLang(state.options.defaultLang||"fr");
       const looksLikeLang2=c.length>=5 || ["fr","de","en","lb","lu","deutsch","english","lëtzebuergesch","letzebuergesch"].includes(String(c[2]||"").trim().toLowerCase());
       const email1=c[1]||"";
       const lang1=looksLikeLang2 ? normalizeLang(c[2]||dl) : dl;
       const email2=looksLikeLang2 ? (c[3]||"") : (c[2]||"");
       const lang2=looksLikeLang2 ? normalizeLang(c[4]||dl) : dl;
+      // 6e colonne facultative : langue du message e-Bichelchen (repli sur la langue du contact 1).
+      const langEb=normalizeLang(c[5]||lang1);
       if(ebMode){
         const match=state.students.find(st=>ebNormName(st.name)===ebNormName(c[0]));
         if(match){
-          match.email1=email1; match.email2=email2; match.lang1=lang1; match.lang2=lang2;
+          match.email1=email1; match.email2=email2; match.lang1=lang1; match.lang2=lang2; match.langEb=langEb;
           merged++;
         } else {
           ignored++;
         }
       } else {
-        state.students.push({id:uid(),name:c[0],email1,email2,lang1,lang2});
+        state.students.push({id:uid(),name:c[0],email1,email2,lang1,lang2,langEb});
         added++;
       }
     });
@@ -3583,7 +3620,10 @@ function refreshSelectionUI(){
   if(cnt) cnt.textContent = sendable.length ? (selected+" sur "+sendable.length+" "+(selected===1?"sélectionné":"sélectionnés")) : "";
   updateMailBanner();
   const bar=document.getElementById("mailSelectBar");
-  if(bar) bar.style.display = sendable.length>=2 ? "flex" : "none";
+  // v144: afficher « Tout sélectionner » dès qu'au moins 2 messages sont visibles dans l'aperçu actif
+  // (e-Bichelchen comme e-mails et rappels), même si certains ne sont pas encore liés.
+  const visibleNotDone=visibleMsgs.filter(m=>!isPreviewDone(m));
+  if(bar) bar.style.display = visibleNotDone.length>=2 ? "flex" : "none";
   const sendBtn=document.getElementById("sendAll");
   if(sendBtn){
     const selectedMsgs=currentMsgs.filter(m=>!isMsgDone(m) && !excludedSet.has(m.id) && !(m.kind==="eb" && !m.matchedId));
@@ -3684,7 +3724,7 @@ function autofillEbMap(){
 function importEbStudentsToList(auto=false){
   const arr=ebStudents();
   if(!arr.length) return 0;
-  const dl=normalizeLang("fr");
+  const dl=normalizeLang(state.options.defaultLang||"fr");
   state.students=state.students||[];
   state.ebichelchenMap=state.ebichelchenMap||{};
   const existing=new Set(state.students.map(st=>ebNormName(st.name)));
