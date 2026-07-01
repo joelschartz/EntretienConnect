@@ -362,7 +362,7 @@
 <body>
 <header>
   <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v144</span></p>
+  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v145</span></p>
 </header>
 
 <nav class="tabs">
@@ -650,7 +650,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 144;
+const APP_VERSION = 145;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1188,6 +1188,12 @@ function clearWorkSession(){
   state.ebichelchenGroups=[];
   state.ebichelchenSelectedGroupId="";
   try{ ebData=null; }catch(e){}
+  // v145: fermer aussi la fenêtre e-Bichelchen et vider l'état côté helper local,
+  // sinon (surtout sous Windows où la fenêtre reste ouverte) une ancienne session
+  // reste active et bloque une nouvelle connexion.
+  try{ if(typeof ebStopAuto==="function") ebStopAuto(); }catch(e){}
+  try{ fetch("/api/eb/cleanup?closeEb=1",{cache:"no-store"}).catch(function(){}); }catch(e){}
+  try{ fetch("/api/eb/clear",{cache:"no-store"}).catch(function(){}); }catch(e){}
   state.options.workflowMode="";
   state.options.setupDone=false;
   state.options.emailEnabled=false;
@@ -1596,7 +1602,7 @@ function setWorkflowMode(mode, opts={}){
 function setupProgressHtml(){
   const mode=workflowMode();
   if(!mode) return '<div class="banner info compact">Commencez par choisir comment vous voulez contacter les parents.</div>';
-  return '<div class="banner info compact"><span class="pill ok">Mode : '+esc(modeLabel(mode))+'</span></div>';
+  return '<div class="banner info compact"><span class="pill info">Mode : '+esc(modeLabel(mode))+'</span></div>';
 }
 function ebConnectedSummaryHtml(){
   if(!ebReady()) return "";
@@ -1701,7 +1707,7 @@ function ecVisualSelectMode(mode){
       }
     });
     const cur=document.getElementById("setupCurrent");
-    if(cur){ cur.innerHTML='<div class="banner info compact"><span class="pill ok">Mode : '+esc(modeLabel(mode))+'</span></div>'; }
+    if(cur){ cur.innerHTML='<div class="banner info compact"><span class="pill info">Mode : '+esc(modeLabel(mode))+'</span></div>'; }
     const nav=document.getElementById("setupNavHint"); if(nav) nav.style.display="inline";
   }catch(e){ console.error(e); }
 }
@@ -3724,7 +3730,10 @@ function autofillEbMap(){
 function importEbStudentsToList(auto=false){
   const arr=ebStudents();
   if(!arr.length) return 0;
-  const dl=normalizeLang(state.options.defaultLang||"fr");
+  // v145: les élèves importés depuis e-Bichelchen démarrent toujours en français.
+  // (La « Langue standard pour nouveaux contacts » ne s'applique qu'aux élèves ajoutés
+  //  manuellement / par CSV, pas à l'import e-Bichelchen.)
+  const dl=normalizeLang("fr");
   state.students=state.students||[];
   state.ebichelchenMap=state.ebichelchenMap||{};
   const existing=new Set(state.students.map(st=>ebNormName(st.name)));
@@ -3891,6 +3900,9 @@ async function ebConnectFlow(){
   state.ebichelchenMap=state.ebichelchenMap||{};
   saveState();
   renderSetup(); renderEbPanel(); applyChannelVisibility();
+  // v145: fermer d'abord une éventuelle fenêtre e-Bichelchen restée ouverte (session
+  // précédente) avant d'en ouvrir une nouvelle, pour éviter un état bloqué.
+  try{ await ebGet("/api/eb/cleanup?closeEb=1"); }catch(_){}
   try{ await ebGet("/api/eb/clear"); }catch(_){}
   setEbStatus("Ouverture de la fenêtre de connexion e-Bichelchen …","info");
   try{
