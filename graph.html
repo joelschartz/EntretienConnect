@@ -356,6 +356,36 @@
     .mail-template-head{align-items:flex-start;flex-wrap:wrap}.template-toggle-zone{flex:1 1 100%}.logo-mode-buttons{width:100%}.logo-mode-btn{flex:1 1 auto}
   }
 
+  /* Card header with action icon */
+  .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
+  .card-head h2{margin:0}
+  a.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:16px;font-weight:400;line-height:1;text-decoration:none;cursor:pointer;padding:0;margin:0;transition:background .12s,color .12s,border-color .12s}
+  .mailbody .mail-reset{display:flex;justify-content:flex-end}
+  a.icon-btn:hover{background:var(--err-soft);color:var(--err);border-color:#f6cfcb}
+  a.icon-btn.save:hover{background:var(--ok-soft);color:var(--ok);border-color:#bfe5d1}
+  .editor-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+
+  /* "?" info tooltip */
+  .tip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--accent-soft);color:#4a55a2;font-size:12.5px;font-weight:750;cursor:help;user-select:none;outline:none}
+  .tip:hover,.tip:focus{background:#e0e5fd}
+  .tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);background:#26262b;color:#fff;padding:10px 13px;border-radius:11px;font-size:12.5px;font-weight:450;line-height:1.5;width:max-content;max-width:min(320px,78vw);white-space:pre-line;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s;z-index:120;box-shadow:0 10px 30px rgba(16,24,40,.22)}
+  .tip.tip-left::after{left:auto;right:-6px;transform:none}
+  .tip:hover::after,.tip:focus::after{opacity:1;visibility:visible}
+
+  /* Compact logo select */
+  .logo-mode-select{width:auto;min-width:170px;height:36px;padding:6px 10px;border-radius:10px;background:#fff}
+  .signature-options-row .hint{margin:0}
+
+  /* Setup cards highlighted in their own pastel color */
+  .setup-mode-card[data-mode="ebichelchen"]:hover{border-color:#a9d9c1}
+  .setup-mode-card[data-mode="both"]:hover{border-color:#ecd5a8}
+  .setup-mode-card[data-mode="ebichelchen"].active{border-color:var(--ok);background:linear-gradient(180deg,#fafffc,#e7f5ee);box-shadow:0 8px 24px rgba(46,139,100,.16)}
+  .setup-mode-card[data-mode="ebichelchen"].active:after{background:var(--ok)}
+  .setup-mode-card[data-mode="ebichelchen"].active h3{color:var(--ok)}
+  .setup-mode-card[data-mode="both"].active{border-color:#c98a2e;background:linear-gradient(180deg,#fffdf8,#faefda);box-shadow:0 8px 24px rgba(201,138,46,.16)}
+  .setup-mode-card[data-mode="both"].active:after{background:#c98a2e}
+  .setup-mode-card[data-mode="both"].active h3{color:var(--warn)}
+
   .source-lang-inline{justify-content:flex-end}
   .source-lang-inline .source-pill{margin-right:auto}
 
@@ -363,7 +393,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v148</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v149</span></h1>
 </header>
 
 <nav class="tabs">
@@ -406,7 +436,7 @@
 
   <section class="panel" id="panel-students">
     <div class="card">
-      <h2 id="studentsTitle">Liste des élèves</h2>
+      <div class="card-head"><h2 id="studentsTitle">Liste des élèves</h2><span id="resetStudentsRow" style="display:none"><a href="#" id="resetStudents" class="icon-btn" title="Réinitialiser la liste d’élèves">↺</a></span></div>
       <div id="studentModeNote" class="student-mode-note"></div>
       <div class="student-lang-default">
         <label for="defaultLangStudents">Langue standard pour nouveaux contacts</label>
@@ -423,10 +453,11 @@
         <div class="spacer"></div>
         <button class="ghost sm" id="importEbStudentsBtn" type="button" style="display:none">Importer depuis e-Bichelchen</button>
         <button class="ghost sm email-only" id="importCsvBtn">Importer un CSV</button>
+        <span class="tip tip-left email-only csv-hint" tabindex="0" data-tip="Format CSV — 1 élève par ligne :
+Élève, contact1@…, langue1, contact2@…, langue2
+Langues : FR, DE, EN, LU">?</span>
         <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
       </div>
-      <p class="hint csv-hint">CSV : <code class="k">Élève,contact1@...,langue1,contact2@...,langue2</code> — 1 élève par ligne · langues FR, DE, EN, LU.</p>
-      <div class="mail-reset" id="resetStudentsRow" style="display:none;text-align:center;margin-top:12px"><a href="#" id="resetStudents" title="Supprimer tous les élèves de la liste">↺ Réinitialiser la liste d’élèves</a></div>
     </div>
   </section>
 
@@ -440,9 +471,8 @@
       </div>
     </div>
     <div class="card">
-      <h2 style="margin:0 0 12px">Jours d’entretien</h2>
+      <div class="card-head"><h2>Jours d’entretien</h2><span id="resetCalRow" style="display:none"><a href="#" id="resetCal" class="icon-btn" title="Réinitialiser le calendrier &amp; les rendez-vous">↺</a></span></div>
       <div id="miniCal"></div>
-      <div style="max-width:520px;margin:0 auto"><div class="mail-reset" id="resetCalRow" style="display:none"><a href="#" id="resetCal" title="Supprimer tous les jours sélectionnés et les rendez-vous attribués">↺ Réinitialiser le calendrier &amp; les rendez-vous</a></div></div>
     </div>
     <div class="card">
       <h2>Attribuer les rendez-vous</h2>
@@ -562,25 +592,30 @@
         <div class="mailbody-head">
           <label class="mail-subject-label" for="tplSubject">Objet</label>
           <input id="tplSubject" class="mail-subject-input" title="Modifier l’objet">
+          <span class="tip tip-left" tabindex="0" data-tip="Variables remplacées automatiquement à l’envoi :
+{DATE} — date du rendez-vous
+{TIME} — heure
+{ENFANT} — prénom de l’élève
+{TRIMESTRE} — trimestre choisi
+{RAPPEL_DELAI} — délai du rappel">?</span>
         </div>
         <div id="tplBodyEditor" class="rich-editor mail-editor template-mail-editor" contenteditable="true" spellcheck="true"></div>
       </div>
-      <div class="mail-reset" id="resetTplBodyRow" style="display:none"><a href="#" id="resetTplBody">↺ Réinitialiser le texte par défaut</a><a href="#" id="saveTplBody" class="save-default" title="Définir le texte actuel + l’objet comme standard personnel">✓ enregistrer comme standard</a></div>
-      <p class="hint">Les variables <code class="k">{DATE}</code>, <code class="k">{TIME}</code>, <code class="k">{ENFANT}</code> (prénom), <code class="k">{TRIMESTRE}</code> et <code class="k">{RAPPEL_DELAI}</code> sont automatiquement remplacées à l’envoi.</p>
+      <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Enregistrer le texte + l’objet comme standard personnel">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Réinitialiser le texte par défaut">↺</a></div>
       <div id="sigMissing" style="margin-top:12px"></div>
       <div id="inlineSignatureControls" class="inline-sig-controls">
         <div class="signature-options-row">
-          <span class="signature-options-label">Logo dans la signature :</span>
-          <div id="logoModeButtons" class="logo-mode-buttons" role="group" aria-label="Choisir le logo dans la signature">
-            <button type="button" class="logo-mode-btn" data-logo-mode="unesco">Logo UNESCO</button>
-            <button type="button" class="logo-mode-btn" data-logo-mode="custom">Téléverser un logo personnel</button>
-            <button type="button" class="logo-mode-btn" data-logo-mode="none">Aucun logo</button>
-          </div>
+          <span class="signature-options-label">Logo</span>
+          <select id="logoModeSelect" class="logo-mode-select" aria-label="Choisir le logo dans la signature">
+            <option value="unesco">Logo UNESCO</option>
+            <option value="custom">Logo personnel…</option>
+            <option value="none">Aucun logo</option>
+          </select>
           <input type="file" id="logoFile" accept="image/*" style="display:none">
+          <span id="sigStatus" class="hint" style="margin:0"></span>
         </div>
-        <div id="sigStatus" class="hint"></div>
       </div>
-      <div class="mail-reset" id="resetSigRow" style="display:none"><a href="#" id="defaultSigBtn">↺ Réinitialiser la signature</a><a href="#" id="saveSig" class="save-default" title="Définir la signature actuelle (et le choix du logo) comme standard personnel">✓ enregistrer comme standard</a></div>
+      <div class="editor-actions" id="resetSigRow" style="display:none"><a href="#" id="saveSig" class="icon-btn save" title="Enregistrer la signature (et le logo) comme standard personnel">✓</a><a href="#" id="defaultSigBtn" class="icon-btn" title="Réinitialiser la signature">↺</a></div>
       </div>
     </div>
 
@@ -638,7 +673,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 148;
+const APP_VERSION = 149;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2586,10 +2621,8 @@ function renderLogoPreview(){
   renderSigMissing(); normalizeLogoMode();
   const controls=document.getElementById("inlineSignatureControls");
   if(controls) controls.style.display = state.options.useSig!==false ? "block" : "none";
-  const logoButtons=document.getElementById("logoModeButtons");
-  if(logoButtons){
-    logoButtons.querySelectorAll(".logo-mode-btn").forEach(btn=>btn.classList.toggle("active", btn.dataset.logoMode === (state.options.logoMode || "unesco")));
-  }
+  const logoSelect=document.getElementById("logoModeSelect");
+  if(logoSelect) logoSelect.value = state.options.logoMode || "unesco";
   const st=document.getElementById("sigStatus");
   if(st){
     if(state.options.logoMode==="none") st.textContent="";
@@ -2851,7 +2884,7 @@ function bindSettings(){
     updateTemplateSignatureView(body, renderTemplateCollapseState);
   };
   const logoFile=document.getElementById("logoFile");
-  const logoModeButtons=document.getElementById("logoModeButtons");
+  const logoModeSelect=document.getElementById("logoModeSelect");
   let logoModeBeforeUpload=state.options.logoMode || "unesco";
   function applyLogoMode(mode){
     commitEditor(body);
@@ -2873,10 +2906,8 @@ function bindSettings(){
     logoModeBeforeUpload=state.options.logoMode || "unesco";
     if(logoFile) logoFile.click();
   }
-  if(logoModeButtons){
-    logoModeButtons.querySelectorAll(".logo-mode-btn").forEach(btn=>{
-      btn.onclick=()=>applyLogoMode(btn.dataset.logoMode);
-    });
+  if(logoModeSelect){
+    logoModeSelect.onchange=()=>applyLogoMode(logoModeSelect.value);
   }
   logoFile.onchange=e=>{
     const f=e.target.files[0];
@@ -3343,7 +3374,7 @@ function ebRowHtml(m, openId){
           <div class="mailbody-head"><label class="mail-subject-label" for="ebt_${m.id}">Titre</label><input id="ebt_${m.id}" class="mail-subject-input eb-title-input" data-ebid="${m.id}" value="${esc(m.ebTitle)}" title="Modifier le titre du message e-Bichelchen"></div>
           <div class="eb-text-wrap"><label class="mail-subject-label" for="ebd_${m.id}">Message</label><textarea id="ebd_${m.id}" class="eb-message-text" data-ebid="${m.id}" title="Modifier le texte du message e-Bichelchen">${esc(m.ebDesc)}</textarea></div>
         </div>
-        <div class="mail-reset" style="${edited?'':'display:none'}"><a href="#" class="reset-eb-ov" data-ebid="${m.id}">↺ réinitialiser au message standard</a></div>
+        <div class="mail-reset" style="${edited?'':'display:none'}"><a href="#" class="reset-eb-ov icon-btn" data-ebid="${m.id}" title="Réinitialiser au message standard">↺</a></div>
       </div>
     </div>`;
 }
@@ -3398,7 +3429,7 @@ function reminderRowHtml(m, openId){
           <div class="mailbody-head"><label class="mail-subject-label" for="mrs_${m.id}">Objet</label><input id="mrs_${m.id}" class="mail-subject-input" data-ovk="${m.id}" data-msgid="${m.id}" data-default-subject="${esc(m.defaultSubject||'')}" value="${esc(m.subject)}" title="Modifier l’objet du rappel"></div>
           <div id="mr_${m.id}" class="rich-editor mail-editor" style="min-height:220px" contenteditable="true" data-ovk="${m.id}">${m.previewHtml}</div>
         </div>
-        <div class="mail-reset" style="${edited?'':'display:none'}"><a href="#" class="reset-ov" data-ovk="${m.id}">↺ réinitialiser au modèle standard</a></div>
+        <div class="mail-reset" style="${edited?'':'display:none'}"><a href="#" class="reset-ov icon-btn" data-ovk="${m.id}" title="Réinitialiser au modèle standard">↺</a></div>
       </div>
     </div>`;
 }
@@ -3466,7 +3497,7 @@ function renderMails(openId){
           <div class="mailbody-head"><label class="mail-subject-label" for="ms_${m.id}">Objet</label><input id="ms_${m.id}" class="mail-subject-input" data-ovk="${ovk}" data-msgid="${m.id}" value="${esc(m.subject)}" title="Modifier l’objet"></div>
           <div id="me_${m.id}" class="rich-editor mail-editor" contenteditable="true" data-ovk="${ovk}">${m.previewHtml}</div>
         </div>
-        <div class="mail-reset" style="${edited?'':'display:none'}"><a href="#" class="reset-ov" data-ovk="${ovk}">↺ réinitialiser au modèle standard</a></div>
+        <div class="mail-reset" style="${edited?'':'display:none'}"><a href="#" class="reset-ov icon-btn" data-ovk="${ovk}" title="Réinitialiser au modèle standard">↺</a></div>
       </div>
     </div>`;
   }).join("");
