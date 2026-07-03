@@ -266,10 +266,15 @@
   .reminder-toggle{display:flex;align-items:center;gap:8px;margin-left:auto;color:var(--muted);font-size:13px;font-weight:750;cursor:pointer}
   .reminder-toggle input{width:16px;height:16px;min-width:16px;margin:0}
   .reminder-note,.template-note{margin:2px 0 12px;font-size:12.5px;color:var(--muted)}
-  .template-settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 16px;padding:0;border:0;border-radius:0;background:transparent;align-items:stretch}
+  .template-settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 16px;padding:0;border:0;border-radius:0;background:transparent;align-items:start}
   .student-lang-default{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 14px;padding:0;border:0;background:transparent}.student-lang-default label{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}.student-lang-default select{height:40px;width:auto;min-width:170px;padding:7px 10px;border-radius:999px;background:#fff}
   .setting-field{display:flex;flex-direction:column;gap:6px;min-width:0}.setting-field label,.setting-title{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}.setting-help{font-size:11.5px;line-height:1.35;color:var(--muted)}.setting-field select,.setting-field input[type=time]{height:40px;padding:7px 10px;border-radius:12px;background:#fff}.reminder-setting{gap:8px;align-items:flex-start;min-width:0}.reminder-setting .setting-title{align-self:flex-start}.reminder-main,.signature-toggle{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:800;font-size:13px;cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;user-select:none;-webkit-tap-highlight-color:transparent;box-shadow:var(--shadow-sm);white-space:nowrap}.reminder-main:hover,.signature-toggle:hover{border-color:var(--line-strong);background:#fff;box-shadow:0 6px 16px rgba(20,30,60,.06)}.reminder-main input,.signature-toggle input{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;flex:0 0 16px;margin:0;padding:0;border:1px solid var(--line-strong);border-radius:4px;background:#fff;box-shadow:none;outline:none;display:inline-grid;place-content:center;transition:background .12s ease,border-color .12s ease}.reminder-main input:focus,.reminder-main input:focus-visible,.signature-toggle input:focus,.signature-toggle input:focus-visible{outline:none;box-shadow:none}.reminder-main input:checked,.signature-toggle input:checked{background:var(--accent);border-color:var(--accent)}.reminder-main input:checked:after,.signature-toggle input:checked:after{content:"";width:8px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-top:-1px}.reminder-controls{display:flex;gap:8px;align-items:center;justify-content:flex-start;flex-wrap:nowrap;color:var(--muted);font-size:13px;text-align:left;white-space:nowrap}.reminder-controls select{width:auto;min-width:82px}.reminder-controls input[type=time]{width:104px}.reminder-setting{justify-self:start;margin-left:58px}.signature-setting{padding-left:0;align-items:flex-start;justify-self:end}.signature-setting .signature-toggle{align-self:flex-start}.template-language-edit{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:750}.template-language-edit select{width:auto;min-width:148px;height:38px;padding:6px 10px;border-radius:999px;background:#fff}.student-contact-grid .group-head th{background:#f8f8fb}.student-contact-grid .contact-group{text-align:left}.student-contact-grid .contact2-start{border-left:0!important}.student-contact-grid th.contact2-start,.student-contact-grid td.contact2-start{padding-left:10px!important}.student-contact-grid .contact-cell{min-width:0}.student-contact-grid .contact-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .contact-inline input{flex:1 1 auto;min-width:0}.student-contact-grid .lang-select{flex:0 0 58px;width:58px;min-width:58px;height:36px;padding:5px 6px;border-radius:10px;background:#fff;font-size:12.5px;font-weight:400;letter-spacing:.01em;text-align:center;color:var(--ink)}.student-contact-grid .lang-select option{font-weight:400}.student-contact-grid .student-name-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .student-name-inline input{flex:1 1 auto;min-width:0}.student-index{width:22px;min-width:22px;height:22px;border-radius:999px;background:var(--accent-soft);color:#4a55a2;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}.student-contact-grid .actions-cell{width:62px!important;padding-left:10px!important;padding-right:10px!important;text-align:center}.student-contact-grid .actions-cell .st-del{width:42px;min-width:42px;padding-left:0;padding-right:0}.csv-hint{margin-top:2px;text-align:right}.email-invalid{border-color:#ffb4aa!important;background:#fff8f7!important}.email-invalid:focus{border-color:#ef6f61!important;box-shadow:0 0 0 4px rgba(239,111,97,.12)!important}.student-email-warning{margin-top:10px;text-align:left}.lang-pill{display:inline-flex;align-items:center;border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:700;color:var(--muted);margin-left:4px}
-  .template-settings{grid-template-columns:minmax(170px,240px) minmax(320px,1fr) auto;align-items:end}
+  .template-settings{grid-template-columns:minmax(170px,240px) minmax(320px,1fr) auto;align-items:start}
+  .template-settings .setting-field{gap:8px}
+  .template-settings .setting-field label,.template-settings .setting-title{margin:0;line-height:1.2}
+  .reminder-inline,.signature-inline{min-height:40px}
+  .reminder-main,.signature-toggle{height:40px;box-sizing:border-box}
+  .reminder-controls input[type=time],.reminder-controls select{height:40px}
   .template-settings .setting-field{justify-content:end}
   .signature-setting{justify-self:end;align-items:flex-start;min-width:300px;padding-left:0}
   .signature-setting .signature-toggle{align-self:flex-start}
@@ -332,11 +337,8 @@
   .eb-match-table select{height:36px;padding:6px 8px;border-radius:10px}
   .eb-match-status{font-size:12px;font-weight:800;white-space:nowrap}
   .eb-match-status.ok{color:var(--ok)} .eb-match-status.miss{color:var(--err)}
-  .mode-ebichelchen #inlineSignatureControls,
   .mode-ebichelchen #resetSigRow,
-  .mode-ebichelchen #sigMissing,
-  .mode-ebichelchen .signature-setting,
-  .mode-ebichelchen .reminder-setting{display:none!important}
+  .mode-ebichelchen #sigMissing{display:none!important}
   #appToast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;font-weight:700;box-shadow:0 10px 30px rgba(16,24,40,.28);z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none}
 
   .sig-modal{position:fixed;inset:0;background:rgba(20,30,60,.48);display:none;align-items:center;justify-content:center;z-index:70;padding:18px}
@@ -412,7 +414,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v150</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v151</span></h1>
 </header>
 
 <nav class="tabs">
@@ -469,8 +471,8 @@
       <div id="studentTable"></div>
       <div class="toolbar" style="margin-top:14px">
         <button id="addStudent">+ Ajouter un élève</button>
-        <div class="spacer"></div>
         <button class="ghost sm" id="importEbStudentsBtn" type="button" style="display:none">Importer depuis e-Bichelchen</button>
+        <div class="spacer"></div>
         <button class="ghost sm email-only" id="importCsvBtn">Importer un CSV</button>
         <span class="tip tip-left email-only csv-hint" tabindex="0" data-tip="Format CSV — 1 élève par ligne :
 Élève, contact1@…, langue1, contact2@…, langue2
@@ -684,7 +686,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 150;
+const APP_VERSION = 151;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1910,8 +1912,7 @@ function renderStudents(){
   }
   if(!wrap) return;
   if(state.students.length===0){
-    const ebAction = eb ? '<div class="student-source-actions"><button type="button" class="ghost sm" onclick="goTab(\'setup\')">Connecter e-Bichelchen</button></div>' : '';
-    wrap.innerHTML='<div class="banner warn empty-state">Aucun élève pour l’instant.</div>'+ebAction;
+    wrap.innerHTML='<div class="banner warn empty-state">Aucun élève pour l’instant.</div>';
     return;
   }
   if(eb && !em){
@@ -2018,7 +2019,16 @@ document.getElementById("addStudent").onclick=()=>{
   state.students.push({id:uid(),name:"",email1:"",email2:"",lang1:dl,lang2:dl,langEb:dl});
   saveState(); renderStudents(); renderSetup();
 };
-const _importEbStudentsBtn=document.getElementById("importEbStudentsBtn"); if(_importEbStudentsBtn){ _importEbStudentsBtn.onclick=()=>{ const added=importEbStudentsToList(); alert(added ? (added+" élève(s) réimporté(s) depuis e-Bichelchen.") : "Aucun nouvel élève à importer."); }; }
+const _importEbStudentsBtn=document.getElementById("importEbStudentsBtn"); if(_importEbStudentsBtn){ _importEbStudentsBtn.onclick=()=>{
+  let added=0, failed=false;
+  try{ added=importEbStudentsToList(); }catch(e){ failed=true; }
+  if(failed || (!added && !ebStudents().length)){
+    alert("L’import e-Bichelchen n’a pas fonctionné.\n\nVous revenez au « Démarrage » — cliquez-y sur « Connecter » pour rétablir la connexion e-Bichelchen.");
+    goTab("setup");
+    return;
+  }
+  alert(added ? (added+" élève(s) réimporté(s) depuis e-Bichelchen.") : "Aucun nouvel élève à importer.");
+}; }
 const _resetStudents=document.getElementById("resetStudents");
 if(_resetStudents){ _resetStudents.onclick=(e)=>{ if(e) e.preventDefault(); if(!state.students.length){ return; } if(!confirm("Voulez-vous vraiment supprimer tous les élèves de la liste ?\n\nLes rendez-vous attribués à ces élèves seront aussi retirés. Le modèle et la signature sont conservés.")) return; state.students=[]; state.ebichelchenMap={}; state.assignments={}; saveState(); renderStudents(); renderSetup(); renderMails(); }; }
 document.getElementById("importCsvBtn").onclick=()=>document.getElementById("csvFile").click();
