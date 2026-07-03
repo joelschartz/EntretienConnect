@@ -6,90 +6,84 @@
 <title>EntretienConnect</title>
 <style>
   :root{
-    --bg:#f5f7fb;
+    --bg:#f6f6f9;
     --surface:#ffffff;
-    --surface-soft:#f8fafc;
-    --ink:#172033;
-    --muted:#667085;
-    --muted-2:#8b96a8;
-    --line:#dbe3ef;
-    --line-strong:#cbd5e1;
-    --accent:#2f5fd7;
-    --accent-d:#244bb0;
-    --accent-soft:#eef4ff;
-    --ok:#157347;
-    --ok-soft:#e8f7ef;
-    --warn:#a76508;
-    --warn-soft:#fff3dc;
-    --err:#b42318;
-    --err-soft:#fff0ee;
-    --shadow:0 14px 40px rgba(20,30,60,.08);
-    --shadow-sm:0 2px 10px rgba(20,30,60,.05);
-    --radius:18px;
+    --surface-soft:#f8f8fb;
+    --ink:#1d1d1f;
+    --muted:#6e6e76;
+    --muted-2:#9b9ba3;
+    --line:#e9e9f0;
+    --line-strong:#dcdce5;
+    --accent:#6c7cf0;
+    --accent-d:#5563d8;
+    --accent-soft:#eef0fe;
+    --ok:#2e8b64;
+    --ok-soft:#e3f5ec;
+    --warn:#b0762a;
+    --warn-soft:#fcf2df;
+    --err:#d2564d;
+    --err-soft:#fdeceb;
+    --shadow:0 8px 30px rgba(28,28,45,.07);
+    --shadow-sm:0 1px 3px rgba(28,28,45,.05);
+    --radius:20px;
   }
   *{box-sizing:border-box}
   html{background:var(--bg)}
   body{
     margin:0;
-    font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
     background:
-      radial-gradient(circle at top left,rgba(47,95,215,.13),transparent 34rem),
-      linear-gradient(180deg,#fbfcff 0,#f5f7fb 320px,var(--bg) 100%);
+      radial-gradient(58rem 38rem at -8% -12%,rgba(108,124,240,.10),transparent 62%),
+      radial-gradient(50rem 34rem at 108% -4%,rgba(96,190,155,.09),transparent 60%),
+      radial-gradient(52rem 40rem at 50% 118%,rgba(240,176,138,.07),transparent 62%),
+      var(--bg);
+    background-attachment:fixed;
     color:var(--ink);
     font-size:15px;
     line-height:1.5;
+    -webkit-font-smoothing:antialiased;
   }
   header{
-    position:relative;
-    overflow:hidden;
-    background:rgba(255,255,255,.92);
+    background:transparent;
     color:var(--ink);
-    padding:24px max(22px,calc((100vw - 1180px)/2 + 22px));
-    border-bottom:1px solid rgba(219,227,239,.9);
-    box-shadow:0 8px 26px rgba(20,30,60,.05);
+    padding:34px max(22px,calc((100vw - 1180px)/2 + 22px)) 16px;
   }
-  header:after{
-    content:"";
-    position:absolute;
-    width:360px;height:360px;right:-150px;top:-210px;
-    border-radius:50%;background:rgba(47,95,215,.10);
-  }
-  header h1{position:relative;margin:0;font-size:25px;font-weight:820;letter-spacing:-.03em}
-  header p{position:relative;margin:5px 0 0;color:var(--muted);font-size:14px;max-width:1120px;white-space:nowrap}
+  header h1{margin:0;font-size:28px;font-weight:750;letter-spacing:-.03em}
+  header p{margin:5px 0 0;color:var(--muted);font-size:14px;max-width:1120px;white-space:nowrap}
   .tabs{
-    display:flex;gap:8px;
-    padding:12px max(16px,calc((100vw - 1180px)/2 + 16px));
-    background:rgba(246,248,252,.86);
-    backdrop-filter:saturate(180%) blur(14px);
-    border-bottom:1px solid rgba(203,213,225,.75);
+    display:flex;
+    padding:10px max(16px,calc((100vw - 1180px)/2 + 16px));
+    background:rgba(246,246,249,.8);
+    backdrop-filter:saturate(180%) blur(18px);
+    -webkit-backdrop-filter:saturate(180%) blur(18px);
+    border-bottom:1px solid rgba(28,28,45,.06);
     position:sticky;top:0;z-index:5;overflow-x:auto;
-    box-shadow:0 6px 20px rgba(20,30,60,.04);
   }
+  .tabs-track{display:inline-flex;gap:4px;background:rgba(28,28,45,.06);border-radius:999px;padding:4px}
   .tab{
-    padding:10px 16px;
+    padding:8px 17px;
     cursor:pointer;
-    border:1px solid var(--line);
+    border:0;
     border-radius:999px;
-    background:#fff;
+    background:transparent;
     color:var(--muted);
-    font-weight:760;
+    font-weight:650;
     font-size:14px;
     white-space:nowrap;
-    transition:.16s ease;
+    transition:.18s ease;
   }
-  .tab:hover{background:#fff;color:var(--ink);border-color:var(--line-strong);box-shadow:0 5px 14px rgba(20,30,60,.05)}
-  .tab.active{color:#fff;background:var(--accent);border-color:var(--accent);box-shadow:0 8px 20px rgba(47,95,215,.22)}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--ink);background:#fff;box-shadow:0 1px 5px rgba(28,28,45,.14);font-weight:750}
   .wrap{max-width:1180px;margin:0 auto;padding:24px 18px 90px}
   .panel{display:none}.panel.active{display:block}
   .card{
-    background:rgba(255,255,255,.96);
-    border:1px solid rgba(219,227,239,.95);
+    background:rgba(255,255,255,.9);
+    border:1px solid rgba(28,28,45,.06);
     border-radius:var(--radius);
-    padding:22px;
-    margin-bottom:20px;
+    padding:24px;
+    margin-bottom:18px;
     box-shadow:var(--shadow-sm);
   }
-  .card:hover{box-shadow:0 10px 28px rgba(20,30,60,.06)}
   h2{font-size:18px;margin:0 0 12px;font-weight:760;letter-spacing:-.01em}
   h3{font-size:12px;margin:18px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800}
   label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px;font-weight:700}
@@ -102,18 +96,18 @@
   input:focus,select:focus,textarea:focus,.rich-editor:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
   textarea{resize:vertical;min-height:150px;line-height:1.5}
   button{
-    font-family:inherit;font-size:14px;font-weight:750;border:none;border-radius:11px;
-    padding:10px 16px;cursor:pointer;background:var(--accent);color:#fff;
-    box-shadow:0 8px 18px rgba(47,95,215,.20);
+    font-family:inherit;font-size:14px;font-weight:650;border:none;border-radius:12px;
+    padding:10px 17px;cursor:pointer;background:var(--accent);color:#fff;
+    box-shadow:none;
     transition:background .12s ease,box-shadow .12s ease,border-color .12s ease;
   }
-  button:hover{background:var(--accent-d);box-shadow:0 8px 18px rgba(47,95,215,.20)}
-  button:active{box-shadow:0 6px 14px rgba(47,95,215,.18)}
-  button:disabled{opacity:1;cursor:not-allowed;background:#eef2f6;color:#98a2b3;border:1px solid var(--line);transform:none;box-shadow:none}
+  button:hover{background:var(--accent-d)}
+  button:active{background:var(--accent-d);opacity:.92}
+  button:disabled{opacity:1;cursor:not-allowed;background:#eef0f4;color:#98a2b3;border:1px solid var(--line);transform:none;box-shadow:none}
   button.ghost{background:#fff;color:var(--accent);border:1px solid var(--line);box-shadow:none}
-  button.ghost:hover{background:var(--accent-soft);border-color:#c8d8ff;box-shadow:none}
-  button.danger{background:#fff;color:var(--err);border:1px solid #ffd0ca;box-shadow:none}
-  button.danger:hover{background:var(--err-soft);border-color:#ffb8af}
+  button.ghost:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}
+  button.danger{background:#fff;color:var(--err);border:1px solid #f6cfcb;box-shadow:none}
+  button.danger:hover{background:var(--err-soft);border-color:#f0b9b3}
   button.sm{padding:7px 11px;font-size:13px;border-radius:10px}
   .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.spacer{flex:1}
@@ -123,17 +117,17 @@
   th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em;background:var(--surface-soft);font-weight:800}
   .muted{color:var(--muted)} .hint{font-size:13px;color:var(--muted);margin-top:7px}
   .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
-  .pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.err{background:var(--err-soft);color:var(--err)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.info{background:var(--accent-soft);color:#24447e}
+  .pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.err{background:var(--err-soft);color:var(--err)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.info{background:var(--accent-soft);color:#4a55a2}
   .banner{padding:11px 13px;border-radius:12px;font-size:13.5px;margin-bottom:12px;border:1px solid transparent}
   .banner-group{display:grid;gap:8px;margin-bottom:12px}.banner-group .banner{margin-bottom:0}
   .truncated-inline{display:inline-block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
-  .banner.warn{background:var(--warn-soft);color:#7a4800;border-color:#ffe0a3}
-  .banner.err{background:var(--err-soft);color:#8a1d14;border-color:#ffc9c1}
-  .banner.ok{background:var(--ok-soft);color:#0f5e38;border-color:#bde8ce}
-  .banner.info{background:var(--accent-soft);color:#253e7c;border-color:#d7e3ff}
+  .banner.warn{background:var(--warn-soft);color:#7a4800;border-color:#f3ddb5}
+  .banner.err{background:var(--err-soft);color:#8a1d14;border-color:#f3cdc8}
+  .banner.ok{background:var(--ok-soft);color:#0f5e38;border-color:#bfe5d1}
+  .banner.info{background:var(--accent-soft);color:#3f4a8f;border-color:#dfe3fc}
   .banner.compact{padding:10px 13px;margin:10px 0 12px;font-size:13.5px}
   .empty-state{margin:12px 0 0}
-  code.k{background:var(--accent-soft);padding:2px 7px;border-radius:7px;font-size:12px;word-break:break-all;color:#27437f}
+  code.k{background:var(--accent-soft);padding:2px 7px;border-radius:7px;font-size:12px;word-break:break-all;color:#4a55a2}
   .check{display:flex;align-items:center;gap:9px;color:var(--ink);font-weight:650;margin:12px 0 0;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}.check input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;flex:0 0 16px;margin:0;padding:0;border:1px solid var(--line-strong);border-radius:4px;background:#fff;box-shadow:none!important;outline:none!important;display:inline-grid;place-content:center;transition:background .12s ease,border-color .12s ease}.check input[type="checkbox"]:hover{border-color:var(--accent)}.check input[type="checkbox"]:focus,.check input[type="checkbox"]:focus-visible{outline:none!important;box-shadow:none!important}.check input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}.check input[type="checkbox"]:checked:after{content:"";width:8px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-top:-1px}.check select{width:auto}
   .daycard{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--surface-soft)}.daycard h4{margin:0 0 8px;font-size:14px}
   .slotrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line)}.slotrow:last-child{border-bottom:none}
@@ -141,13 +135,13 @@
   .schedule{border-collapse:separate;border-spacing:0;font-size:13px;border-radius:0 0 14px 14px;table-layout:fixed}
   .schedule th,.schedule td{border-right:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:middle}
   .schedule th:last-child,.schedule td:last-child{border-right:none}
-  .schedule th{background:#f7f9fd;font-size:12px;white-space:nowrap;color:var(--ink)}
-  .schedule td.td-time,.schedule .th-time{white-space:nowrap;font-weight:750;font-variant-numeric:tabular-nums;background:#fbfdff;position:sticky;left:0;z-index:1;width:132px;min-width:132px;max-width:132px}
+  .schedule th{background:#f8f8fb;font-size:12px;white-space:nowrap;color:var(--ink)}
+  .schedule td.td-time,.schedule .th-time{white-space:nowrap;font-weight:750;font-variant-numeric:tabular-nums;background:#fbfbfe;position:sticky;left:0;z-index:1;width:132px;min-width:132px;max-width:132px}
   .schedule select{min-width:145px;padding:7px 8px;border-radius:9px}
-  .schedule td.assigned{background:var(--accent-soft)}.schedule td.assigned select{border-color:var(--accent);font-weight:700;color:var(--ink);background:#fff}.schedule td.past{background:#fff;color:#98a2b3}.schedule td.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important;box-shadow:none!important}.schedule td.past.assigned{background:#fff}.schedule td.td-time.past-time{background:#fbfdff;color:#98a2b3}
+  .schedule td.assigned{background:var(--accent-soft)}.schedule td.assigned select{border-color:var(--accent);font-weight:700;color:var(--ink);background:#fff}.schedule td.past{background:#fff;color:#98a2b3}.schedule td.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important;box-shadow:none!important}.schedule td.past.assigned{background:#fff}.schedule td.td-time.past-time{background:#fbfbfe;color:#98a2b3}
   .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
-  .weekblock .weekhead{font-weight:800;font-size:13px;color:#21335c;background:linear-gradient(180deg,#f5f8ff,#eef4ff);border-bottom:1px solid var(--line);padding:9px 12px}
-  .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe6cf;border-radius:14px}
+  .weekblock .weekhead{font-weight:800;font-size:13px;color:#4a55a2;background:linear-gradient(180deg,#f4f5fe,#eef0fe);border-bottom:1px solid var(--line);padding:9px 12px}
+  .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
   #mailTemplatePreview{display:none}
   .template-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 12px}
   .editor-panel{border:1px solid var(--line);border-radius:14px;background:var(--surface-soft);padding:12px;margin-top:10px}.editor-panel.open{display:block}
@@ -169,13 +163,13 @@
   .rich-toolbar .ot-sep{width:1px;height:22px;background:var(--line);margin:0 2px;padding:0;flex:0 0 auto}
   .rich-toolbar .color-picker{position:relative;display:inline-flex;align-items:center;flex:0 0 auto}
   .rich-toolbar .ot-clr{position:relative;width:42px;height:33px;border:1px solid var(--line);border-radius:8px;background:#fff;display:inline-flex;align-items:center;justify-content:center;gap:2px;font-weight:800;font-size:15px;color:#344054;cursor:pointer;padding:0 4px;box-shadow:none}
-  .rich-toolbar .ot-clr:hover,.rich-toolbar .color-picker.open .ot-clr{background:var(--accent-soft);border-color:#c8d8ff}
+  .rich-toolbar .ot-clr:hover,.rich-toolbar .color-picker.open .ot-clr{background:var(--accent-soft);border-color:#dfe3fc}
   .rich-toolbar .ot-clr .color-letter{line-height:1;border-bottom:4px solid var(--current-color,#c00000);padding:0 1px}
   .rich-toolbar .ot-clr .hilite-ico{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px}
   .rich-toolbar .ot-clr .hilite-ico svg{width:20px;height:20px;fill:none;stroke:#344054;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
   .rich-toolbar .ot-clr .hilite-ico .hi-pen{fill:var(--current-color,#fff176)}
   .rich-toolbar .ot-clr .hilite-ico .hi-strip{stroke:var(--current-color,#fff176);stroke-width:3.2}
-  .rich-toolbar .ot-clr .color-caret{font-size:10px;color:#667085;margin-left:1px}
+  .rich-toolbar .ot-clr .color-caret{font-size:10px;color:#6e6e76;margin-left:1px}
   .color-popover{display:none;position:absolute;left:0;top:39px;z-index:80;width:218px;background:#fff;border:1px solid var(--line-strong);border-radius:14px;box-shadow:0 16px 45px rgba(16,24,40,.18);padding:10px}
   .color-picker.open .color-popover{display:block}
   .color-popover .palette-title{font-size:12px;font-weight:850;color:var(--muted);margin:2px 4px 8px}
@@ -183,12 +177,12 @@
   .palette-swatch{width:26px!important;height:26px!important;min-width:26px!important;padding:0!important;border-radius:50%!important;border:1px solid rgba(16,24,40,.16)!important;background:var(--swatch)!important;box-shadow:none!important}
   .palette-swatch:hover{outline:3px solid var(--accent-soft);outline-offset:1px}
   .palette-swatch.no-color{background:#fff!important;position:relative}.palette-swatch.no-color:before{content:"";position:absolute;left:3px;right:3px;top:12px;border-top:2px solid #c0c7d2;transform:rotate(-45deg)}
-  .palette-more{margin-top:10px;width:100%;height:32px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;color:#667085;font-size:12px;font-weight:750;display:flex;align-items:center;justify-content:center;cursor:default}
+  .palette-more{margin-top:10px;width:100%;height:32px;border:1px solid var(--line);border-radius:10px;background:#f8f8fb;color:#6e6e76;font-size:12px;font-weight:750;display:flex;align-items:center;justify-content:center;cursor:default}
   .rich-toolbar select[data-cmd="fontName"]{min-width:130px} .rich-toolbar select[data-cmd="fontSize"]{min-width:62px}
-  .outlook-toolbar{border:0;border-bottom:1px solid #eef2f7;border-radius:0;margin:0;padding:12px 18px;min-height:66px;gap:8px;box-shadow:0 1px 0 rgba(0,0,0,.02);flex-wrap:nowrap;overflow-x:auto;background:#fbfcff}
+  .outlook-toolbar{border:0;border-bottom:1px solid #eef2f7;border-radius:0;margin:0;padding:12px 18px;min-height:66px;gap:8px;box-shadow:0 1px 0 rgba(0,0,0,.02);flex-wrap:nowrap;overflow-x:auto;background:#fbfbfe}
   .outlook-toolbar button{height:38px;min-width:38px;padding:0 9px;border:0;border-radius:10px;background:#fff;color:#475467;font-size:21px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
   .outlook-toolbar button:hover{background:var(--accent-soft)}
-  .outlook-toolbar button:active{background:#e9eefb}
+  .outlook-toolbar button:active{background:#e9ebfc}
   .outlook-toolbar .ot-faded{color:#8a8a8a;font-weight:400}
   .outlook-toolbar select{height:40px;border:1px solid var(--line);background:#fff;border-radius:12px;color:#344054;font-weight:700;font-size:15px;padding:0 12px;box-shadow:none}
   .outlook-toolbar select:focus{outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
@@ -201,22 +195,22 @@
   .ot-more button{font-size:13px;min-width:auto;height:34px;border:1px solid var(--line);padding:0 10px}
   .rich-editor{min-height:170px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;font-family:Calibri,Helvetica,Arial,sans-serif;font-size:11pt;line-height:1.45;overflow:auto}
   .outlook-editor{border:0;border-radius:0 0 18px 18px;min-height:310px;padding:22px 26px;font-size:12pt;line-height:1.5;box-shadow:none}
-  .outlook-editor:focus{outline:none;box-shadow:inset 0 0 0 2px #dbeafe;border-color:transparent}
-  .inline-signature{margin-top:18px;border-radius:8px;padding:2px 4px;margin-left:-4px;display:inline-block;max-width:100%}.inline-signature:focus,.inline-signature:focus-within{outline:2px solid #dbeafe;background:#f8fbff}.signature-logo-separator{margin-top:12px;margin-bottom:6px;border-top:1px solid #000;width:245px;max-width:100%;height:0;line-height:0;font-size:0}.inline-logo{margin-top:0;border-radius:8px;display:block;width:max-content;max-width:100%;padding:0 4px}.inline-logo img{max-height:90px;border:0;display:block}.inline-sig-controls{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fbfcff,#f8fbff);padding:14px;margin-top:14px}.signature-options-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.signature-options-label{font-size:13px;font-weight:800;color:var(--ink);margin-right:2px}.logo-mode-buttons{display:flex;gap:8px;flex-wrap:wrap}.logo-mode-btn{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}.logo-mode-btn:hover{background:var(--accent-soft);border-color:#c8d8ff;box-shadow:none}.logo-mode-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 7px 16px rgba(47,95,215,.18)}.reset-sig-btn{margin-left:auto}.inline-sig-controls .toolbar{margin-bottom:0}.sig-editor{min-height:250px}.sig-logo-block{margin-top:12px}.sig-editor-logo{margin-top:7px}.sig-editor-logo img{max-height:90px;border:0;display:block}
+  .outlook-editor:focus{outline:none;box-shadow:inset 0 0 0 2px #e3e7fd;border-color:transparent}
+  .inline-signature{margin-top:18px;border-radius:8px;padding:2px 4px;margin-left:-4px;display:inline-block;max-width:100%}.inline-signature:focus,.inline-signature:focus-within{outline:2px solid #e3e7fd;background:#fafaff}.signature-logo-separator{margin-top:12px;margin-bottom:6px;border-top:1px solid #000;width:245px;max-width:100%;height:0;line-height:0;font-size:0}.inline-logo{margin-top:0;border-radius:8px;display:block;width:max-content;max-width:100%;padding:0 4px}.inline-logo img{max-height:90px;border:0;display:block}.inline-sig-controls{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fbfbfe,#fafaff);padding:14px;margin-top:14px}.signature-options-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.signature-options-label{font-size:13px;font-weight:800;color:var(--ink);margin-right:2px}.logo-mode-buttons{display:flex;gap:8px;flex-wrap:wrap}.logo-mode-btn{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}.logo-mode-btn:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}.logo-mode-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:none}.reset-sig-btn{margin-left:auto}.inline-sig-controls .toolbar{margin-bottom:0}.sig-editor{min-height:250px}.sig-logo-block{margin-top:12px}.sig-editor-logo{margin-top:7px}.sig-editor-logo img{max-height:90px;border:0;display:block}
 
   .signature-toggle input[type="checkbox"]:focus,.signature-toggle input[type="checkbox"]:focus-visible{outline:none!important;box-shadow:none!important}
   .signature-toggle input[type="checkbox"]{transform:none!important}
 
-  .template-card{position:relative}.mail-template-head{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:14px}.template-toggle-zone{display:flex;align-items:center;gap:10px;min-width:0;flex:1;cursor:pointer;border-radius:12px;padding:2px 4px;margin:-2px -4px}.template-toggle-zone:hover{background:transparent}.template-chevron{width:30px;height:30px;min-width:30px;padding:0;border-radius:8px;background:#fff;color:var(--accent);border:1px solid var(--line);box-shadow:var(--shadow-sm);font-size:18px;display:inline-flex;align-items:center;justify-content:center;line-height:1}.template-chevron:hover,.template-toggle-zone:hover .template-chevron{background:var(--accent-soft);border-color:#d7e3ff;box-shadow:0 6px 16px rgba(20,30,60,.08)}.mail-template-head .template-title{display:flex;flex-direction:column;gap:2px;min-width:0}.mail-template-head .template-title h2{margin:0}.mail-template-head .template-title .hint{margin:0}.template-editor-area{display:block}.template-card.template-collapsed .template-editor-area{display:none}.template-card.template-collapsed{padding-bottom:18px}.template-card.template-collapsed .mail-template-head{border-bottom:0;margin-bottom:0;padding-bottom:0}
+  .template-card{position:relative}.mail-template-head{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:14px}.template-toggle-zone{display:flex;align-items:center;gap:10px;min-width:0;flex:1;cursor:pointer;border-radius:12px;padding:2px 4px;margin:-2px -4px}.template-toggle-zone:hover{background:transparent}.template-chevron{width:30px;height:30px;min-width:30px;padding:0;border-radius:8px;background:#fff;color:var(--accent);border:1px solid var(--line);box-shadow:var(--shadow-sm);font-size:18px;display:inline-flex;align-items:center;justify-content:center;line-height:1}.template-chevron:hover,.template-toggle-zone:hover .template-chevron{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:0 6px 16px rgba(20,30,60,.08)}.mail-template-head .template-title{display:flex;flex-direction:column;gap:2px;min-width:0}.mail-template-head .template-title h2{margin:0}.mail-template-head .template-title .hint{margin:0}.template-editor-area{display:block}.template-card.template-collapsed .template-editor-area{display:none}.template-card.template-collapsed{padding-bottom:18px}.template-card.template-collapsed .mail-template-head{border-bottom:0;margin-bottom:0;padding-bottom:0}
 
   .preview-card{padding:0;overflow:hidden}
-  .preview-head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;padding:22px 22px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#fbfcff)}
+  .preview-head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;padding:22px 22px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#fbfbfe)}
   .preview-head h2{margin:0 0 3px}
   .preview-head .hint{margin:0}
   .preview-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 22px 4px}
   .preview-tab{background:#fff;color:var(--muted);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:850}
-  .preview-tab:hover{background:var(--accent-soft);border-color:#d7e3ff;box-shadow:none}
-  .preview-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 8px 18px rgba(47,95,215,.18)}
+  .preview-tab:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}
+  .preview-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:none}
   .preview-empty{margin:10px 22px 22px}
   .mail-actionbar{margin:0;justify-content:flex-end;align-items:center}
   .mail-actionbar #sendAll{min-width:160px}
@@ -225,7 +219,7 @@
   .mailitem{border:1px solid var(--line);border-radius:13px;margin:0;overflow:hidden;background:#fff;box-shadow:none;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
   .mailitem:hover{border-color:var(--line-strong);box-shadow:0 6px 18px rgba(20,30,60,.05)}
   .mailitem.done{border-color:#d9e1ee;background:#fbfcfe;opacity:.58}
-  .mailitem.open{border-color:#b9cdfc;box-shadow:0 14px 34px rgba(47,95,215,.10);transform:translateY(-1px)}
+  .mailitem.open{border-color:#c9d0fa;box-shadow:0 6px 20px rgba(28,28,45,.07);transform:translateY(-1px)}
   .mailhead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:6px 14px;background:#fff;cursor:default;min-height:44px}
   .mailhead .check{margin:0}
   .mailitem.done .mailhead{background:#fbfcfe}
@@ -234,11 +228,11 @@
   .combine-option{margin-top:12px;color:var(--muted);font-weight:600;cursor:pointer}
   .mail-avatar{display:none}
   .mail-main{min-width:0;display:grid;grid-template-columns:135px 95px minmax(0,1fr);align-items:center;column-gap:10px;overflow:hidden}.mailhead .who{display:block;font-weight:850;font-size:14.5px;line-height:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}.mailhead .parent-label{display:block;color:var(--muted);font-size:12.5px;font-weight:400;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mailhead .recipient-line{display:block;color:var(--muted);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:0}.mailhead .dot{display:none}
-  .mailhead .toggle{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:800;user-select:none;padding:6px 10px;border-radius:999px;background:var(--accent-soft);white-space:nowrap;border:1px solid #d7e3ff}
-  .mailhead .toggle:hover{background:#e3ecff}
+  .mailhead .toggle{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:800;user-select:none;padding:6px 10px;border-radius:999px;background:var(--accent-soft);white-space:nowrap;border:1px solid #dfe3fc}
+  .mailhead .toggle:hover{background:#e4e8fd}
   .mailitem.open .toggle{background:var(--accent);color:#fff;border-color:var(--accent)}
   .status{display:flex;gap:8px;align-items:center;justify-content:flex-end;min-width:max-content}
-  .mailbody{display:none;padding:0 14px 14px;border-top:1px solid var(--line);font-size:13.5px;background:#fbfcff}
+  .mailbody{display:none;padding:0 14px 14px;border-top:1px solid var(--line);font-size:13.5px;background:#fbfbfe}
   .mailitem.open .mailbody{display:block}
   .mailbody .rich-toolbar{margin:14px 0 0!important}
   .mail-compose-shell{margin-top:10px;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
@@ -253,7 +247,7 @@
   .template-editor-area .rich-toolbar{margin:0 0 10px!important}
   .mode-ebichelchen .template-editor-area > .rich-toolbar{display:none!important}
   #tplBodyEditor.plain-template-editor{min-height:170px;white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5;background:#fff;padding:16px;border-radius:14px}
-  #tplBodyEditor.plain-template-editor:focus{outline:none;box-shadow:0 0 0 3px var(--accent-soft);border-color:#c8d8ff}
+  #tplBodyEditor.plain-template-editor:focus{outline:none;box-shadow:0 0 0 3px var(--accent-soft);border-color:#dfe3fc}
   .template-compose-shell{margin-top:0}
   .template-compose-shell .mail-editor{min-height:0;transition:none;overflow:visible}
   .template-card.signature-off .template-compose-shell .mail-editor{min-height:0}
@@ -262,14 +256,14 @@
 
   .template-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
   .template-tab{background:#fff;color:var(--muted);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:800}
-  .template-tab:hover{background:var(--accent-soft);border-color:#d7e3ff;box-shadow:none}
-  .template-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 8px 18px rgba(47,95,215,.18)}
+  .template-tab:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}
+  .template-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:none}
   .reminder-toggle{display:flex;align-items:center;gap:8px;margin-left:auto;color:var(--muted);font-size:13px;font-weight:750;cursor:pointer}
   .reminder-toggle input{width:16px;height:16px;min-width:16px;margin:0}
   .reminder-note,.template-note{margin:2px 0 12px;font-size:12.5px;color:var(--muted)}
   .template-settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 14px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface-soft);align-items:stretch}
   .student-lang-default{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:var(--surface-soft)}.student-lang-default label{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}.student-lang-default select{height:40px;width:auto;min-width:170px;padding:7px 10px;border-radius:999px;background:#fff}
-  .setting-field{display:flex;flex-direction:column;gap:6px;min-width:0}.setting-field label,.setting-title{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}.setting-help{font-size:11.5px;line-height:1.35;color:var(--muted)}.setting-field select,.setting-field input[type=time]{height:40px;padding:7px 10px;border-radius:12px;background:#fff}.reminder-setting{gap:8px;align-items:flex-start;min-width:0}.reminder-setting .setting-title{align-self:flex-start}.reminder-main,.signature-toggle{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:800;font-size:13px;cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;user-select:none;-webkit-tap-highlight-color:transparent;box-shadow:var(--shadow-sm);white-space:nowrap}.reminder-main:hover,.signature-toggle:hover{border-color:var(--line-strong);background:#fff;box-shadow:0 6px 16px rgba(20,30,60,.06)}.reminder-main input,.signature-toggle input{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;flex:0 0 16px;margin:0;padding:0;border:1px solid var(--line-strong);border-radius:4px;background:#fff;box-shadow:none;outline:none;display:inline-grid;place-content:center;transition:background .12s ease,border-color .12s ease}.reminder-main input:focus,.reminder-main input:focus-visible,.signature-toggle input:focus,.signature-toggle input:focus-visible{outline:none;box-shadow:none}.reminder-main input:checked,.signature-toggle input:checked{background:var(--accent);border-color:var(--accent)}.reminder-main input:checked:after,.signature-toggle input:checked:after{content:"";width:8px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-top:-1px}.reminder-controls{display:flex;gap:8px;align-items:center;justify-content:flex-start;flex-wrap:nowrap;color:var(--muted);font-size:13px;text-align:left;white-space:nowrap}.reminder-controls select{width:auto;min-width:82px}.reminder-controls input[type=time]{width:104px}.reminder-setting{justify-self:start;margin-left:58px}.signature-setting{padding-left:0;align-items:flex-start;justify-self:end}.signature-setting .signature-toggle{align-self:flex-start}.template-language-edit{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:750}.template-language-edit select{width:auto;min-width:148px;height:38px;padding:6px 10px;border-radius:999px;background:#fff}.student-contact-grid .group-head th{background:#f8fafc}.student-contact-grid .contact-group{text-align:left}.student-contact-grid .contact2-start{border-left:0!important}.student-contact-grid th.contact2-start,.student-contact-grid td.contact2-start{padding-left:10px!important}.student-contact-grid .contact-cell{min-width:0}.student-contact-grid .contact-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .contact-inline input{flex:1 1 auto;min-width:0}.student-contact-grid .lang-select{flex:0 0 58px;width:58px;min-width:58px;height:36px;padding:5px 6px;border-radius:10px;background:#fff;font-size:12.5px;font-weight:400;letter-spacing:.01em;text-align:center;color:var(--ink)}.student-contact-grid .lang-select option{font-weight:400}.student-contact-grid .student-name-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .student-name-inline input{flex:1 1 auto;min-width:0}.student-index{width:22px;min-width:22px;height:22px;border-radius:999px;background:var(--accent-soft);color:#27437f;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}.student-contact-grid .actions-cell{width:62px!important;padding-left:10px!important;padding-right:10px!important;text-align:center}.student-contact-grid .actions-cell .st-del{width:42px;min-width:42px;padding-left:0;padding-right:0}.csv-hint{margin-top:2px;text-align:right}.email-invalid{border-color:#ffb4aa!important;background:#fff8f7!important}.email-invalid:focus{border-color:#ef6f61!important;box-shadow:0 0 0 4px rgba(239,111,97,.12)!important}.student-email-warning{margin-top:10px;text-align:left}.lang-pill{display:inline-flex;align-items:center;border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:700;color:var(--muted);margin-left:4px}
+  .setting-field{display:flex;flex-direction:column;gap:6px;min-width:0}.setting-field label,.setting-title{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}.setting-help{font-size:11.5px;line-height:1.35;color:var(--muted)}.setting-field select,.setting-field input[type=time]{height:40px;padding:7px 10px;border-radius:12px;background:#fff}.reminder-setting{gap:8px;align-items:flex-start;min-width:0}.reminder-setting .setting-title{align-self:flex-start}.reminder-main,.signature-toggle{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:800;font-size:13px;cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;user-select:none;-webkit-tap-highlight-color:transparent;box-shadow:var(--shadow-sm);white-space:nowrap}.reminder-main:hover,.signature-toggle:hover{border-color:var(--line-strong);background:#fff;box-shadow:0 6px 16px rgba(20,30,60,.06)}.reminder-main input,.signature-toggle input{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;flex:0 0 16px;margin:0;padding:0;border:1px solid var(--line-strong);border-radius:4px;background:#fff;box-shadow:none;outline:none;display:inline-grid;place-content:center;transition:background .12s ease,border-color .12s ease}.reminder-main input:focus,.reminder-main input:focus-visible,.signature-toggle input:focus,.signature-toggle input:focus-visible{outline:none;box-shadow:none}.reminder-main input:checked,.signature-toggle input:checked{background:var(--accent);border-color:var(--accent)}.reminder-main input:checked:after,.signature-toggle input:checked:after{content:"";width:8px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-top:-1px}.reminder-controls{display:flex;gap:8px;align-items:center;justify-content:flex-start;flex-wrap:nowrap;color:var(--muted);font-size:13px;text-align:left;white-space:nowrap}.reminder-controls select{width:auto;min-width:82px}.reminder-controls input[type=time]{width:104px}.reminder-setting{justify-self:start;margin-left:58px}.signature-setting{padding-left:0;align-items:flex-start;justify-self:end}.signature-setting .signature-toggle{align-self:flex-start}.template-language-edit{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:750}.template-language-edit select{width:auto;min-width:148px;height:38px;padding:6px 10px;border-radius:999px;background:#fff}.student-contact-grid .group-head th{background:#f8f8fb}.student-contact-grid .contact-group{text-align:left}.student-contact-grid .contact2-start{border-left:0!important}.student-contact-grid th.contact2-start,.student-contact-grid td.contact2-start{padding-left:10px!important}.student-contact-grid .contact-cell{min-width:0}.student-contact-grid .contact-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .contact-inline input{flex:1 1 auto;min-width:0}.student-contact-grid .lang-select{flex:0 0 58px;width:58px;min-width:58px;height:36px;padding:5px 6px;border-radius:10px;background:#fff;font-size:12.5px;font-weight:400;letter-spacing:.01em;text-align:center;color:var(--ink)}.student-contact-grid .lang-select option{font-weight:400}.student-contact-grid .student-name-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .student-name-inline input{flex:1 1 auto;min-width:0}.student-index{width:22px;min-width:22px;height:22px;border-radius:999px;background:var(--accent-soft);color:#4a55a2;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}.student-contact-grid .actions-cell{width:62px!important;padding-left:10px!important;padding-right:10px!important;text-align:center}.student-contact-grid .actions-cell .st-del{width:42px;min-width:42px;padding-left:0;padding-right:0}.csv-hint{margin-top:2px;text-align:right}.email-invalid{border-color:#ffb4aa!important;background:#fff8f7!important}.email-invalid:focus{border-color:#ef6f61!important;box-shadow:0 0 0 4px rgba(239,111,97,.12)!important}.student-email-warning{margin-top:10px;text-align:left}.lang-pill{display:inline-flex;align-items:center;border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:700;color:var(--muted);margin-left:4px}
   .template-settings{grid-template-columns:minmax(260px,420px) minmax(300px,1fr);align-items:end}
   .template-settings .setting-field{justify-content:end}
   .signature-setting{justify-self:end;align-items:flex-start;min-width:300px;padding-left:0}
@@ -296,21 +290,24 @@
   .setup-hero{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;align-items:stretch}
   .setup-intro{padding:4px 4px 0}.setup-intro h2{font-size:24px;margin:0 0 8px;letter-spacing:-.02em}.setup-intro p{max-width:720px}
   .setup-mode-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
-  .setup-mode-card{border:1px solid var(--line);background:#fff;border-radius:18px;padding:16px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px;min-height:220px;position:relative;cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s,transform .15s}
-  .setup-mode-card:hover{border-color:#c4d3ff;box-shadow:0 10px 24px rgba(47,95,215,.10);transform:translateY(-1px)}
-  .setup-mode-card.active{border:2px solid var(--accent);background:linear-gradient(180deg,#f8fbff,#edf4ff);box-shadow:0 14px 34px rgba(47,95,215,.22);transform:translateY(-2px)}
-  .setup-mode-card.active:after{content:"✓";position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:999px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:900;box-shadow:0 8px 20px rgba(47,95,215,.28)}
+  .setup-mode-card{border:1px solid var(--line);background:#fff;border-radius:18px;padding:18px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px;min-height:0;position:relative;cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s,transform .15s}
+  .setup-mode-card[data-mode="ebichelchen"]{background:linear-gradient(180deg,#fff,#f2faf6)}
+  .setup-mode-card[data-mode="email"]{background:linear-gradient(180deg,#fff,#f2f4fe)}
+  .setup-mode-card[data-mode="both"]{background:linear-gradient(180deg,#fff,#fdf6ee)}
+  .setup-mode-card:hover{border-color:#dfe3fc;box-shadow:0 4px 14px rgba(28,28,45,.06);transform:translateY(-1px)}
+  .setup-mode-card.active{border:2px solid var(--accent);background:linear-gradient(180deg,#fafaff,#f0f2fe);box-shadow:0 8px 24px rgba(108,124,240,.16);transform:translateY(-2px)}
+  .setup-mode-card.active:after{content:"✓";position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:999px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:900;box-shadow:none}
   .setup-mode-card.active h3{color:var(--accent)}
   .setup-mode-card.active .setup-chip{padding-right:34px}
   .setup-mode-card button.selected-mode-btn{background:var(--ok);border-color:var(--ok);color:#fff;box-shadow:none;cursor:default}
   .setup-mode-card h3{font-size:16px;margin:0;color:var(--ink);text-transform:none;letter-spacing:-.01em;font-weight:820}
   .setup-mode-card p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.45}.setup-mode-card ul{margin:0 0 0 18px;padding:0;color:var(--muted);font-size:13px;line-height:1.45}.setup-mode-card .setup-card-actions{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
-  .setup-chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:var(--accent-soft);color:#27437f;padding:4px 9px;font-size:12px;font-weight:850;align-self:flex-start}
+  .setup-chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:var(--accent-soft);color:#4a55a2;padding:4px 9px;font-size:12px;font-weight:850;align-self:flex-start}
   .setup-chip.ok{background:var(--ok-soft);color:var(--ok)}.setup-chip.warn{background:var(--warn-soft);color:var(--warn)}
   .setup-status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:16px}
   .setup-status-card{border:1px solid var(--line);border-radius:16px;background:var(--surface-soft);padding:14px}.setup-status-card h3{font-size:13px;margin:0 0 6px;color:var(--ink);text-transform:none;letter-spacing:0}.setup-status-card p{margin:0 0 10px;color:var(--muted);font-size:13px}
   .setup-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}.setup-current{margin-top:10px}
-  .setup-reminder-choice{margin-top:14px}.setup-reminder-card{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fff,#fbfcff);padding:14px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}.setup-reminder-card h3{font-size:13px;margin:0 0 4px;color:var(--ink);text-transform:none;letter-spacing:0}.setup-reminder-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.4}.setup-reminder-card .reminder-main{box-shadow:none}
+  .setup-reminder-choice{margin-top:14px}.setup-reminder-card{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fff,#fbfbfe);padding:14px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}.setup-reminder-card h3{font-size:13px;margin:0 0 4px;color:var(--ink);text-transform:none;letter-spacing:0}.setup-reminder-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.4}.setup-reminder-card .reminder-main{box-shadow:none}
   .send-setup-card .send-mode-summary{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}.send-reminder-settings{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}.send-reminder-settings .reminder-controls{margin-top:8px}
   .student-source-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}.student-mode-note{margin-bottom:12px}.students-eb-only .email-only{display:none!important}.students-eb-only .csv-hint{display:none!important}.students-eb-only .student-lang-default{display:none!important}
   .source-pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:4px 8px;font-size:11.5px;font-weight:780;color:var(--muted)}
@@ -322,7 +319,7 @@
   .eb-browser{width:auto;min-width:150px;height:36px;padding:6px 10px;border-radius:10px}
   #ebStatus{margin:0}
   .eb-classbox{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin:8px 0;background:var(--surface-soft);transition:border-color .15s,background .15s,box-shadow .15s}
-  .eb-classbox.selected{border:2px solid var(--accent);background:linear-gradient(180deg,#f8fbff,#edf4ff);box-shadow:0 10px 24px rgba(47,95,215,.14)}
+  .eb-classbox.selected{border:2px solid var(--accent);background:linear-gradient(180deg,#fafaff,#f0f2fe);box-shadow:0 4px 14px rgba(108,124,240,.10)}
   .eb-classbox .selected-class-btn{background:var(--ok);border-color:var(--ok);color:#fff;cursor:default}
   .eb-classbox strong{font-size:15px}
   .eb-match-table{margin-top:10px}
@@ -335,7 +332,7 @@
   .mode-ebichelchen #sigMissing,
   .mode-ebichelchen .signature-setting,
   .mode-ebichelchen .reminder-setting{display:none!important}
-  #appToast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#172033;color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;font-weight:700;box-shadow:0 10px 30px rgba(16,24,40,.28);z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none}
+  #appToast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;font-weight:700;box-shadow:0 10px 30px rgba(16,24,40,.28);z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none}
 
   .sig-modal{position:fixed;inset:0;background:rgba(20,30,60,.48);display:none;align-items:center;justify-content:center;z-index:70;padding:18px}
   .sig-modal.open{display:flex}
@@ -361,15 +358,16 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect</h1>
-  <p>Planifier les entretiens avec les parents — par e-Bichelchen, par e-mail, ou les deux <span style="opacity:.55;font-size:12px">· v145</span></p>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v147</span></h1>
 </header>
 
 <nav class="tabs">
-  <div class="tab active" data-tab="setup">1 · Démarrage</div>
-  <div class="tab" data-tab="students">2 · Élèves</div>
-  <div class="tab" data-tab="calendar">3 · Calendrier</div>
-  <div class="tab" data-tab="mails">4 · Envoi</div>
+  <div class="tabs-track">
+    <div class="tab active" data-tab="setup">1 · Démarrage</div>
+    <div class="tab" data-tab="students">2 · Élèves</div>
+    <div class="tab" data-tab="calendar">3 · Calendrier</div>
+    <div class="tab" data-tab="mails">4 · Envoi</div>
+  </div>
 </nav>
 
 <div class="wrap">
@@ -377,29 +375,19 @@
     <div class="card">
       <div class="setup-intro">
         <h2>Que voulez-vous faire ?</h2>
-        <p class="hint">Choisissez d’abord le canal. L’app affiche ensuite uniquement ce qui est nécessaire : e-Bichelchen importe les élèves automatiquement, l’e-mail demande des adresses de parents.</p>
       </div>
       <div class="setup-mode-grid" id="setupModeGrid">
         <div class="setup-mode-card" data-mode="ebichelchen">
           <span class="setup-chip ok">Le plus rapide</span>
           <h3>Uniquement e-Bichelchen</h3>
-          <p>Idéal si vous publiez les rendez-vous dans e-Bichelchen et ne voulez pas gérer les adresses e-mail.</p>
-          <ul><li>Connexion e-Bichelchen</li><li>Import automatique des élèves</li><li>Aucune adresse e-mail requise</li></ul>
-          <div class="setup-card-actions"><button type="button" data-choose-mode="ebichelchen" onclick="setWorkflowMode('ebichelchen')">Choisir</button></div>
         </div>
         <div class="setup-mode-card" data-mode="email">
           <span class="setup-chip">Classique</span>
           <h3>Uniquement e-mail</h3>
-          <p>Pour envoyer les confirmations via Microsoft 365. Les rappels se règlent plus tard dans « Envoi ».</p>
-          <ul><li>Élèves saisis ou importés par CSV</li><li>Adresses e-mail nécessaires seulement pour l’e-mail</li><li>Rappel réglé plus tard dans « Envoi »</li></ul>
-          <div class="setup-card-actions"><button type="button" data-choose-mode="email" onclick="setWorkflowMode('email')">Choisir</button></div>
         </div>
         <div class="setup-mode-card" data-mode="both">
           <span class="setup-chip warn">Complet</span>
           <h3>e-Bichelchen + e-mail</h3>
-          <p>Les noms viennent d’e-Bichelchen, puis vous complétez les adresses pour envoyer aussi des e-mails.</p>
-          <ul><li>Import automatique des élèves</li><li>Adresses e-mail à compléter seulement si vous envoyez aussi par e-mail</li><li>Publication e-Bichelchen possible même sans e-mail</li></ul>
-          <div class="setup-card-actions"><button type="button" data-choose-mode="both" onclick="setWorkflowMode('both')">Choisir</button></div>
         </div>
       </div>
       <div id="setupCurrent" class="setup-current"></div>
@@ -414,7 +402,6 @@
   <section class="panel" id="panel-students">
     <div class="card">
       <h2 id="studentsTitle">Liste des élèves</h2>
-      <p class="hint" id="studentsIntro">Inscrivez chaque élève une seule fois avec les adresses e-mail de contact et choisissez la langue souhaitée pour chaque contact. Les champs vides seront ignorés lors de l’envoi.</p>
       <div id="studentModeNote" class="student-mode-note"></div>
       <div class="student-lang-default">
         <label for="defaultLangStudents">Langue standard pour nouveaux contacts</label>
@@ -433,7 +420,7 @@
         <button class="ghost sm email-only" id="importCsvBtn">Importer un CSV</button>
         <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
       </div>
-      <p class="hint csv-hint">CSV (en-tête facultatif) : <code class="k">Prénom et nom de l’élève,contact1@...,langue1,contact2@...,langue2,langue e-Bichelchen</code> — 1 élève par ligne. La langue e-Bichelchen est facultative (par défaut celle du contact 1). Langues : FR, DE, EN, LU.</p>
+      <p class="hint csv-hint">CSV : <code class="k">Élève,contact1@...,langue1,contact2@...,langue2</code> — 1 élève par ligne · langues FR, DE, EN, LU.</p>
       <div class="mail-reset" id="resetStudentsRow" style="display:none;text-align:center;margin-top:12px"><a href="#" id="resetStudents" title="Supprimer tous les élèves de la liste">↺ Réinitialiser la liste d’élèves</a></div>
     </div>
   </section>
@@ -448,8 +435,7 @@
       </div>
     </div>
     <div class="card">
-      <h2 style="margin:0 0 4px">Jours d’entretien</h2>
-      <p class="hint" style="margin:0 0 12px">Cliquez sur les jours où les entretiens ont lieu (le week-end n’est pas sélectionnable).</p>
+      <h2 style="margin:0 0 12px">Jours d’entretien</h2>
       <div id="miniCal"></div>
       <div style="max-width:520px;margin:0 auto"><div class="mail-reset" id="resetCalRow" style="display:none"><a href="#" id="resetCal" title="Supprimer tous les jours sélectionnés et les rendez-vous attribués">↺ Réinitialiser le calendrier &amp; les rendez-vous</a></div></div>
     </div>
@@ -463,12 +449,11 @@
   <section class="panel" id="panel-mails">
     <div class="card channels-card" id="channelsCard">
       <h2>Mode d’envoi</h2>
-      <p class="hint">Vous pouvez ajuster ici le choix fait au démarrage. Activez seulement ce que vous voulez réellement envoyer maintenant.</p>
       <div class="channel-row">
-        <label class="channel-main"><input type="checkbox" id="ebEnabled"> <span><b>Message e-Bichelchen</b><br><span class="hint" style="margin:0;font-weight:400">Publie un message individuel dans e-Bichelchen pour chaque élève sélectionné. Aucune adresse e-mail nécessaire.</span></span></label>
+        <label class="channel-main"><input type="checkbox" id="ebEnabled"> <span><b>Message e-Bichelchen</b></span></label>
       </div>
       <div class="channel-row">
-        <label class="channel-main"><input type="checkbox" id="emailEnabled"> <span><b>E-mail de confirmation</b><br><span class="hint" style="margin:0;font-weight:400">Envoi via votre compte Microsoft 365. Nécessite des adresses e-mail.</span></span></label>
+        <label class="channel-main"><input type="checkbox" id="emailEnabled"> <span><b>E-mail de confirmation</b></span></label>
         <div class="channel-sub" id="emailSub">
           <label class="reminder-main" title="Les rappels seront programmés dans Outlook uniquement lorsque vous cliquez sur Envoyer."><input type="checkbox" id="reminderEnabled"> Rappel automatique</label>
           <div class="reminder-controls"><span>à</span><input type="time" id="reminderTime"><span>,</span><select id="reminderDays"><option value="1">1 jour</option><option value="2">2 jours</option><option value="3">3 jours</option></select><span>avant le rendez-vous</span></div>
@@ -485,7 +470,7 @@
         <button id="signIn">Se connecter avec Microsoft</button>
         <button id="signOut" class="ghost sm" style="display:none">Se déconnecter</button>
       </div>
-      <p class="hint" id="authHint">Connexion nécessaire uniquement si vous envoyez par e-mail.</p>
+      <p class="hint" id="authHint"></p>
     </div>
 
     <div class="card eb-card" id="ebCard">
@@ -499,7 +484,7 @@
             <option value="edge">Microsoft Edge</option>
           </select>
         </div>
-        <div id="ebStatus" class="banner info compact">Non connecté. e-Bichelchen ouvre une petite fenêtre de connexion à part ; connectez-vous, l’app lit ensuite automatiquement la classe et les élèves.</div>
+        <div id="ebStatus" class="banner info compact">Non connecté.</div>
         <div id="ebGroupChooser"></div>
         <div id="ebMatchBox"></div>
       </div>
@@ -511,7 +496,6 @@
           <button id="toggleTemplate" class="template-chevron" type="button" aria-expanded="true" aria-label="Déplier ou replier le modèle d’e-mail">▾</button>
           <div class="template-title">
             <h2>Modèle d’e-mail</h2>
-            <p class="hint">Modèle, signature et logo pour tous les e-mails.</p>
           </div>
         </div>
       </div>
@@ -536,7 +520,6 @@
         <button type="button" class="template-tab" data-template-mode="reminder">Rappel</button>
         <div class="template-language-edit"><span>Langue du modèle</span><select id="templateLang"><option value="fr">Français</option><option value="de">Deutsch</option><option value="en">English</option><option value="lb">Lëtzebuergesch</option></select></div>
       </div>
-      <p class="template-note" id="templateNote"></p>
       <div id="mailTemplatePreview"></div>
       <div class="rich-toolbar" data-for="tplBodyEditor" aria-label="Barre de mise en forme">
           <button class="ot-ic editor-undo" data-cmd="undo" title="Annuler" disabled><svg viewBox="0 0 20 20"><path d="M8 6H4v-4"/><path d="M4 6c2.3-2.6 6.3-3.2 9.1-1.3 3.3 2.2 3.9 6.9 1.2 9.8-2.1 2.2-5.4 2.8-8.1 1.5"/></svg></button>
@@ -600,7 +583,7 @@
       <div class="preview-head">
         <div>
           <h2>Aperçu &amp; envoi</h2>
-          <p class="hint" id="previewHint">Ouvrez uniquement l’e-mail que vous souhaitez contrôler ou adapter. Les modifications sont enregistrées automatiquement.</p>
+          <p class="hint" id="previewHint" style="display:none"></p>
           
         </div>
         <div class="toolbar mail-actionbar">
@@ -636,7 +619,7 @@
   <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;padding:22px;box-shadow:0 18px 55px rgba(20,30,60,.22)">
     <h3 style="font-size:17px;margin:0 0 8px">Session précédente trouvée</h3>
     <p style="margin:0 0 8px">Des élèves ou rendez-vous sont encore enregistrés dans cette app.</p>
-    <p class="hint" style="margin:0">Vous pouvez continuer là où vous étiez, ou commencer une nouvelle session. Les modèles, la signature et le logo seront conservés.</p>
+    <p class="hint" style="margin:0">Les modèles, la signature et le logo seront conservés.</p>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap">
       <button class="ghost" id="sessionNew">Nouvelle session</button>
       <button id="sessionContinue">Continuer</button>
@@ -650,7 +633,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 145;
+const APP_VERSION = 147;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1600,9 +1583,7 @@ function setWorkflowMode(mode, opts={}){
   if(opts.openEmail && modeNeedsEmail(mode)){ const b=document.getElementById("signIn"); if(b) b.click(); }
 }
 function setupProgressHtml(){
-  const mode=workflowMode();
-  if(!mode) return '<div class="banner info compact">Commencez par choisir comment vous voulez contacter les parents.</div>';
-  return '<div class="banner info compact"><span class="pill info">Mode : '+esc(modeLabel(mode))+'</span></div>';
+  return "";
 }
 function ebConnectedSummaryHtml(){
   if(!ebReady()) return "";
@@ -1617,10 +1598,7 @@ function msConnectedSummaryHtml(){
   return '<div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+esc(who):'')+'.</div>';
 }
 function previewHintText(){
-  const em=emailEnabled(), eb=ebichelchenEnabled();
-  if(eb && !em) return "Ouvrez uniquement le message e-Bichelchen que vous souhaitez contrôler ou adapter. Les modifications sont enregistrées automatiquement.";
-  if(em && eb) return "Ouvrez uniquement l’e-mail ou le message e-Bichelchen que vous souhaitez contrôler ou adapter. Les modifications sont enregistrées automatiquement.";
-  return "Ouvrez uniquement l’e-mail que vous souhaitez contrôler ou adapter. Les modifications sont enregistrées automatiquement.";
+  return "";
 }
 function renderSetup(){
   const mode=workflowMode();
@@ -1654,7 +1632,7 @@ function renderSetup(){
         const selected=!!ebSelectedGroupId();
         ebParts.push('<div class="banner '+(selected?'info':'warn')+' compact">'+ebGroupChoiceHtml()+'</div>');
       }else if(!ebReady()){
-        ebParts.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. Les noms des élèves peuvent être importés automatiquement après la connexion. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button><div id="setupEbLiveStatus" class="hint" style="margin-top:8px"></div></div>');
+        ebParts.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button><div id="setupEbLiveStatus" class="hint" style="margin-top:8px"></div></div>');
       }
       if(ebParts.length) cards.push('<div>'+ebParts.join("")+'</div>');
     }
@@ -1663,7 +1641,7 @@ function renderSetup(){
         const who=[account.name||"", account.email||""].filter(Boolean).join(" · ");
         cards.push('<div><div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+esc(who):'')+'.<div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
       }else{
-        cards.push('<div><div class="banner warn compact">Microsoft n’est pas encore connecté. Ce n’est nécessaire qu’au moment d’envoyer des e-mails. <button type="button" class="ghost sm" id="setupMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
+        cards.push('<div><div class="banner warn compact">Microsoft n’est pas encore connecté — nécessaire seulement pour l’envoi d’e-mails. <button type="button" class="ghost sm" id="setupMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
       }
     }
     status.innerHTML=cards.join("");
@@ -1707,7 +1685,7 @@ function ecVisualSelectMode(mode){
       }
     });
     const cur=document.getElementById("setupCurrent");
-    if(cur){ cur.innerHTML='<div class="banner info compact"><span class="pill info">Mode : '+esc(modeLabel(mode))+'</span></div>'; }
+    if(cur){ cur.innerHTML=""; }
     const nav=document.getElementById("setupNavHint"); if(nav) nav.style.display="inline";
   }catch(e){ console.error(e); }
 }
@@ -1864,8 +1842,7 @@ function renderStudents(){
     : (eb && em ? "Les noms peuvent être importés depuis e-Bichelchen ; complétez ensuite les adresses e-mail des parents pour l’envoi." : "Inscrivez chaque élève une seule fois avec les adresses e-mail de contact et choisissez la langue souhaitée pour chaque contact. Les champs vides seront ignorés lors de l’envoi.");
   if(note){
     // Le titre + l’introduction suffisent. On garde seulement un rappel tant qu’aucun mode n’a été choisi.
-    if(!mode) note.innerHTML='<div class="banner info compact">Choisissez d’abord le mode dans « Démarrage ».</div>';
-    else note.innerHTML='';
+    note.innerHTML='';
   }
   const resetStudentsRow=document.getElementById("resetStudentsRow");
   if(resetStudentsRow) resetStudentsRow.style.display = state.students.length>0 ? "" : "none";
@@ -1880,7 +1857,7 @@ function renderStudents(){
   if(!wrap) return;
   if(state.students.length===0){
     const ebAction = eb ? '<div class="student-source-actions"><button type="button" class="ghost sm" onclick="goTab(\'setup\')">Connecter e-Bichelchen</button></div>' : '';
-    wrap.innerHTML='<div class="banner warn empty-state">Aucun élève pour l’instant. '+(eb?'Connectez e-Bichelchen pour importer automatiquement la classe.':'Cliquez sur « + Ajouter un élève » ou importez un CSV.')+'</div>'+ebAction;
+    wrap.innerHTML='<div class="banner warn empty-state">Aucun élève pour l’instant.</div>'+ebAction;
     return;
   }
   if(eb && !em){
@@ -2053,7 +2030,7 @@ function renderDateList(){
     if(weekend) cls.push("wknd"); if(isPast) cls.push("past"); if(!weekend && state.config.dates.includes(ds)) cls.push("sel"); if(ds===todayStr) cls.push("today");
     cells += (weekend || isPast) ? ('<div class="'+cls.join(" ")+'" title="'+(isPast?'Jour passé':'Week-end')+'">'+d+'</div>') : ('<div class="'+cls.join(" ")+'" data-d="'+ds+'">'+d+'</div>');
   }
-  host.innerHTML=MINICAL_CSS+'<div class="minical"><div class="cal-head"><button class="cal-nav" data-dir="-1">‹</button><span class="cal-title">'+title+'</span><button class="cal-nav" data-dir="1">›</button></div><div class="cal-grid">'+wd.map(w=>'<div class="cal-wd">'+w+'</div>').join("")+cells+'</div><div class="hint" style="margin-top:6px">Cliquer sur un jour = sélectionner/désélectionner · '+selectedCount(state.config.dates.length)+'</div></div>';
+  host.innerHTML=MINICAL_CSS+'<div class="minical"><div class="cal-head"><button class="cal-nav" data-dir="-1">‹</button><span class="cal-title">'+title+'</span><button class="cal-nav" data-dir="1">›</button></div><div class="cal-grid">'+wd.map(w=>'<div class="cal-wd">'+w+'</div>').join("")+cells+'</div><div class="hint" style="margin-top:6px">'+countFr(state.config.dates.length,"jour sélectionné","jours sélectionnés")+'</div></div>';
   host.querySelectorAll(".cal-nav").forEach(b=>{ b.onclick=()=>{ calView.m+=(+b.dataset.dir); if(calView.m<0){calView.m=11;calView.y--;} if(calView.m>11){calView.m=0;calView.y++;} renderDateList(); }; });
   host.querySelectorAll(".cal-day[data-d]").forEach(c=>{ c.onclick=()=>{ const ds=c.dataset.d; if(state.config.dates.includes(ds)){ state.config.dates=state.config.dates.filter(x=>x!==ds); Object.keys(state.assignments).forEach(k=>{ if(k.startsWith(ds+"__")) delete state.assignments[k]; }); } else { state.config.dates.push(ds); state.config.dates.sort(); } saveState(); renderDateList(); renderCalendar(); }; });
   updateCalResetVisibility();
@@ -2673,25 +2650,14 @@ function bindSettings(){
     if(subjLabel) subjLabel.textContent = isEb ? "Titre" : "Objet";
     // Karten-Titel passt sich an die aktiven Kanäle an.
     const titleH2=document.querySelector('.template-title h2');
-    const titleHint=document.querySelector('.template-title .hint');
     if(titleH2) titleH2.textContent = (!em && ebOn) ? "Modèle e-Bichelchen" : "Modèles de messages";
-    if(titleHint) titleHint.textContent = (!em && ebOn)
-      ? "Titre et texte du message e-Bichelchen (texte simple, sans signature)."
-      : (ebOn
-        ? "e-Bichelchen, e-mail de confirmation et rappel. Signature et logo s’appliquent aux e-mails."
-        : "E-mail de confirmation et rappel. Signature et logo s’appliquent aux e-mails.");
     if(reminderEnabled) reminderEnabled.checked = reminderOn;
     if(trimesterSelect) trimesterSelect.value=String(trimesterNumber());
     if(defaultLangStudents) defaultLangStudents.value=normalizeLang(state.options.defaultLang||"fr");
     if(templateLang) templateLang.value=lang;
     if(reminderDays){ reminderDays.value=String(reminderDaysBefore()); reminderDays.disabled=!reminderOn; }
     if(reminderTime){ reminderTime.value=reminderTimeValue(); reminderTime.disabled=!reminderOn; }
-    if(templateNote){
-      const l=langMeta(lang).label;
-      templateNote.textContent = isEb
-        ? `Ce modèle (${l}) est publié comme message e-Bichelchen pour chaque élève sélectionné.`
-        : (mode==="reminder" ? `Ce modèle (${l}) est utilisé pour le rappel automatique (${reminderScheduleText()}).` : `Ce modèle (${l}) est utilisé pour l’e-mail de confirmation.`);
-    }
+    if(templateNote){ templateNote.textContent=""; }
   }
   function reloadTemplateEditor(){
     const tpl=currentTpl();
@@ -3136,7 +3102,7 @@ function renderAuth(){
     saveState();
     if(box) box.innerHTML=`<div class="acct"><span class="pill ok">connecté</span><span><b>${esc(account.name||"")}</b> · ${esc(account.email||"")}</span></div>`;
     if(inBtn) inBtn.style.display="none"; if(outBtn) outBtn.style.display="inline-block";
-    const hint=document.getElementById("authHint"); if(hint) hint.textContent="Connecté. La carte Microsoft est masquée pendant l’envoi ; revenez au démarrage pour vérifier le statut.";
+    const hint=document.getElementById("authHint"); if(hint) hint.textContent="Connecté.";
   } else {
     if(box) box.innerHTML='<div class="banner warn">Vous n’êtes pas encore connecté. Le bouton d’envoi sera activé après la connexion à Microsoft.</div>';
     if(inBtn) inBtn.style.display="inline-block"; if(outBtn) outBtn.style.display="none";
@@ -3440,8 +3406,8 @@ function renderMails(openId){
   updateMailBanner();
   const previewHint=document.getElementById("previewHint");
   if(previewHint){
-    previewHint.textContent = previewHintText();
-    previewHint.style.display = currentMsgs.length>0 ? "" : "none";
+    previewHint.textContent = "";
+    previewHint.style.display = "none";
   }
 
   const sendBtn=document.getElementById("sendAll"), resetBtn=document.getElementById("resetSent");
