@@ -269,7 +269,7 @@
   .template-settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 16px;padding:0;border:0;border-radius:0;background:transparent;align-items:stretch}
   .student-lang-default{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 14px;padding:0;border:0;background:transparent}.student-lang-default label{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}.student-lang-default select{height:40px;width:auto;min-width:170px;padding:7px 10px;border-radius:999px;background:#fff}
   .setting-field{display:flex;flex-direction:column;gap:6px;min-width:0}.setting-field label,.setting-title{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}.setting-help{font-size:11.5px;line-height:1.35;color:var(--muted)}.setting-field select,.setting-field input[type=time]{height:40px;padding:7px 10px;border-radius:12px;background:#fff}.reminder-setting{gap:8px;align-items:flex-start;min-width:0}.reminder-setting .setting-title{align-self:flex-start}.reminder-main,.signature-toggle{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:800;font-size:13px;cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;user-select:none;-webkit-tap-highlight-color:transparent;box-shadow:var(--shadow-sm);white-space:nowrap}.reminder-main:hover,.signature-toggle:hover{border-color:var(--line-strong);background:#fff;box-shadow:0 6px 16px rgba(20,30,60,.06)}.reminder-main input,.signature-toggle input{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;flex:0 0 16px;margin:0;padding:0;border:1px solid var(--line-strong);border-radius:4px;background:#fff;box-shadow:none;outline:none;display:inline-grid;place-content:center;transition:background .12s ease,border-color .12s ease}.reminder-main input:focus,.reminder-main input:focus-visible,.signature-toggle input:focus,.signature-toggle input:focus-visible{outline:none;box-shadow:none}.reminder-main input:checked,.signature-toggle input:checked{background:var(--accent);border-color:var(--accent)}.reminder-main input:checked:after,.signature-toggle input:checked:after{content:"";width:8px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-top:-1px}.reminder-controls{display:flex;gap:8px;align-items:center;justify-content:flex-start;flex-wrap:nowrap;color:var(--muted);font-size:13px;text-align:left;white-space:nowrap}.reminder-controls select{width:auto;min-width:82px}.reminder-controls input[type=time]{width:104px}.reminder-setting{justify-self:start;margin-left:58px}.signature-setting{padding-left:0;align-items:flex-start;justify-self:end}.signature-setting .signature-toggle{align-self:flex-start}.template-language-edit{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:750}.template-language-edit select{width:auto;min-width:148px;height:38px;padding:6px 10px;border-radius:999px;background:#fff}.student-contact-grid .group-head th{background:#f8f8fb}.student-contact-grid .contact-group{text-align:left}.student-contact-grid .contact2-start{border-left:0!important}.student-contact-grid th.contact2-start,.student-contact-grid td.contact2-start{padding-left:10px!important}.student-contact-grid .contact-cell{min-width:0}.student-contact-grid .contact-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .contact-inline input{flex:1 1 auto;min-width:0}.student-contact-grid .lang-select{flex:0 0 58px;width:58px;min-width:58px;height:36px;padding:5px 6px;border-radius:10px;background:#fff;font-size:12.5px;font-weight:400;letter-spacing:.01em;text-align:center;color:var(--ink)}.student-contact-grid .lang-select option{font-weight:400}.student-contact-grid .student-name-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .student-name-inline input{flex:1 1 auto;min-width:0}.student-index{width:22px;min-width:22px;height:22px;border-radius:999px;background:var(--accent-soft);color:#4a55a2;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}.student-contact-grid .actions-cell{width:62px!important;padding-left:10px!important;padding-right:10px!important;text-align:center}.student-contact-grid .actions-cell .st-del{width:42px;min-width:42px;padding-left:0;padding-right:0}.csv-hint{margin-top:2px;text-align:right}.email-invalid{border-color:#ffb4aa!important;background:#fff8f7!important}.email-invalid:focus{border-color:#ef6f61!important;box-shadow:0 0 0 4px rgba(239,111,97,.12)!important}.student-email-warning{margin-top:10px;text-align:left}.lang-pill{display:inline-flex;align-items:center;border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:700;color:var(--muted);margin-left:4px}
-  .template-settings{grid-template-columns:minmax(260px,420px) minmax(300px,1fr);align-items:end}
+  .template-settings{grid-template-columns:minmax(170px,240px) minmax(320px,1fr) auto;align-items:end}
   .template-settings .setting-field{justify-content:end}
   .signature-setting{justify-self:end;align-items:flex-start;min-width:300px;padding-left:0}
   .signature-setting .signature-toggle{align-self:flex-start}
@@ -356,6 +356,25 @@
     .mail-template-head{align-items:flex-start;flex-wrap:wrap}.template-toggle-zone{flex:1 1 100%}.logo-mode-buttons{width:100%}.logo-mode-btn{flex:1 1 auto}
   }
 
+  /* Settings row: Trimestre | Rappel | Signature */
+  .reminder-inline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .signature-inline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .sig-logo-inline{display:inline-flex;align-items:center}
+  .tip.tip-down::after{bottom:auto;top:calc(100% + 9px)}
+  /* Neutral chips: color is reserved for selection + status */
+  .setup-chip,.setup-chip.ok,.setup-chip.warn{background:rgba(28,28,45,.06);color:var(--muted)}
+  /* Connection status rows (Démarrage) */
+  .setup-status-stack{display:grid;gap:10px}
+  .setup-status-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border:1px solid var(--line);border-radius:16px;background:#fff;flex-wrap:wrap}
+  .status-dot{width:9px;height:9px;min-width:9px;border-radius:50%;background:#cfcfd8}
+  .status-dot.on{background:var(--ok)}
+  .status-main{display:flex;flex-direction:column;min-width:0;flex:1}
+  .status-main b{font-size:14px;color:var(--ink)}
+  .status-detail{font-size:12.5px;color:var(--muted)}
+  .setup-status-panel{border:1px solid var(--line);border-radius:16px;background:#fff;padding:12px 14px}
+  #channelHint:not(:empty){margin-bottom:4px}
+  #channelHint .banner:first-child{margin-top:0!important}
+
   /* Card header with action icon */
   .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
   .card-head h2{margin:0}
@@ -393,7 +412,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v149</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v150</span></h1>
 </header>
 
 <nav class="tabs">
@@ -482,20 +501,7 @@ Langues : FR, DE, EN, LU">?</span>
   </section>
 
   <section class="panel" id="panel-mails">
-    <div class="card channels-card" id="channelsCard">
-      <h2>Mode d’envoi</h2>
-      <div class="channel-row">
-        <label class="channel-main"><input type="checkbox" id="ebEnabled"> <span><b>Message e-Bichelchen</b></span></label>
-      </div>
-      <div class="channel-row">
-        <label class="channel-main"><input type="checkbox" id="emailEnabled"> <span><b>E-mail de confirmation</b></span></label>
-        <div class="channel-sub" id="emailSub">
-          <label class="reminder-main" title="Les rappels seront programmés dans Outlook uniquement lorsque vous cliquez sur Envoyer."><input type="checkbox" id="reminderEnabled"> Rappel automatique</label>
-          <div class="reminder-controls"><span>à</span><input type="time" id="reminderTime"><span>,</span><select id="reminderDays"><option value="1">1 jour</option><option value="2">2 jours</option><option value="3">3 jours</option></select><span>avant le rendez-vous</span></div>
-        </div>
-      </div>
-      <div id="channelHint"></div>
-    </div>
+    <div id="channelHint"></div>
 
     <div class="card" id="authCard">
       <h2>Connexion Microsoft</h2>
@@ -535,7 +541,7 @@ Langues : FR, DE, EN, LU">?</span>
         </div>
       </div>
       <div id="templateEditorArea" class="template-editor-area">
-      <div class="template-settings" aria-label="Paramètres des e-mails">
+      <div class="template-settings" aria-label="Paramètres des messages">
         <div class="setting-field">
           <label for="trimesterSelect">Trimestre</label>
           <select id="trimesterSelect">
@@ -544,16 +550,39 @@ Langues : FR, DE, EN, LU">?</span>
             <option value="3">3e trimestre</option>
           </select>
         </div>
+        <div class="setting-field reminder-field" id="emailSub">
+          <span class="setting-title">Rappel</span>
+          <div class="reminder-inline">
+            <label class="reminder-main" title="Les rappels sont programmés dans Outlook au moment de l’envoi."><input type="checkbox" id="reminderEnabled"> Rappel automatique</label>
+            <div class="reminder-controls"><span>à</span><input type="time" id="reminderTime"><span>,</span><select id="reminderDays"><option value="1">1 jour</option><option value="2">2 jours</option><option value="3">3 jours</option></select><span>avant le rendez-vous</span></div>
+          </div>
+        </div>
         <div class="setting-field signature-setting">
           <span class="setting-title">Signature</span>
-          <label class="signature-toggle"><input type="checkbox" id="useSigTop"> Ajouter la signature</label>
+          <div class="signature-inline">
+            <label class="signature-toggle"><input type="checkbox" id="useSigTop"> Ajouter la signature</label>
+            <div id="inlineSignatureControls" class="sig-logo-inline">
+              <select id="logoModeSelect" class="logo-mode-select" aria-label="Logo dans la signature">
+                <option value="unesco">Logo UNESCO</option>
+                <option value="custom">Logo personnel…</option>
+                <option value="none">Aucun logo</option>
+              </select>
+              <input type="file" id="logoFile" accept="image/*" style="display:none">
+            </div>
+          </div>
+          <span id="sigStatus" class="hint" style="margin:0"></span>
         </div>
       </div>
       <div class="template-tabs" id="templateModeTabs" role="tablist" aria-label="Choisir le modèle de message">
         <button type="button" class="template-tab" data-template-mode="ebichelchen" style="display:none">e-Bichelchen</button>
         <button type="button" class="template-tab active" data-template-mode="confirmation">E-mail</button>
         <button type="button" class="template-tab" data-template-mode="reminder">Rappel</button>
-        <div class="template-language-edit"><span>Langue du modèle</span><select id="templateLang"><option value="fr">Français</option><option value="de">Deutsch</option><option value="en">English</option><option value="lb">Lëtzebuergesch</option></select></div>
+        <div class="template-language-edit"><span>Langue du modèle</span><select id="templateLang"><option value="fr">Français</option><option value="de">Deutsch</option><option value="en">English</option><option value="lb">Lëtzebuergesch</option></select><span class="tip tip-left tip-down" tabindex="0" data-tip="Variables remplacées automatiquement à l’envoi :
+{DATE} — date du rendez-vous
+{TIME} — heure
+{ENFANT} — prénom de l’élève
+{TRIMESTRE} — trimestre choisi
+{RAPPEL_DELAI} — délai du rappel">?</span></div>
       </div>
       <div id="mailTemplatePreview"></div>
       <div class="rich-toolbar" data-for="tplBodyEditor" aria-label="Barre de mise en forme">
@@ -592,29 +621,11 @@ Langues : FR, DE, EN, LU">?</span>
         <div class="mailbody-head">
           <label class="mail-subject-label" for="tplSubject">Objet</label>
           <input id="tplSubject" class="mail-subject-input" title="Modifier l’objet">
-          <span class="tip tip-left" tabindex="0" data-tip="Variables remplacées automatiquement à l’envoi :
-{DATE} — date du rendez-vous
-{TIME} — heure
-{ENFANT} — prénom de l’élève
-{TRIMESTRE} — trimestre choisi
-{RAPPEL_DELAI} — délai du rappel">?</span>
         </div>
         <div id="tplBodyEditor" class="rich-editor mail-editor template-mail-editor" contenteditable="true" spellcheck="true"></div>
       </div>
       <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Enregistrer le texte + l’objet comme standard personnel">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Réinitialiser le texte par défaut">↺</a></div>
       <div id="sigMissing" style="margin-top:12px"></div>
-      <div id="inlineSignatureControls" class="inline-sig-controls">
-        <div class="signature-options-row">
-          <span class="signature-options-label">Logo</span>
-          <select id="logoModeSelect" class="logo-mode-select" aria-label="Choisir le logo dans la signature">
-            <option value="unesco">Logo UNESCO</option>
-            <option value="custom">Logo personnel…</option>
-            <option value="none">Aucun logo</option>
-          </select>
-          <input type="file" id="logoFile" accept="image/*" style="display:none">
-          <span id="sigStatus" class="hint" style="margin:0"></span>
-        </div>
-      </div>
       <div class="editor-actions" id="resetSigRow" style="display:none"><a href="#" id="saveSig" class="icon-btn save" title="Enregistrer la signature (et le logo) comme standard personnel">✓</a><a href="#" id="defaultSigBtn" class="icon-btn" title="Réinitialiser la signature">↺</a></div>
       </div>
     </div>
@@ -673,7 +684,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 149;
+const APP_VERSION = 150;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1667,21 +1678,24 @@ function renderSetup(){
     const cards=[];
     if(modeNeedsEb(mode)){
       const ebParts=[];
-      if(ebReady()) ebParts.push(ebConnectedSummaryHtml());
-      if(ebHasMultipleKnownGroups()){
-        const selected=!!ebSelectedGroupId();
-        ebParts.push('<div class="banner '+(selected?'info':'warn')+' compact">'+ebGroupChoiceHtml()+'</div>');
-      }else if(!ebReady()){
-        ebParts.push('<div class="banner warn compact">e-Bichelchen n’est pas encore connecté. <button type="button" class="ghost sm" id="setupEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button><div id="setupEbLiveStatus" class="hint" style="margin-top:8px"></div></div>');
+      if(ebReady()){
+        const g=(typeof ebData!=="undefined" && ebData.group) ? ebData.group : {};
+        const n=ebStudents().length;
+        ebParts.push('<div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><b>e-Bichelchen</b><span class="status-detail">Classe « '+esc(String(g.classAlias||g.name||g.id||""))+' » · '+studentCount(n)+'</span></div></div>');
       }
-      if(ebParts.length) cards.push('<div>'+ebParts.join("")+'</div>');
+      if(ebHasMultipleKnownGroups()){
+        ebParts.push('<div class="setup-status-panel">'+ebGroupChoiceHtml()+'</div>');
+      }else if(!ebReady()){
+        ebParts.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><b>e-Bichelchen</b><span class="status-detail">Non connecté</span><div id="setupEbLiveStatus" class="hint" style="margin:4px 0 0"></div></div><button type="button" class="ghost sm" id="setupEbConnect">Connecter</button></div>');
+      }
+      if(ebParts.length) cards.push('<div class="setup-status-stack">'+ebParts.join("")+'</div>');
     }
     if(modeNeedsEmail(mode)){
       if(account){
         const who=[account.name||"", account.email||""].filter(Boolean).join(" · ");
-        cards.push('<div><div class="banner ok compact">Microsoft connecté ✓'+(who?' — '+esc(who):'')+'.<div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
+        cards.push('<div><div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><b>Microsoft 365</b>'+(who?'<span class="status-detail">'+esc(who)+'</span>':'')+'<div id="setupLoginBox" style="display:none;margin-top:8px"></div></div></div></div>');
       }else{
-        cards.push('<div><div class="banner warn compact">Microsoft n’est pas encore connecté — nécessaire seulement pour l’envoi d’e-mails. <button type="button" class="ghost sm" id="setupMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="setupLoginBox" style="display:none;margin-top:10px"></div></div></div>');
+        cards.push('<div><div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><b>Microsoft 365</b><span class="status-detail">Non connecté — nécessaire seulement pour l’envoi d’e-mails</span><div id="setupLoginBox" style="display:none;margin-top:8px"></div></div><button type="button" class="ghost sm" id="setupMsConnect">Connecter</button></div></div>');
       }
     }
     status.innerHTML=cards.join("");
@@ -2620,7 +2634,7 @@ function normalizeLogoMode(){
 function renderLogoPreview(){
   renderSigMissing(); normalizeLogoMode();
   const controls=document.getElementById("inlineSignatureControls");
-  if(controls) controls.style.display = state.options.useSig!==false ? "block" : "none";
+  if(controls) controls.style.display = state.options.useSig!==false ? "" : "none";
   const logoSelect=document.getElementById("logoModeSelect");
   if(logoSelect) logoSelect.value = state.options.logoMode || "unesco";
   const st=document.getElementById("sigStatus");
@@ -3292,8 +3306,8 @@ function mailBannerHtml(){
   const sentCount=currentMsgs.filter(isMsgDone).length;
   const remaining=currentMsgs.length-sentCount;
   const banners=[];
-  if(!em && !eb) return '<div class="banner-group"><div class="banner warn">Choisissez au moins un canal d’envoi ci-dessus (e-mail et/ou e-Bichelchen).</div></div>';
-  if(em && !account && currentMsgs.some(m=>m.kind!=="eb")) banners.push('<div class="banner warn">Veuillez vous connecter dans « Mode d’envoi » avec votre compte Microsoft pour envoyer les e-mails.</div>');
+  if(!em && !eb) return '<div class="banner-group"><div class="banner warn">Aucun canal d’envoi actif. Choisissez un mode dans « Démarrage ».</div></div>';
+  if(em && !account && currentMsgs.some(m=>m.kind!=="eb")) banners.push('<div class="banner warn">Veuillez vous connecter avec votre compte Microsoft (bouton ci-dessus) pour envoyer les e-mails.</div>');
   if(eb && !ebReady()) banners.push('<div class="banner warn">Connectez e-Bichelchen ci-dessus pour pouvoir publier les messages.</div>');
   if(currentMsgs.length===0) banners.push('<div class="banner warn">Aucun envoi prêt. Attribuez des élèves dans l’onglet « Calendrier »'+(em?' et saisissez les adresses e-mail':'')+'.</div>');
   if(em && missing.length){
@@ -3772,7 +3786,7 @@ function applyChannelVisibility(){
   const hint=document.getElementById("channelHint");
   if(hint){
     const bits=[];
-    if(!em && !eb) bits.push('<div class="banner warn compact" style="margin:10px 0 0">Choisissez au moins un canal pour pouvoir envoyer.</div>');
+    if(!em && !eb) bits.push('<div class="banner warn compact" style="margin:10px 0 0">Aucun canal d’envoi actif. Choisissez un mode dans « Démarrage ».</div>');
     if(em && !account) bits.push('<div class="banner warn compact" style="margin:10px 0 0">Microsoft n’est pas connecté. Les e-mails ne pourront pas partir. <button type="button" class="ghost sm" id="sendMsConnect" style="margin-left:8px">Connecter Microsoft</button><div id="sendInlineLoginBox" style="display:none;margin-top:10px"></div></div>');
     if(eb && !ebReady()){
       if(ebNeedsGroupSelection()){
@@ -4036,7 +4050,7 @@ if(_newSessionBtn){
 const overlay=document.getElementById("confirmOverlay");
 document.getElementById("sendAll").onclick=async()=>{
   const em=emailEnabled(), eb=ebichelchenEnabled();
-  if(!em && !eb){ alert("Choisissez au moins un canal d’envoi (e-mail et/ou e-Bichelchen)."); return; }
+  if(!em && !eb){ alert("Aucun canal d’envoi actif. Choisissez un mode dans « Démarrage »."); return; }
   currentMsgs=buildMessages();
   if(currentMsgs.length===0){ alert("Aucun envoi prêt. Attribuez des élèves dans l’onglet « Calendrier »."); return; }
   pendingSend=currentMsgs.filter(m=>!isMsgDone(m) && !excludedSet.has(m.id) && !(m.kind==="eb" && !m.matchedId));
@@ -4046,7 +4060,7 @@ document.getElementById("sendAll").onclick=async()=>{
   }
   const pendingEmail=pendingSend.filter(m=>m.kind!=="eb");
   const pendingEb=pendingSend.filter(m=>m.kind==="eb");
-  if(pendingEmail.length && !account){ alert("Veuillez d’abord vous connecter avec Microsoft pour envoyer les e-mails.\n\nSi vous voulez seulement publier dans e-Bichelchen, décochez l’e-mail dans « Mode d’envoi »."); return; }
+  if(pendingEmail.length && !account){ alert("Veuillez d’abord vous connecter avec Microsoft pour envoyer les e-mails.\n\nSi vous voulez seulement publier dans e-Bichelchen, choisissez « Uniquement e-Bichelchen » dans « Démarrage »."); return; }
   if(pendingEb.length && !ebReady()){ alert("e-Bichelchen est activé mais pas encore connecté (ou la catégorie « Message » est introuvable).\n\nConnectez e-Bichelchen, ou désactivez ce canal."); return; }
   if(!pendingEmail.length){
     pendingReminderPlan=[];
