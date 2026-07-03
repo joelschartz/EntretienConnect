@@ -410,11 +410,41 @@
   .source-lang-inline{justify-content:flex-end}
   .source-lang-inline .source-pill{margin-right:auto}
 
+
+  /* v152: ruhiger Kopfbereich im Vorlagen-Editor */
+  .template-main-row{margin:0 0 14px;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+  .template-main-row .template-language-edit{margin-left:auto}
+  .template-options-compact{display:flex;flex-direction:column;gap:12px;margin:0 0 14px}
+  .template-text-option{display:flex;align-items:center;gap:10px;max-width:360px}
+  .template-text-option .option-label,.email-option-card .option-label,.email-options-title span:first-child{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}
+  .template-text-option select{height:38px;border-radius:12px;background:#fff;padding:6px 10px;min-width:180px}
+  .email-options-panel{border:1px solid var(--line);background:linear-gradient(180deg,#fff,#fbfcff);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow-sm)}
+  .email-options-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .email-options-summary{font-size:12.5px;color:var(--muted);font-weight:650;text-transform:none;letter-spacing:0}
+  .email-options-grid{display:grid;grid-template-columns:minmax(330px,1fr) minmax(300px,1fr);gap:12px}
+  .email-option-card{border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px;min-width:0}
+  .email-option-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .legacy-hidden{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+  .reminder-choice{display:inline-flex;align-items:center;border:1px solid var(--line);background:#f7f8ff;border-radius:999px;padding:3px;gap:2px}
+  .reminder-choice-btn{border:0;background:transparent;color:var(--muted);box-shadow:none;border-radius:999px;padding:7px 11px;font-size:12.5px;font-weight:850;white-space:nowrap}
+  .reminder-choice-btn.active{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(56,98,220,.18)}
+  .reminder-choice-btn:hover{box-shadow:none}
+  .email-option-card .reminder-controls{margin-top:0}
+  .email-option-card.reminder-off .reminder-controls{display:none!important}
+  .email-option-card .signature-toggle{height:34px;padding:6px 10px;box-shadow:none}
+  .email-option-card .signature-inline{justify-content:flex-start}
+  .email-option-card .sig-logo-inline{display:flex;align-items:center;gap:8px}
+  .email-option-card .logo-mode-select{height:38px;border-radius:12px;background:#fff}
+  .template-card.mode-ebichelchen #templateEmailOptions,
+  .template-card.no-email #templateEmailOptions{display:none!important}
+  .template-card.mode-ebichelchen #trimesterOption{display:flex}
+  @media (max-width:1000px){.email-options-grid{grid-template-columns:1fr}.template-main-row .template-language-edit{margin-left:0;width:100%}}
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v151</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v152</span></h1>
 </header>
 
 <nav class="tabs">
@@ -538,44 +568,12 @@ Langues : FR, DE, EN, LU">?</span>
         <div id="templateToggleZone" class="template-toggle-zone" role="button" tabindex="0" aria-label="Déplier ou replier le modèle d’e-mail">
           <button id="toggleTemplate" class="template-chevron" type="button" aria-expanded="true" aria-label="Déplier ou replier le modèle d’e-mail">▾</button>
           <div class="template-title">
-            <h2>Modèle d’e-mail</h2>
+            <h2>Modèles de messages</h2>
           </div>
         </div>
       </div>
       <div id="templateEditorArea" class="template-editor-area">
-      <div class="template-settings" aria-label="Paramètres des messages">
-        <div class="setting-field">
-          <label for="trimesterSelect">Trimestre</label>
-          <select id="trimesterSelect">
-            <option value="1">1er trimestre</option>
-            <option value="2">2e trimestre</option>
-            <option value="3">3e trimestre</option>
-          </select>
-        </div>
-        <div class="setting-field reminder-field" id="emailSub">
-          <span class="setting-title">Rappel</span>
-          <div class="reminder-inline">
-            <label class="reminder-main" title="Les rappels sont programmés dans Outlook au moment de l’envoi."><input type="checkbox" id="reminderEnabled"> Rappel automatique</label>
-            <div class="reminder-controls"><span>à</span><input type="time" id="reminderTime"><span>,</span><select id="reminderDays"><option value="1">1 jour</option><option value="2">2 jours</option><option value="3">3 jours</option></select><span>avant le rendez-vous</span></div>
-          </div>
-        </div>
-        <div class="setting-field signature-setting">
-          <span class="setting-title">Signature</span>
-          <div class="signature-inline">
-            <label class="signature-toggle"><input type="checkbox" id="useSigTop"> Ajouter la signature</label>
-            <div id="inlineSignatureControls" class="sig-logo-inline">
-              <select id="logoModeSelect" class="logo-mode-select" aria-label="Logo dans la signature">
-                <option value="unesco">Logo UNESCO</option>
-                <option value="custom">Logo personnel…</option>
-                <option value="none">Aucun logo</option>
-              </select>
-              <input type="file" id="logoFile" accept="image/*" style="display:none">
-            </div>
-          </div>
-          <span id="sigStatus" class="hint" style="margin:0"></span>
-        </div>
-      </div>
-      <div class="template-tabs" id="templateModeTabs" role="tablist" aria-label="Choisir le modèle de message">
+      <div class="template-tabs template-main-row" id="templateModeTabs" role="tablist" aria-label="Choisir le modèle de message">
         <button type="button" class="template-tab" data-template-mode="ebichelchen" style="display:none">e-Bichelchen</button>
         <button type="button" class="template-tab active" data-template-mode="confirmation">E-mail</button>
         <button type="button" class="template-tab" data-template-mode="reminder">Rappel</button>
@@ -585,6 +583,54 @@ Langues : FR, DE, EN, LU">?</span>
 {ENFANT} — prénom de l’élève
 {TRIMESTRE} — trimestre choisi
 {RAPPEL_DELAI} — délai du rappel">?</span></div>
+      </div>
+
+      <div class="template-options-compact" id="templateOptionsCompact" aria-label="Options du modèle">
+        <div class="template-text-option" id="trimesterOption">
+          <span class="option-label">Trimestre</span>
+          <select id="trimesterSelect">
+            <option value="1">1er trimestre</option>
+            <option value="2">2e trimestre</option>
+            <option value="3">3e trimestre</option>
+          </select>
+        </div>
+
+        <div class="email-options-panel" id="templateEmailOptions">
+          <div class="email-options-title">
+            <span>Options e-mail</span>
+            <span class="email-options-summary" id="emailOptionsSummary"></span>
+          </div>
+          <div class="email-options-grid">
+            <div class="email-option-card reminder-field" id="emailSub">
+              <div class="email-option-head">
+                <span class="option-label">Rappel</span>
+                <div class="reminder-choice" role="group" aria-label="Choisir l'envoi avec ou sans rappel">
+                  <button type="button" class="reminder-choice-btn" id="reminderOffBtn">E-mail seul</button>
+                  <button type="button" class="reminder-choice-btn" id="reminderOnBtn">E-mail + rappel</button>
+                </div>
+              </div>
+              <label class="reminder-main legacy-hidden" title="Les rappels sont programmés dans Outlook au moment de l’envoi."><input type="checkbox" id="reminderEnabled"> Rappel automatique</label>
+              <div class="reminder-controls"><span>à</span><input type="time" id="reminderTime"><span>,</span><select id="reminderDays"><option value="1">1 jour</option><option value="2">2 jours</option><option value="3">3 jours</option></select><span>avant le rendez-vous</span></div>
+            </div>
+            <div class="email-option-card signature-setting">
+              <div class="email-option-head">
+                <span class="option-label">Signature</span>
+                <label class="signature-toggle"><input type="checkbox" id="useSigTop"> Ajouter</label>
+              </div>
+              <div class="signature-inline">
+                <div id="inlineSignatureControls" class="sig-logo-inline">
+                  <select id="logoModeSelect" class="logo-mode-select" aria-label="Logo dans la signature">
+                    <option value="unesco">Logo UNESCO</option>
+                    <option value="custom">Logo personnel…</option>
+                    <option value="none">Aucun logo</option>
+                  </select>
+                  <input type="file" id="logoFile" accept="image/*" style="display:none">
+                </div>
+              </div>
+              <span id="sigStatus" class="hint" style="margin:0"></span>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="mailTemplatePreview"></div>
       <div class="rich-toolbar" data-for="tplBodyEditor" aria-label="Barre de mise en forme">
@@ -686,7 +732,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 151;
+const APP_VERSION = 152;
 
 window.addEventListener("error", function(ev){
   try{
@@ -4368,6 +4414,87 @@ try{
 })();
 </script>
 
+
+
+<script>
+// v152: kompakte E-Mail-Optionen im Vorlagenbereich
+(function(){
+  function reminderOn(){
+    try { return !(window.state && state.options && state.options.reminderEnabled===false); } catch(e){ return true; }
+  }
+  function logoLabel(){
+    try{
+      var m=(state.options && state.options.logoMode) || "unesco";
+      if(m==="none") return "sans logo";
+      if(m==="custom") return "logo personnel";
+      return "Logo UNESCO";
+    }catch(e){ return "Logo UNESCO"; }
+  }
+  function updateTemplateOptionUi(){
+    try{
+      var on=reminderOn();
+      var offBtn=document.getElementById("reminderOffBtn");
+      var onBtn=document.getElementById("reminderOnBtn");
+      var card=document.getElementById("emailSub");
+      var cb=document.getElementById("reminderEnabled");
+      var summary=document.getElementById("emailOptionsSummary");
+      var useSig=document.getElementById("useSigTop");
+      if(cb) cb.checked=on;
+      if(offBtn) offBtn.classList.toggle("active", !on);
+      if(onBtn) onBtn.classList.toggle("active", on);
+      if(card) card.classList.toggle("reminder-off", !on);
+      if(summary){
+        var sig=(useSig && useSig.checked) ? ("signature · "+logoLabel()) : "sans signature";
+        var rappel=on ? "rappel activé" : "sans rappel";
+        summary.textContent=sig+" · "+rappel;
+      }
+    }catch(e){}
+  }
+  function setReminder(on){
+    try{
+      var cb=document.getElementById("reminderEnabled");
+      if(cb){
+        cb.checked=!!on;
+        cb.dispatchEvent(new Event("change", {bubbles:true}));
+      }else if(window.state && state.options){
+        state.options.reminderEnabled=!!on;
+        if(typeof saveState==="function") saveState();
+      }
+      setTimeout(updateTemplateOptionUi, 0);
+    }catch(e){}
+  }
+  function bindTemplateOptionUi(){
+    var offBtn=document.getElementById("reminderOffBtn");
+    var onBtn=document.getElementById("reminderOnBtn");
+    if(offBtn && !offBtn.dataset.boundV152){ offBtn.dataset.boundV152="1"; offBtn.onclick=function(){ setReminder(false); }; }
+    if(onBtn && !onBtn.dataset.boundV152){ onBtn.dataset.boundV152="1"; onBtn.onclick=function(){ setReminder(true); }; }
+    ["reminderEnabled","reminderTime","reminderDays","useSigTop","logoModeSelect"].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el && !el.dataset.boundV152Refresh){ el.dataset.boundV152Refresh="1"; el.addEventListener("change", function(){ setTimeout(updateTemplateOptionUi,0); }); }
+    });
+    updateTemplateOptionUi();
+  }
+  var oldApply=window.applyChannelVisibility || (typeof applyChannelVisibility==="function" ? applyChannelVisibility : null);
+  if(oldApply){
+    window.applyChannelVisibility=function(){
+      var r=oldApply.apply(this, arguments);
+      setTimeout(bindTemplateOptionUi, 0);
+      return r;
+    };
+  }
+  var oldRenderMails=window.renderMails || (typeof renderMails==="function" ? renderMails : null);
+  if(oldRenderMails){
+    window.renderMails=function(){
+      var r=oldRenderMails.apply(this, arguments);
+      setTimeout(bindTemplateOptionUi, 0);
+      return r;
+    };
+  }
+  document.addEventListener("DOMContentLoaded", bindTemplateOptionUi);
+  setTimeout(bindTemplateOptionUi, 300);
+  setInterval(updateTemplateOptionUi, 1500);
+})();
+</script>
 
 </body>
 </html>
