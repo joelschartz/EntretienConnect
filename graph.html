@@ -437,7 +437,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v181</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v182</span></h1>
 </header>
 
 <nav class="tabs">
@@ -696,7 +696,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 181;
+const APP_VERSION = 182;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1563,6 +1563,22 @@ function currentTemplateMode(){
   if(m==="ebichelchen" && ebichelchenEnabled()) return "ebichelchen";
   if(m==="reminder" && emailEnabled() && state.options && state.options.reminderEnabled!==false) return "reminder";
   return "confirmation";
+}
+function previewKindForTemplateMode(mode){
+  mode=normalizeTemplateMode(mode);
+  return mode==="ebichelchen" ? "eb" : (mode==="reminder" ? "reminder" : "email");
+}
+function templateModeForPreviewKind(kind){
+  if(kind==="eb") return "ebichelchen";
+  if(kind==="reminder") return "reminder";
+  if(kind==="email") return "confirmation";
+  return "";
+}
+function syncPreviewKindToTemplateMode(mode){
+  state.options=state.options||{};
+  const k=previewKindForTemplateMode(mode||currentTemplateMode());
+  state.options.previewKind=k;
+  return k;
 }
 function currentTemplateLang(){ return normalizeLang((state.options && state.options.templateLang) || "fr"); }
 function ensureLocalizedTemplates(){ state.localizedTemplates=normalizeLocalizedTemplates(state.localizedTemplates||{}); }
@@ -3261,12 +3277,26 @@ function bindSettings(){
   function switchTemplateMode(mode){
     mode=normalizeTemplateMode(mode);
     if(mode==="ebichelchen" && !ebichelchenEnabled()) mode="confirmation";
-    if(mode===currentTemplateMode()) return;
+    if(mode==="reminder" && (!emailEnabled() || state.options.reminderEnabled===false)) mode="confirmation";
+    const oldMode=currentTemplateMode();
+    const oldPreview=state.options.previewKind||"";
+    if(mode===oldMode && oldPreview===previewKindForTemplateMode(mode)) return;
     commitEditor(body);
     state.options.templateMode=mode;
+    syncPreviewKindToTemplateMode(mode);
     saveState();
     reloadTemplateEditor();
   }
+  window._switchTemplateModeFromPreview=function(mode, previewKind){
+    mode=normalizeTemplateMode(mode);
+    if(mode==="ebichelchen" && !ebichelchenEnabled()) mode="confirmation";
+    if(mode==="reminder" && (!emailEnabled() || state.options.reminderEnabled===false)) mode="confirmation";
+    commitEditor(body);
+    state.options.templateMode=mode;
+    state.options.previewKind=previewKind || previewKindForTemplateMode(mode);
+    saveState();
+    reloadTemplateEditor();
+  };
   function switchTemplateLang(lang){
     lang=normalizeLang(lang);
     if(lang===currentTemplateLang()) return;
@@ -3284,6 +3314,7 @@ function bindSettings(){
         commitEditor(body);
         state.options.reminderEnabled=true;
         state.options.templateMode="reminder";
+        syncPreviewKindToTemplateMode("reminder");
         saveState(); if(typeof applyChannelVisibility==="function") applyChannelVisibility();
         reloadTemplateEditor(); renderMails();
         return;
@@ -3293,6 +3324,7 @@ function bindSettings(){
       commitEditor(body);
       state.options.reminderEnabled=false;
       state.options.templateMode = emailEnabled() ? "confirmation" : (ebichelchenEnabled()?"ebichelchen":"confirmation");
+      syncPreviewKindToTemplateMode(state.options.templateMode);
       saveState(); if(typeof applyChannelVisibility==="function") applyChannelVisibility();
       reloadTemplateEditor(); renderMails();
       return;
@@ -3305,6 +3337,7 @@ function bindSettings(){
   if(reminderEnabled){ reminderEnabled.onchange=()=>{
     state.options.reminderEnabled=reminderEnabled.checked;
     if(!reminderEnabled.checked && state.options.templateMode==="reminder") state.options.templateMode = emailEnabled() ? "confirmation" : (ebichelchenEnabled()?"ebichelchen":"confirmation");
+    syncPreviewKindToTemplateMode(state.options.templateMode);
     saveState(); if(typeof applyChannelVisibility==="function") applyChannelVisibility(); reloadTemplateEditor(); renderMails();
   }; }
   if(reminderDays){ reminderDays.onchange=()=>{ state.options.reminderDaysBefore=Math.min(3,Math.max(1,Number(reminderDays.value)||1)); saveState(); refreshTemplateControls(); renderTemplatePreview(); renderMails(); }; }
@@ -4064,7 +4097,14 @@ function renderPreviewTabs(kinds, active){
   box.style.display="flex";
   box.innerHTML=kinds.map(k=>`<button type="button" class="preview-tab ${k.kind===active?'active':''}" data-preview-kind="${k.kind}">${esc(k.label)} · ${k.count}</button>`).join("");
   box.querySelectorAll("[data-preview-kind]").forEach(btn=>btn.onclick=()=>{
-    state.options.previewKind=btn.dataset.previewKind;
+    const kind=btn.dataset.previewKind;
+    const mode=templateModeForPreviewKind(kind);
+    if(mode && typeof window._switchTemplateModeFromPreview==="function"){
+      window._switchTemplateModeFromPreview(mode, kind);
+      return;
+    }
+    state.options.previewKind=kind;
+    if(mode) state.options.templateMode=mode;
     saveState();
     renderMails();
   });
@@ -4137,7 +4177,12 @@ function renderMails(openId){
     reminderMsgs=planned.concat(scheduled).sort((a,b)=>new Date(a.dueAt)-new Date(b.dueAt));
   }
   const kinds=availablePreviewKinds(emailMsgs, ebMsgs, reminderMsgs);
-  const activeKind=normalizePreviewKind(state.options.previewKind, kinds);
+  // v182: Modèles und Aperçu teilen denselben aktiven Nachrichtentyp.
+  // Der Editor-Modus bestimmt die Vorschau, solange dieser Typ verfügbar ist;
+  // wenn nicht, nimmt die Vorschau den ersten verfügbaren Typ.
+  const wantedKind=previewKindForTemplateMode(currentTemplateMode());
+  const wantedAvailable=kinds.some(k=>k.kind===wantedKind);
+  const activeKind=wantedAvailable ? wantedKind : normalizePreviewKind(state.options.previewKind, kinds);
   if(state.options.previewKind!==activeKind){ state.options.previewKind=activeKind; saveState(); }
   renderPreviewTabs(kinds, activeKind);
   const emailHtml=emailMsgs.map(m=>{
