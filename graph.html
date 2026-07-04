@@ -437,7 +437,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v178</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v179</span></h1>
 </header>
 
 <nav class="tabs">
@@ -635,22 +635,9 @@ Langues : FR, DE, EN, LU">?</span>
       </div>
       <!-- v163: le PDF de rappel se joint individuellement par élève dans l’aperçu (📎 dans la barre de l’éditeur). -->
       <input type="file" id="reminderPdfInput" accept="application/pdf,.pdf" style="display:none">
-      <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Enregistrer le texte + l’objet comme standard personnel">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Réinitialiser le texte par défaut">↺</a></div>
+      <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Définir le texte actuel comme standard personnel">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Recharger le standard actuel">↺</a></div>
       <div id="sigMissing" style="margin-top:12px"></div>
-      <div class="editor-actions" id="resetSigRow" style="display:none"><a href="#" id="saveSig" class="icon-btn save" title="Enregistrer la signature (et le logo) comme standard personnel">✓</a><a href="#" id="defaultSigBtn" class="icon-btn" title="Réinitialiser la signature">↺</a></div>
-      <div class="template-personal-box" id="templatePersonalBox">
-        <div>
-          <h3>Modèles et signature</h3>
-          <p class="hint">Ces réglages sont enregistrés localement sur cet ordinateur : textes e-mail, rappel, e-Bichelchen, signature et logo. Les élèves et rendez-vous ne sont pas exportés ici.</p>
-        </div>
-        <div class="template-personal-actions">
-          <button type="button" class="ghost sm" id="saveActiveModelDefault">Enregistrer ce modèle comme standard</button>
-          <button type="button" class="ghost sm" id="saveSignatureDefault">Enregistrer la signature comme standard</button>
-          <button type="button" class="ghost sm" id="exportTemplates">Exporter mes modèles</button>
-          <button type="button" class="ghost sm" id="importTemplates">Importer des modèles</button>
-          <input type="file" id="importTemplatesFile" accept="application/json,.json" style="display:none">
-        </div>
-      </div>
+      <div class="editor-actions" id="resetSigRow" style="display:none"><a href="#" id="saveSig" class="icon-btn save" title="Définir la signature actuelle comme standard personnel">✓</a><a href="#" id="defaultSigBtn" class="icon-btn" title="Recharger la signature standard">↺</a></div>
       </div>
     </div>
 
@@ -708,7 +695,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 178;
+const APP_VERSION = 179;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3373,9 +3360,7 @@ function bindSettings(){
   if(defaultSigBtn){
     defaultSigBtn.addEventListener("click", (e)=>{
       if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      if(confirm("Réinitialiser la signature au standard ? La signature actuelle (et le logo) sera remplacée par votre standard enregistré — ou, s’il n’y en a pas, par le standard d’origine.")){
-        applyHardSignatureReset();
-      }
+      applyHardSignatureReset();
     }, true);
   }
   function applyTemplateBodyReset(){
@@ -3402,9 +3387,7 @@ function bindSettings(){
   if(resetTplBody){
     resetTplBody.addEventListener("click", (e)=>{
       if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      if(confirm(currentTemplateMode()==="ebichelchen" ? "Réinitialiser le message e-Bichelchen au standard ? Le titre et le texte seront remplacés." : "Réinitialiser le texte de l’e-mail à votre standard ? L’objet et le texte seront remplacés. La signature reste inchangée.")){
-        applyTemplateBodyReset();
-      }
+      applyTemplateBodyReset();
     }, true);
   }
   function saveTemplateBodyAsDefault(){
@@ -3416,36 +3399,25 @@ function bindSettings(){
     setUserDefaultTemplate(mode, lang, activeTpl.subject, activeTpl.bodyHtml);
     saveState();
     updateTplResetVisibility();
-    showToast(currentTemplateMode()==="ebichelchen" ? "Message e-Bichelchen enregistré comme standard ✓" : "Texte enregistré comme standard ✓");
   }
   function saveSignatureAsDefault(){
     commitEditor(body);
     state.userDefaults=Object.assign({}, state.userDefaults, { signatureHtml: state.template.signatureHtml, logoMode: state.options.logoMode, includeLogo: state.options.includeLogo!==false });
     saveState();
     updateTplResetVisibility();
-    showToast("Signature enregistrée comme standard ✓");
   }
   const saveTplBody=document.getElementById("saveTplBody");
   if(saveTplBody){
     saveTplBody.addEventListener("click", (e)=>{
       if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      const msg=currentTemplateMode()==="ebichelchen"
-        ? "Définir le message e-Bichelchen actuellement affiché comme standard personnel ? La réinitialisation restaurera désormais cette version."
-        : (currentTemplateMode()==="reminder"
-          ? "Définir le rappel actuellement affiché comme standard personnel ? La réinitialisation restaurera désormais cette version."
-          : "Définir le texte actuel de l’e-mail et l’objet comme standard personnel ? La réinitialisation restaurera désormais cette version.");
-      if(confirm(msg)){
-        saveTemplateBodyAsDefault();
-      }
+      saveTemplateBodyAsDefault();
     }, true);
   }
   const saveSig=document.getElementById("saveSig");
   if(saveSig){
     saveSig.addEventListener("click", (e)=>{
       if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      if(confirm("Définir la signature actuelle (et le choix du logo) comme standard personnel ? La réinitialisation de la signature restaurera désormais cette signature.")){
-        saveSignatureAsDefault();
-      }
+      saveSignatureAsDefault();
     }, true);
   }
   const useSigTop=document.getElementById("useSigTop");
