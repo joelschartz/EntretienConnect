@@ -405,6 +405,9 @@
   a.icon-btn:hover{background:var(--err-soft);color:var(--err);border-color:#f6cfcb}
   a.icon-btn.save:hover{background:var(--ok-soft);color:var(--ok);border-color:#bfe5d1}
   .editor-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  .template-personal-box{margin-top:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface-soft);padding:14px;display:flex;align-items:flex-start;gap:14px;justify-content:space-between;flex-wrap:wrap}
+  .template-personal-box h3{font-size:14px;margin:0 0 4px;font-weight:850;color:var(--ink)}
+  .template-personal-box p{margin:0;max-width:620px}.template-personal-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.template-personal-actions button{white-space:nowrap}
 
   /* "?" info tooltip */
   .tip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--accent-soft);color:#4a55a2;font-size:12.5px;font-weight:750;cursor:help;user-select:none;outline:none}
@@ -434,7 +437,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v177</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v178</span></h1>
 </header>
 
 <nav class="tabs">
@@ -473,9 +476,6 @@
       <div id="setupReminderChoice" class="setup-reminder-choice" style="display:none"></div>
       <div id="setupStatusGrid" class="setup-status-grid"></div>
       <div class="setup-actions">
-        <button type="button" class="ghost sm" id="exportAppData">Exporter les données</button>
-        <button type="button" class="ghost sm" id="importAppData">Importer les données</button>
-        <input type="file" id="importAppDataFile" accept="application/json,.json" style="display:none">
         <span class="hint" id="setupNavHint" style="display:none"></span>
       </div>
     </div>
@@ -638,6 +638,19 @@ Langues : FR, DE, EN, LU">?</span>
       <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Enregistrer le texte + l’objet comme standard personnel">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Réinitialiser le texte par défaut">↺</a></div>
       <div id="sigMissing" style="margin-top:12px"></div>
       <div class="editor-actions" id="resetSigRow" style="display:none"><a href="#" id="saveSig" class="icon-btn save" title="Enregistrer la signature (et le logo) comme standard personnel">✓</a><a href="#" id="defaultSigBtn" class="icon-btn" title="Réinitialiser la signature">↺</a></div>
+      <div class="template-personal-box" id="templatePersonalBox">
+        <div>
+          <h3>Modèles et signature</h3>
+          <p class="hint">Ces réglages sont enregistrés localement sur cet ordinateur : textes e-mail, rappel, e-Bichelchen, signature et logo. Les élèves et rendez-vous ne sont pas exportés ici.</p>
+        </div>
+        <div class="template-personal-actions">
+          <button type="button" class="ghost sm" id="saveActiveModelDefault">Enregistrer ce modèle comme standard</button>
+          <button type="button" class="ghost sm" id="saveSignatureDefault">Enregistrer la signature comme standard</button>
+          <button type="button" class="ghost sm" id="exportTemplates">Exporter mes modèles</button>
+          <button type="button" class="ghost sm" id="importTemplates">Importer des modèles</button>
+          <input type="file" id="importTemplatesFile" accept="application/json,.json" style="display:none">
+        </div>
+      </div>
       </div>
     </div>
 
@@ -695,7 +708,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 177;
+const APP_VERSION = 178;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1780,43 +1793,119 @@ function showToast(msg){
   clearTimeout(t._hideTimer); t._hideTimer=setTimeout(()=>{ t.style.opacity="0"; },1900);
 }
 
-function exportAppData(){
+function cloneJsonSafe(obj){
+  try{ return JSON.parse(JSON.stringify(obj==null?null:obj)); }catch(e){ return null; }
+}
+function currentTemplatePayload(){
+  try{ const ed=document.getElementById("tplBodyEditor"); if(ed) commitEditor(ed); }catch(e){}
+  return {
+    userDefaults: cloneJsonSafe(state.userDefaults||{}),
+    template: cloneJsonSafe(state.template||{}),
+    reminderTemplate: cloneJsonSafe(state.reminderTemplate||{}),
+    ebichelchenTemplate: cloneJsonSafe(state.ebichelchenTemplate||{}),
+    localizedTemplates: cloneJsonSafe(state.localizedTemplates||{}),
+    options: {
+      useSig: state.options.useSig!==false,
+      includeLogo: state.options.includeLogo!==false,
+      logoMode: state.options.logoMode || "unesco",
+      templateLang: normalizeLang(state.options.templateLang || "fr")
+    }
+  };
+}
+function exportTemplateData(){
   try{
     saveState();
-    const payload={exportedBy:"EntretienConnect", version:APP_VERSION, exportedAt:new Date().toISOString(), state:state};
+    const payload={
+      exportedBy:"EntretienConnect",
+      exportType:"templates-and-signature",
+      version:APP_VERSION,
+      exportedAt:new Date().toISOString(),
+      templates:currentTemplatePayload()
+    };
     const blob=new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
     const a=document.createElement("a");
     const d=new Date();
     const stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0")+"-"+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0");
     a.href=URL.createObjectURL(blob);
-    a.download="EntretienConnect-backup-"+stamp+".json";
+    a.download="EntretienConnect-modeles-signature-"+stamp+".json";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    showToast("Données exportées ✓");
+    showToast("Modèles exportés ✓");
   }catch(e){ alert("Export impossible : "+(e&&e.message?e.message:e)); }
 }
-function importAppDataFile(file){
+function extractTemplateImportPayload(parsed){
+  if(!parsed || typeof parsed!=="object") return null;
+  // v178 export format
+  if(parsed.templates && typeof parsed.templates==="object") return parsed.templates;
+  // ancien export complet v177 : n'en reprendre que les modèles, jamais les élèves/rendez-vous.
+  if(parsed.state && typeof parsed.state==="object") return parsed.state;
+  // accepte aussi un fichier réduit contenant directement les champs de modèles.
+  if(parsed.template || parsed.reminderTemplate || parsed.ebichelchenTemplate || parsed.userDefaults || parsed.localizedTemplates) return parsed;
+  return null;
+}
+function optionSubsetForTemplateImport(opts){
+  opts=opts&&typeof opts==="object" ? opts : {};
+  const out={};
+  if(Object.prototype.hasOwnProperty.call(opts,"useSig")) out.useSig=opts.useSig!==false;
+  if(Object.prototype.hasOwnProperty.call(opts,"includeLogo")) out.includeLogo=opts.includeLogo!==false;
+  if(Object.prototype.hasOwnProperty.call(opts,"logoMode")) out.logoMode=String(opts.logoMode||"unesco");
+  if(Object.prototype.hasOwnProperty.call(opts,"templateLang")) out.templateLang=normalizeLang(opts.templateLang);
+  return out;
+}
+function importTemplateDataFile(file){
   if(!file) return;
   const reader=new FileReader();
   reader.onload=()=>{
     try{
       const parsed=JSON.parse(String(reader.result||"{}"));
-      const rawState=(parsed && parsed.state && typeof parsed.state==="object") ? parsed.state : parsed;
-      const imported=normalizeStateObject(rawState);
-      if(!confirm("Importer cette sauvegarde ?\n\nLes données actuellement affichées seront remplacées sur cet ordinateur.")) return;
-      state=imported;
-      hydrateRuntimeSetsFromState();
+      const raw=extractTemplateImportPayload(parsed);
+      if(!raw) throw new Error("no-template-payload");
+      if(!confirm("Importer ces modèles et cette signature ?\n\nLes élèves, les rendez-vous et les statuts d’envoi actuels seront conservés.")) return;
+      const merged=Object.assign({}, state, {
+        userDefaults: raw.userDefaults!==undefined ? raw.userDefaults : state.userDefaults,
+        template: raw.template || state.template,
+        reminderTemplate: raw.reminderTemplate || state.reminderTemplate,
+        ebichelchenTemplate: raw.ebichelchenTemplate || state.ebichelchenTemplate,
+        localizedTemplates: raw.localizedTemplates || state.localizedTemplates,
+        options: Object.assign({}, state.options, optionSubsetForTemplateImport(raw.options))
+      });
+      const norm=normalizeStateObject(merged);
+      state.userDefaults=norm.userDefaults;
+      state.template=norm.template;
+      state.reminderTemplate=norm.reminderTemplate;
+      state.ebichelchenTemplate=norm.ebichelchenTemplate;
+      state.localizedTemplates=norm.localizedTemplates;
+      const importedOpts=optionSubsetForTemplateImport(raw.options);
+      state.options=Object.assign({}, state.options, importedOpts);
+      if(!state.options.logoMode) state.options.logoMode="unesco";
       saveState();
       refreshAllViews();
-      showToast("Données importées ✓");
-    }catch(e){ alert("Import impossible : fichier JSON invalide."); }
+      showToast("Modèles importés ✓");
+    }catch(e){ alert("Import impossible : ce fichier ne contient pas de modèles EntretienConnect valides."); }
   };
   reader.readAsText(file);
 }
 function bindDataImportExport(){
-  const ex=document.getElementById("exportAppData"); if(ex) ex.onclick=exportAppData;
-  const im=document.getElementById("importAppData"); const fi=document.getElementById("importAppDataFile");
-  if(im && fi){ im.onclick=()=>fi.click(); fi.onchange=()=>{ const f=fi.files && fi.files[0]; fi.value=""; importAppDataFile(f); }; }
+  const exportTpl=document.getElementById("exportTemplates");
+  if(exportTpl) exportTpl.onclick=exportTemplateData;
+  const importTpl=document.getElementById("importTemplates");
+  const importFile=document.getElementById("importTemplatesFile");
+  if(importTpl && importFile){
+    importTpl.onclick=()=>importFile.click();
+    importFile.onchange=()=>{ const f=importFile.files && importFile.files[0]; importFile.value=""; importTemplateDataFile(f); };
+  }
+  const saveActive=document.getElementById("saveActiveModelDefault");
+  if(saveActive) saveActive.onclick=(e)=>{
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    const hiddenSave=document.getElementById("saveTplBody");
+    if(hiddenSave) hiddenSave.click();
+  };
+  const saveSignature=document.getElementById("saveSignatureDefault");
+  if(saveSignature) saveSignature.onclick=(e)=>{
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    const hiddenSave=document.getElementById("saveSig");
+    if(hiddenSave) hiddenSave.click();
+  };
 }
 function unwrapNodeKeepChildren(node){
   const parent=node && node.parentNode; if(!parent) return;
@@ -3340,7 +3429,12 @@ function bindSettings(){
   if(saveTplBody){
     saveTplBody.addEventListener("click", (e)=>{
       if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      if(confirm("Définir le texte actuel de l’e-mail et l’objet comme standard personnel ? La réinitialisation restaurera désormais cette version.")){
+      const msg=currentTemplateMode()==="ebichelchen"
+        ? "Définir le message e-Bichelchen actuellement affiché comme standard personnel ? La réinitialisation restaurera désormais cette version."
+        : (currentTemplateMode()==="reminder"
+          ? "Définir le rappel actuellement affiché comme standard personnel ? La réinitialisation restaurera désormais cette version."
+          : "Définir le texte actuel de l’e-mail et l’objet comme standard personnel ? La réinitialisation restaurera désormais cette version.");
+      if(confirm(msg)){
         saveTemplateBodyAsDefault();
       }
     }, true);
