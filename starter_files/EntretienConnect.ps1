@@ -25,7 +25,7 @@ $TokenFile = Join-Path $RuntimeDir "graph_token.json"
 $LogFile   = Join-Path $RuntimeDir "EntretienConnect-log.txt"
 $EbCacheFile = Join-Path $RuntimeDir "ebichelchen_cache.json"
 $script:Pending = $null
-$script:PendingWeb = $null   # v173: état PKCE du login sans code (state/verifier/redirect)
+$script:PendingWeb = $null   # v174: état PKCE du login sans code (state/verifier/redirect)
 $script:LastHeartbeatUtc = $null
 $script:ServerStartedUtc = [DateTime]::UtcNow
 $script:ShutdownRequested = $false
@@ -535,7 +535,7 @@ function Handle-Request($stream, $req) {
         return
     }
     if ($path -eq "/api/graph/capabilities") {
-        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = 173 }
+        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = 174 }
         return
     }
     if ($path -eq "/api/graph/account") {
@@ -544,7 +544,7 @@ function Handle-Request($stream, $req) {
         else { Send-Json $stream @{ ok = $true; signedIn = $false } }
         return
     }
-    # ---- v173: Login sans code (auth-code + PKCE, redirection loopback) ----
+    # ---- v174: Login sans code (auth-code + PKCE, redirection loopback) ----
     if ($path -eq "/api/graph/login-start-web") {
         $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
         $vb = New-Object byte[] 64
@@ -555,7 +555,7 @@ function Handle-Request($stream, $req) {
         $sb = New-Object byte[] 24
         $rng.GetBytes($sb)
         $oauthState = [Convert]::ToBase64String($sb).TrimEnd('=').Replace('+','-').Replace('/','_')
-        # v173: Racine seulement. Azure accepte le port loopback, mais le chemin
+        # v174: Racine seulement. Azure accepte le port loopback, mais le chemin
         # doit correspondre à http://localhost ; /oauth/redirect donnait AADSTS50011.
         $redirect = "http://localhost:$Port/"
         $script:PendingWeb = @{ state = $oauthState; verifier = $verifier; redirect = $redirect }
@@ -804,7 +804,7 @@ try {
 
 try { [System.IO.File]::WriteAllText($LogFile, ("=== Start " + (Get-Date) + " ===" + [Environment]::NewLine), [Text.Encoding]::UTF8) } catch {}
 Write-Host "============================================================"
-Write-Host "  EntretienConnect est lancé.   [Version : v173 GitHub Starter - sans Python]"
+Write-Host "  EntretienConnect est lancé.   [Version : v174 GitHub Starter - sans Python]"
 Write-Host "  Dans le navigateur :  $url"
 Write-Host "  Laissez cette fenêtre ouverte. La fermer = quitter."
 Write-Host "============================================================"

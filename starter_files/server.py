@@ -280,7 +280,7 @@ OAUTH_BASE = "https://login.microsoftonline.com/" + GRAPH_TENANT + "/oauth2/v2.0
 TOKEN_FILE = os.path.join(DATA_DIR, "graph_token.json")
 
 _pending_device = {}   # zwischen Login-Start und Polling
-_pending_web = {}      # v173: state -> {verifier, redirect_uri} für den Login ohne Code (PKCE)
+_pending_web = {}      # v174: state -> {verifier, redirect_uri} für den Login ohne Code (PKCE)
 
 
 def _gctx():
@@ -443,7 +443,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         parsed0 = urllib.parse.urlparse(self.path)
         path0 = parsed0.path
         qs0 = urllib.parse.parse_qs(parsed0.query)
-        # v173: OAuth-Code-Login kehrt auf die Wurzel zurueck:
+        # v174: OAuth-Code-Login kehrt auf die Wurzel zurueck:
         # http://localhost:<port>/?code=...&state=...
         # Der Microsoft-Client "Graph Command Line Tools" ist nur fuer
         # http://localhost ohne Pfad registriert. Azure ignoriert beim
@@ -459,7 +459,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 173, "ebichelchen": EB_AVAILABLE})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 174, "ebichelchen": EB_AVAILABLE})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -561,10 +561,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(200, {"ok": True, "signedIn": True, "account": t["account"]})
         return self._json(200, {"ok": True, "signedIn": False})
 
-    # ---- Graph: Login starten (page web, sans code à saisir) — v173 ----
+    # ---- Graph: Login starten (page web, sans code à saisir) — v174 ----
     # Auth-code + PKCE avec redirection loopback vers ce helper. L'utilisateur ne fait
     # que la connexion IAM ; aucun code d'appareil à copier.
-    # IMPORTANT v173 : redirect_uri = http://localhost:<port>/ (racine).
+    # IMPORTANT v174 : redirect_uri = http://localhost:<port>/ (racine).
     # Avec ce client public, Azure accepte le port loopback mais le chemin doit
     # rester la racine enregistrée ; /oauth/redirect provoque AADSTS50011.
     def handle_graph_login_start_web(self):

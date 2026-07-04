@@ -434,7 +434,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v173</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v174</span></h1>
 </header>
 
 <nav class="tabs">
@@ -691,7 +691,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 173;
+const APP_VERSION = 174;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2307,8 +2307,75 @@ function closestStylableElement(editor){
   }
   return null;
 }
+function styleTextSelectionByNodes(editor, range, prop, val){
+  // Robuste Variante für alle Editor-Felder: nicht den kompletten HTML-Block in ein
+  // einziges <span> stecken (das zerlegt bei Mehrzeilen-/BR-Auswahl manchmal die
+  // Struktur), sondern nur die tatsächlich markierten Textknoten ummanteln.
+  if(!editor || !range || range.collapsed) return false;
+  const pieces=[];
+  const acceptNode=(node)=>{
+    if(!node || !node.nodeValue) return NodeFilter.FILTER_SKIP;
+    if(node.parentElement && node.parentElement.closest('[contenteditable="false"]')) return NodeFilter.FILTER_REJECT;
+    try{ if(!range.intersectsNode(node)) return NodeFilter.FILTER_SKIP; }catch(_){ return NodeFilter.FILTER_SKIP; }
+    let start=0, end=node.nodeValue.length;
+    if(node===range.startContainer) start=range.startOffset;
+    if(node===range.endContainer) end=range.endOffset;
+    if(end<=start) return NodeFilter.FILTER_SKIP;
+    return NodeFilter.FILTER_ACCEPT;
+  };
+  let walker;
+  try{ walker=document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, {acceptNode}); }
+  catch(_){ return false; }
+  let node;
+  while((node=walker.nextNode())){
+    let start=0, end=node.nodeValue.length;
+    if(node===range.startContainer) start=range.startOffset;
+    if(node===range.endContainer) end=range.endOffset;
+    if(end>start) pieces.push({node,start,end});
+  }
+  if(!pieces.length) return false;
+  const tuneHighlight = (el)=>{
+    if(!el || !el.style) return;
+    el.style.boxDecorationBreak="clone";
+    el.style.webkitBoxDecorationBreak="clone";
+    el.style.padding="0 .06em";
+    el.style.borderRadius=".08em";
+    el.style.lineHeight="1.15";
+  };
+  const spans=[];
+  for(let i=pieces.length-1;i>=0;i--){
+    const p=pieces[i];
+    let n=p.node;
+    if(!n || !n.parentNode) continue;
+    let start=Math.max(0, Math.min(p.start, n.nodeValue.length));
+    let end=Math.max(start, Math.min(p.end, n.nodeValue.length));
+    if(end<=start) continue;
+    try{
+      if(end<n.nodeValue.length) n.splitText(end);
+      let mid=n;
+      if(start>0) mid=n.splitText(start);
+      if(!mid || !mid.parentNode || !mid.nodeValue) continue;
+      const span=document.createElement("span");
+      span.style[prop]=val;
+      if(prop==="backgroundColor") tuneHighlight(span);
+      mid.parentNode.insertBefore(span, mid);
+      span.appendChild(mid);
+      spans.push(span);
+    }catch(_){ }
+  }
+  spans.reverse();
+  if(!spans.length) return false;
+  try{
+    const sel=window.getSelection(); sel.removeAllRanges();
+    const nr=document.createRange(); nr.setStartBefore(spans[0]); nr.setEndAfter(spans[spans.length-1]);
+    sel.addRange(nr); savedRange=nr.cloneRange();
+  }catch(_){ }
+  return true;
+}
 function applyInlineStyle(editor, prop, val){
-  // Wendet ein Inline-Format direkt auf den gemerkten Bereich an (zuverlässiger als execCommand).
+  // Wendet ein Inline-Format direkt auf den gemerkten Bereich an.
+  // v174: Schriftgrößen/Schriftarten/Farben funktionieren jetzt in allen Editor-Instanzen
+  // (Vorlage, einzelne E-Mail, Rappel) auch bei komplexeren Mehrzeilen-Auswahlen zuverlässig.
   if(!savedRange) return false;
   const anc=savedRange.commonAncestorContainer; const ancEl=anc.nodeType===1?anc:anc.parentElement;
   if(!editor || !ancEl || !editor.contains(ancEl)) return false;
@@ -2325,10 +2392,16 @@ function applyInlineStyle(editor, prop, val){
     if(target){ target.style[prop]=val; if(prop==="backgroundColor") tuneHighlight(target); normalizeHighlightSpans(editor); editor.focus(); return true; }
     return false;
   }
-  const span=document.createElement("span"); span.style[prop]=val; if(prop==="backgroundColor") tuneHighlight(span);
   const r=savedRange.cloneRange();
-  try{ r.surroundContents(span); }
-  catch(e){ try{ const frag=r.extractContents(); span.appendChild(frag); r.insertNode(span); }catch(e2){ return false; } }
+  if(styleTextSelectionByNodes(editor, r, prop, val)){
+    normalizeHighlightSpans(editor);
+    editor.focus();
+    return true;
+  }
+  const span=document.createElement("span"); span.style[prop]=val; if(prop==="backgroundColor") tuneHighlight(span);
+  const rf=savedRange.cloneRange();
+  try{ rf.surroundContents(span); }
+  catch(e){ try{ const frag=rf.extractContents(); span.appendChild(frag); rf.insertNode(span); }catch(e2){ return false; } }
   const sel=window.getSelection(); sel.removeAllRanges();
   const nr=document.createRange(); nr.selectNodeContents(span); sel.addRange(nr); savedRange=nr.cloneRange();
   normalizeHighlightSpans(editor);
@@ -3351,7 +3424,7 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   if(inBtn) inBtn.disabled=true;
   lb.style.display="block";
   lb.innerHTML='<div class="banner info">Préparation de la connexion …</div>';
-  // v173: connexion SANS code — le helper local reçoit la redirection OAuth (PKCE).
+  // v174: connexion SANS code — le helper local reçoit la redirection OAuth (PKCE).
   // Si le helper n'est pas encore à jour (endpoint inconnu), on retombe sur le code d'appareil.
   let w=null;
   try{ w=await api("/api/graph/login-start-web"); }catch(e){ w=null; }
