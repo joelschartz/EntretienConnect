@@ -437,7 +437,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v182</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v183</span></h1>
 </header>
 
 <nav class="tabs">
@@ -696,7 +696,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 182;
+const APP_VERSION = 183;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1581,6 +1581,20 @@ function syncPreviewKindToTemplateMode(mode){
   return k;
 }
 function currentTemplateLang(){ return normalizeLang((state.options && state.options.templateLang) || "fr"); }
+function currentOpenPreviewId(){
+  const list=document.getElementById("mailList");
+  const open=list ? list.querySelector(".mailitem.open") : null;
+  return open ? String(open.dataset.id||"") : String(window._openPreviewId||"");
+}
+function previewMessageById(id){
+  id=String(id||"");
+  if(!id) return null;
+  return ((activePreviewMsgs||[]).find(x=>String(x.id)===id) || (currentMsgs||[]).find(x=>String(x.id)===id) || null);
+}
+function previewLangForId(id){
+  const m=previewMessageById(id);
+  return m && m.lang ? normalizeLang(m.lang) : "";
+}
 function ensureLocalizedTemplates(){ state.localizedTemplates=normalizeLocalizedTemplates(state.localizedTemplates||{}); }
 function templateDataForMode(mode, lang){
   mode=normalizeTemplateMode(mode);
@@ -2943,7 +2957,7 @@ function commitEditor(editor){
       tpl.bodyHtml=simpleHtmlFromPlainText(txt);
       tpl.body=txt;
       renderTemplatePreview();
-      saveState(); renderMails(); updateTplResetVisibility();
+      saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility();
       return;
     }
     sanitizePastedImages(editor);
@@ -2962,7 +2976,7 @@ function commitEditor(editor){
       if(typeof showToast==="function") showToast("Logo retiré — ↺ sous l’éditeur pour le rétablir.");
     }
     renderTemplatePreview(); renderLogoPreview();
-    saveState(); renderMails(); updateTplResetVisibility();
+    saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility();
   } else if(editor.classList && editor.classList.contains("mail-editor")){
     const ovk=editor.dataset.ovk;
     if(ovk){
@@ -3224,7 +3238,7 @@ function bindSettings(){
   const reminderTime=document.getElementById("reminderTime");
   const currentTpl=()=>templateDataForMode(currentTemplateMode(), currentTemplateLang());
   su.value=currentTpl().subject; forceTemplateEditorHtml(composeEditorHtml(currentTemplateMode(), currentTemplateLang()));
-  su.oninput=()=>{ const tpl=currentTpl(); tpl.subject=su.value; saveState(); renderMails(); updateTplResetVisibility(); };
+  su.oninput=()=>{ const tpl=currentTpl(); tpl.subject=su.value; saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility(); };
   // Robuste, direkte Reaktion auf jede Änderung im Editor (unabhängig vom Commit-Pfad):
   body.addEventListener("input", updateTplResetVisibility);
   body.addEventListener("keyup", updateTplResetVisibility);
@@ -3267,11 +3281,12 @@ function bindSettings(){
     if(reminderTime){ reminderTime.value=reminderTimeValue(); reminderTime.disabled=!reminderOn; }
     if(templateNote){ templateNote.textContent=""; }
   }
-  function reloadTemplateEditor(){
+  function reloadTemplateEditor(openId){
     const tpl=currentTpl();
+    const keepOpen = (openId!==undefined) ? String(openId||"") : currentOpenPreviewId();
     su.value=tpl.subject||"";
     forceTemplateEditorHtml(composeEditorHtml(currentTemplateMode(), currentTemplateLang()));
-    refreshTemplateControls(); renderTemplatePreview(); updateTplResetVisibility(); renderMails();
+    refreshTemplateControls(); renderTemplatePreview(); updateTplResetVisibility(); renderMails(keepOpen);
   }
   window._reloadTemplateEditor=reloadTemplateEditor;
   function switchTemplateMode(mode){
@@ -3297,14 +3312,16 @@ function bindSettings(){
     saveState();
     reloadTemplateEditor();
   };
-  function switchTemplateLang(lang){
+  function switchTemplateLang(lang, openId){
     lang=normalizeLang(lang);
-    if(lang===currentTemplateLang()) return;
+    const keepOpen = (openId!==undefined) ? String(openId||"") : currentOpenPreviewId();
+    if(lang===currentTemplateLang()){ renderMails(keepOpen); return; }
     commitEditor(body);
     state.options.templateLang=lang;
     saveState();
-    reloadTemplateEditor();
+    reloadTemplateEditor(keepOpen);
   }
+  window._switchTemplateLangFromPreview=function(lang, openId){ switchTemplateLang(lang, openId); };
   if(templateModeTabs){ templateModeTabs.querySelectorAll(".template-tab").forEach(btn=>{ btn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation();
     const tm=btn.dataset.templateMode;
     if(tm==="reminder"){
@@ -4140,7 +4157,10 @@ function reminderRowHtml(m, openId){
 }
 let activePreviewIds=new Set();
 let activePreviewMsgs=[];
+window._openPreviewId = window._openPreviewId || "";
 function renderMails(openId){
+  if(openId!==undefined) window._openPreviewId=String(openId||"");
+  openId=String((openId!==undefined ? openId : window._openPreviewId) || "");
   currentMsgs=buildMessages();
   const sentCount=currentMsgs.filter(isMsgDone).length;
   const remaining=currentMsgs.length-sentCount;
@@ -4178,6 +4198,7 @@ function renderMails(openId){
   }
   const kinds=availablePreviewKinds(emailMsgs, ebMsgs, reminderMsgs);
   // v182: Modèles und Aperçu teilen denselben aktiven Nachrichtentyp.
+  // v183: Geöffnete Aperçu-Zeilen bleiben beim Bearbeiten oben offen; beim Öffnen synchronisiert sich die Sprache.
   // Der Editor-Modus bestimmt die Vorschau, solange dieser Typ verfügbar ist;
   // wenn nicht, nimmt die Vorschau den ersten verfügbaren Typ.
   const wantedKind=previewKindForTemplateMode(currentTemplateMode());
@@ -4234,20 +4255,37 @@ function renderMails(openId){
     activePreviewMsgs=[];
     activePreviewIds=new Set();
   }
+  if(openId && !activePreviewIds.has(String(openId))){ openId=""; window._openPreviewId=""; }
 
   list.querySelectorAll(".toggle").forEach(t=>t.onclick=()=>{
     const item=t.closest(".mailitem");
     if(!item) return;
+    const id=String(item.dataset.id||"");
     const shouldOpen=!item.classList.contains("open");
+    if(!shouldOpen){
+      window._openPreviewId="";
+      // Sobald unten keine Vorschau mehr geöffnet ist, springt der Modell-Editor wieder
+      // auf Französisch als Standard zurück.
+      if(currentTemplateLang()!=="fr" && typeof window._switchTemplateLangFromPreview==="function"){
+        window._switchTemplateLangFromPreview("fr", "");
+      } else {
+        renderMails("");
+      }
+      return;
+    }
+    window._openPreviewId=id;
+    const lang=previewLangForId(id);
+    if(lang && lang!==currentTemplateLang() && typeof window._switchTemplateLangFromPreview==="function"){
+      window._switchTemplateLangFromPreview(lang, id);
+      return;
+    }
     list.querySelectorAll(".mailitem.open").forEach(x=>{
       x.classList.remove("open");
       const oldToggle=x.querySelector(".toggle");
       if(oldToggle) oldToggle.textContent="Modifier ▾";
     });
-    if(shouldOpen){
-      item.classList.add("open");
-      t.textContent="Fermer ▴";
-    }
+    item.classList.add("open");
+    t.textContent="Fermer ▴";
   });
   list.querySelectorAll(".eb-title-input").forEach(inp=>inp.oninput=e=>{
     const input=e.target;
