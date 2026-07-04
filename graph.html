@@ -434,7 +434,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v171</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v173</span></h1>
 </header>
 
 <nav class="tabs">
@@ -691,7 +691,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 171;
+const APP_VERSION = 173;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3351,7 +3351,7 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   if(inBtn) inBtn.disabled=true;
   lb.style.display="block";
   lb.innerHTML='<div class="banner info">Préparation de la connexion …</div>';
-  // v171: connexion SANS code — le helper local reçoit la redirection OAuth (PKCE).
+  // v173: connexion SANS code — le helper local reçoit la redirection OAuth (PKCE).
   // Si le helper n'est pas encore à jour (endpoint inconnu), on retombe sur le code d'appareil.
   let w=null;
   try{ w=await api("/api/graph/login-start-web"); }catch(e){ w=null; }

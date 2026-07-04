@@ -280,7 +280,7 @@ OAUTH_BASE = "https://login.microsoftonline.com/" + GRAPH_TENANT + "/oauth2/v2.0
 TOKEN_FILE = os.path.join(DATA_DIR, "graph_token.json")
 
 _pending_device = {}   # zwischen Login-Start und Polling
-_pending_web = {}      # v171: state -> {verifier, redirect_uri} für den Login ohne Code (PKCE)
+_pending_web = {}      # v173: state -> {verifier, redirect_uri} für den Login ohne Code (PKCE)
 
 
 def _gctx():
@@ -440,6 +440,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.split("?",1)[0] == "/api/app/shutdown":
             threading.Thread(target=self.server.shutdown, daemon=True).start()
             return self._json(200, {"ok": True, "shuttingDown": True})
+        parsed0 = urllib.parse.urlparse(self.path)
+        path0 = parsed0.path
+        qs0 = urllib.parse.parse_qs(parsed0.query)
+        # v173: OAuth-Code-Login kehrt auf die Wurzel zurueck:
+        # http://localhost:<port>/?code=...&state=...
+        # Der Microsoft-Client "Graph Command Line Tools" ist nur fuer
+        # http://localhost ohne Pfad registriert. Azure ignoriert beim
+        # Loopback-Redirect den Port, aber NICHT den Pfad. Deshalb darf hier
+        # nicht /oauth/redirect verwendet werden.
+        if path0 == "/" and (qs0.get("code") or qs0.get("state") or qs0.get("error")):
+            return self.handle_oauth_redirect()
         if self.path in ("/", "/index.html"):
             self.send_response(302)
             self.send_header("Location", "/graph.html")
@@ -448,7 +459,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 162, "ebichelchen": EB_AVAILABLE})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 173, "ebichelchen": EB_AVAILABLE})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -550,10 +561,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(200, {"ok": True, "signedIn": True, "account": t["account"]})
         return self._json(200, {"ok": True, "signedIn": False})
 
-    # ---- Graph: Login starten (page web, sans code à saisir) — v171 ----
+    # ---- Graph: Login starten (page web, sans code à saisir) — v173 ----
     # Auth-code + PKCE avec redirection loopback vers ce helper. L'utilisateur ne fait
-    # que la connexion IAM ; aucun code d'appareil à copier. (Le même client public
-    # accepte les redirections http://localhost — vérifié avec IAMSingleSignOn_v1.)
+    # que la connexion IAM ; aucun code d'appareil à copier.
+    # IMPORTANT v173 : redirect_uri = http://localhost:<port>/ (racine).
+    # Avec ce client public, Azure accepte le port loopback mais le chemin doit
+    # rester la racine enregistrée ; /oauth/redirect provoque AADSTS50011.
     def handle_graph_login_start_web(self):
         import base64, secrets
         verifier = secrets.token_urlsafe(64)[:128]
@@ -561,7 +574,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         state = secrets.token_urlsafe(24)
         host = self.headers.get("Host", "") or "127.0.0.1"
         port = host.split(":")[1] if ":" in host else "80"
-        redirect_uri = "http://localhost:" + port + "/oauth/redirect"
+        redirect_uri = "http://localhost:" + port + "/"
         _pending_web.clear()
         _pending_web[state] = {"verifier": verifier, "redirect_uri": redirect_uri, "created": time.time()}
         auth_url = OAUTH_BASE + "/authorize?" + urllib.parse.urlencode({
@@ -918,6 +931,30 @@ def _sha256_file(path):
     return h.hexdigest()
 
 
+def _version_number(value):
+    import re
+    m = re.search(r"(\d+)", str(value or ""))
+    return int(m.group(1)) if m else 0
+
+
+def _local_version_number():
+    try:
+        with open(os.path.join(DATA_DIR, "VERSION.txt"), "r", encoding="utf-8") as f:
+            return _version_number(f.read())
+    except Exception:
+        return 0
+
+
+def _html_app_version(data):
+    try:
+        txt = data.decode("utf-8", "ignore") if isinstance(data, (bytes, bytearray)) else str(data or "")
+        import re
+        m = re.search(r"const\s+APP_VERSION\s*=\s*(\d+)", txt)
+        return int(m.group(1)) if m else 0
+    except Exception:
+        return 0
+
+
 def update_helper_from_github():
     """Télécharge le helper local depuis GitHub Pages, si un manifeste est présent.
 
@@ -932,6 +969,11 @@ def update_helper_from_github():
         if not raw or len(raw) > 2 * 1024 * 1024:
             return
         manifest = json.loads(raw.decode("utf-8"))
+        remote_version = _version_number(manifest.get("version"))
+        local_version = _local_version_number()
+        if remote_version and local_version and remote_version < local_version:
+            print(f"Mise à jour du helper ignorée: GitHub v{remote_version} est plus ancien que local v{local_version}.")
+            return
         files = manifest.get("files", []) or []
     except Exception as e:
         print("Mise à jour du helper ignorée:", e)
@@ -1010,6 +1052,16 @@ def update_ui_from_github():
                 with urllib.request.urlopen(req, context=ctx, timeout=20) as r, open(tmp, "wb") as f:
                     f.write(r.read())
             if os.path.exists(tmp) and os.path.getsize(tmp) > 100:
+                if name == "graph.html":
+                    try:
+                        local_v = _html_app_version(open(dst, "rb").read()) if os.path.exists(dst) else _local_version_number()
+                        remote_v = _html_app_version(open(tmp, "rb").read())
+                        if remote_v and local_v and remote_v < local_v:
+                            os.remove(tmp)
+                            print(f"Mise à jour GitHub ignorée pour graph.html: GitHub v{remote_v} est plus ancien que local v{local_v}.")
+                            continue
+                    except Exception:
+                        pass
                 os.replace(tmp, dst)
                 print("Interface actualisée depuis GitHub :", name)
             elif os.path.exists(tmp):
