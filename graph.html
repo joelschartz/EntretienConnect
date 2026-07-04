@@ -250,10 +250,10 @@
   .mail-subject-input:focus{outline:none;box-shadow:none;background:#fff}
   .mail-compose-shell .mail-editor{min-height:360px;margin:0;font-size:11pt;background:#fff;border:0;border-radius:0;padding:18px 18px 22px;box-shadow:none}
   .mail-compose-shell .mail-editor:focus{outline:none;border-color:transparent;box-shadow:none}
-  .template-attachment-panel{display:none;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;border:1px dashed #cfd6e6;border-radius:14px;background:#fff;padding:11px 13px;flex-wrap:wrap}
-  .mode-reminder .template-attachment-panel{display:flex}
-  .attachment-info{display:flex;align-items:center;gap:8px;min-width:0;color:var(--muted);font-size:13px;font-weight:700}.attachment-info strong{color:var(--ink);font-weight:850;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(460px,60vw)}
-  .attachment-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.attachment-note{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:2px}.pill.attach{background:#eef2ff;color:#4353a8;border:1px solid #dfe3fc}.mail-attachment-note{display:flex;gap:8px;align-items:center;margin-top:10px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:9px 12px;color:var(--muted);font-size:13px;font-weight:750}
+  .pill.attach{background:#eef2ff;color:#4353a8;border:1px solid #dfe3fc}.mail-attachment-note{display:flex;gap:8px;align-items:center;margin-top:10px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:9px 12px;color:var(--muted);font-size:13px;font-weight:750}
+  .mail-attachment-note strong{color:var(--ink);font-weight:850;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(460px,60vw)}
+  .mail-attachment-note .remove-reminder-pdf{margin-left:auto}
+  .rich-toolbar .attach-pdf-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
   .template-editor-area .rich-toolbar{margin:0!important;border-radius:16px 16px 0 0;border-bottom:0}
   .mode-ebichelchen .template-editor-area > .rich-toolbar{display:none!important}
   #tplBodyEditor.plain-template-editor{min-height:170px;white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5;background:#fff;padding:16px;border-radius:14px}
@@ -427,7 +427,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v162</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v163</span></h1>
 </header>
 
 <nav class="tabs">
@@ -622,15 +622,8 @@ Langues : FR, DE, EN, LU">?</span>
         </div>
         <div id="tplBodyEditor" class="rich-editor mail-editor template-mail-editor" contenteditable="true" spellcheck="true"></div>
       </div>
-      <div id="reminderAttachmentPanel" class="template-attachment-panel" aria-label="Pièce jointe du rappel">
-        <div class="attachment-info" id="reminderAttachmentInfo">📎 Aucun PDF joint au rappel.</div>
-        <div class="attachment-actions">
-          <button type="button" class="ghost sm" id="chooseReminderPdf">Joindre un PDF</button>
-          <button type="button" class="ghost sm" id="removeReminderPdf" style="display:none">Retirer</button>
-          <input type="file" id="reminderPdfInput" accept="application/pdf,.pdf" style="display:none">
-        </div>
-        <div class="attachment-note">Ce PDF sera envoyé avec chaque e-mail de rappel.</div>
-      </div>
+      <!-- v163: le PDF de rappel se joint individuellement par élève dans l’aperçu (📎 dans la barre de l’éditeur). -->
+      <input type="file" id="reminderPdfInput" accept="application/pdf,.pdf" style="display:none">
       <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Enregistrer le texte + l’objet comme standard personnel">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Réinitialiser le texte par défaut">↺</a></div>
       <div id="sigMissing" style="margin-top:12px"></div>
       <div class="editor-actions" id="resetSigRow" style="display:none"><a href="#" id="saveSig" class="icon-btn save" title="Enregistrer la signature (et le logo) comme standard personnel">✓</a><a href="#" id="defaultSigBtn" class="icon-btn" title="Réinitialiser la signature">↺</a></div>
@@ -691,7 +684,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 161;
+const APP_VERSION = 163;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1042,18 +1035,30 @@ function sanitizeReminderAttachment(att){
   if(!contentBytes || !/\.pdf$/i.test(name) || size>REMINDER_ATTACHMENT_MAX_BYTES) return null;
   return {name, mime:"application/pdf", size, contentBytes};
 }
-function reminderAttachment(){ state.reminderAttachment=sanitizeReminderAttachment(state.reminderAttachment); return state.reminderAttachment; }
+// v163: pièces jointes PDF par élève (clé = id élève), plus de PDF global pour tous les rappels.
+function reminderAttachmentsMap(){ if(!state.reminderAttachments || typeof state.reminderAttachments!=="object") state.reminderAttachments={}; return state.reminderAttachments; }
+function sanitizeReminderAttachments(map){ const out={}; if(map && typeof map==="object"){ Object.keys(map).forEach(k=>{ const a=sanitizeReminderAttachment(map[k]); if(a) out[k]=a; }); } return out; }
+function reminderAttachmentFor(studentId){ if(!studentId) return null; const map=reminderAttachmentsMap(); const a=sanitizeReminderAttachment(map[studentId]); if(a) map[studentId]=a; else delete map[studentId]; return a; }
 function formatFileSize(bytes){ bytes=Number(bytes)||0; if(bytes<1024) return bytes+" o"; if(bytes<1024*1024) return (bytes/1024).toFixed(bytes<100*1024?1:0).replace(".0","")+" Ko"; return (bytes/(1024*1024)).toFixed(1).replace(".0","")+" Mo"; }
-function reminderAttachmentPayload(){ const a=reminderAttachment(); return a ? {name:a.name, contentType:"application/pdf", contentBytes:a.contentBytes, size:a.size} : null; }
-function reminderAttachmentPill(){ const a=reminderAttachment(); return a ? '<span class="pill attach" title="PDF joint : '+esc(a.name)+'">📎 PDF</span>' : ''; }
-function reminderAttachmentNoteHtml(){ const a=reminderAttachment(); return a ? '<div class="mail-attachment-note" title="'+esc(a.name)+'">📎 <strong>'+esc(a.name)+'</strong><span>sera joint à ce rappel.</span></div>' : ''; }
+function reminderAttachmentPayloadFor(studentId){ const a=reminderAttachmentFor(studentId); return a ? {name:a.name, contentType:"application/pdf", contentBytes:a.contentBytes, size:a.size} : null; }
+function reminderAttachmentPillFor(m){ const a=reminderAttachmentFor(m && m.studentId); return a ? '<span class="pill attach" title="PDF joint : '+esc(a.name)+'">📎 PDF</span>' : ''; }
+function reminderAttachmentNoteHtmlFor(m){
+  const a=reminderAttachmentFor(m && m.studentId);
+  if(!a) return '';
+  return '<div class="mail-attachment-note" title="'+esc(a.name)+'">📎 <strong>'+esc(a.name)+'</strong><span>('+esc(formatFileSize(a.size))+') sera joint à ce rappel.</span><a href="#" class="remove-reminder-pdf icon-btn" data-student="'+esc(m.studentId||"")+'" title="Retirer le PDF de ce rappel">✕</a></div>';
+}
+function reminderAttachBtnHtml(m){
+  const a=reminderAttachmentFor(m && m.studentId);
+  const title=a ? ('PDF joint : '+esc(a.name)+' — cliquer pour remplacer') : 'Joindre un PDF à ce rappel';
+  return '<span class="ot-sep"></span><button type="button" class="ot-ic attach-pdf-btn'+(a?' active':'')+'" data-action="attachPdf" data-student="'+esc((m&&m.studentId)||"")+'" title="'+title+'" aria-label="Joindre un PDF"><svg viewBox="0 0 20 20"><path d="M15.6 9.2 10 14.8a3.3 3.3 0 0 1-4.7-4.7l6.2-6.2a2.2 2.2 0 0 1 3.1 3.1l-6.2 6.2a1.1 1.1 0 0 1-1.6-1.6l5.7-5.7"/></svg></button>';
+}
 function defaultState(){
   return {
     appVersion: APP_VERSION,
     students: [],
     config: { dates: [], start:"14:00", end:"18:00", durationMin:20 },
     assignments: {}, sent: [], reminderSent: [], subjectOverrides: {},
-    reminderAttachment: null,
+    reminderAttachments: {},
     ebOverrides: {},
     ebichelchenData: null,
     ebichelchenGroups: [],
@@ -1215,7 +1220,7 @@ function loadState(){
       assignments: s.assignments||{},
       overrides: s.overrides||{},
       subjectOverrides: s.subjectOverrides||{},
-      reminderAttachment: sanitizeReminderAttachment(s.reminderAttachment),
+      reminderAttachments: sanitizeReminderAttachments(s.reminderAttachments),
       ebOverrides: (s.ebOverrides && typeof s.ebOverrides==="object") ? s.ebOverrides : {},
       ebichelchenData: null, // v138: ne jamais reprendre d’anciennes données e-Bichelchen depuis le localStorage
       sent: Array.isArray(s.sent)? s.sent : [],
@@ -1241,7 +1246,7 @@ function sessionHasWorkData(){
   const hasStudents=(state.students||[]).some(st=>!isEmptyStudentEntry(st));
   const hasDates=!!(state.config && Array.isArray(state.config.dates) && state.config.dates.length);
   const hasAssignments=!!(state.assignments && Object.keys(state.assignments).length);
-  const hasMailEdits=!!((state.overrides && Object.keys(state.overrides).length) || (state.subjectOverrides && Object.keys(state.subjectOverrides).length) || (state.ebOverrides && Object.keys(state.ebOverrides).length));
+  const hasMailEdits=!!((state.overrides && Object.keys(state.overrides).length) || (state.subjectOverrides && Object.keys(state.subjectOverrides).length) || (state.ebOverrides && Object.keys(state.ebOverrides).length) || (state.reminderAttachments && Object.keys(state.reminderAttachments).length));
   const hasStatus=!!((state.sent&&state.sent.length) || (state.reminderSent&&state.reminderSent.length) || (state.ebichelchenSent&&state.ebichelchenSent.length));
   return hasStudents || hasDates || hasAssignments || hasMailEdits || hasStatus;
 }
@@ -1256,6 +1261,7 @@ function clearWorkSession(){
   state.assignments={};
   state.overrides={};
   state.subjectOverrides={};
+  state.reminderAttachments={};
   state.ebOverrides={};
   state.sent=[];
   state.reminderSent=[];
@@ -2009,7 +2015,7 @@ function renderStudents(){
     const ebLangSel=tr.querySelector(".st-leb");
     if(ebLangSel) ebLangSel.onchange=e=>{ st.langEb=normalizeLang(e.target.value); saveState(); renderMails(); };
     const del=tr.querySelector(".st-del");
-    if(del) del.onclick=()=>{ state.students=state.students.filter(x=>x.id!==id); if(state.ebichelchenMap) delete state.ebichelchenMap[id]; Object.keys(state.assignments).forEach(k=>{ if(state.assignments[k]===id) delete state.assignments[k]; }); saveState(); renderStudents(); renderSetup(); renderMails(); };
+    if(del) del.onclick=()=>{ state.students=state.students.filter(x=>x.id!==id); if(state.ebichelchenMap) delete state.ebichelchenMap[id]; if(state.reminderAttachments) delete state.reminderAttachments[id]; Object.keys(state.assignments).forEach(k=>{ if(state.assignments[k]===id) delete state.assignments[k]; }); saveState(); renderStudents(); renderSetup(); renderMails(); };
   });
   validateStudentEmailsUI();
 }
@@ -2600,6 +2606,12 @@ function bindRichToolbars(){
           if(picker) picker.classList.toggle("open");
           return;
         }
+        if(ctrl.dataset.action==="attachPdf"){
+          toolbarBusy=false;
+          const item=tb.closest(".mailitem");
+          openReminderPdfPicker(ctrl.dataset.student, item ? item.dataset.id : null);
+          return;
+        }
         const editor=document.getElementById(tb.dataset.for);
         activeEditor=editor;
         if(ctrl.dataset.action==="pastePlain"){
@@ -2720,27 +2732,31 @@ function updateTemplateSignatureView(body, renderTemplateCollapseState){
   renderLogoPreview();
   scheduleRenderMails();
 }
-function renderReminderAttachmentPanel(){
-  const panel=document.getElementById("reminderAttachmentPanel");
-  const info=document.getElementById("reminderAttachmentInfo");
-  const remove=document.getElementById("removeReminderPdf");
-  const att=reminderAttachment();
-  if(info){
-    if(att) info.innerHTML='📎 <strong title="'+esc(att.name)+'">'+esc(att.name)+'</strong><span>'+esc(formatFileSize(att.size))+'</span>';
-    else info.textContent='📎 Aucun PDF joint au rappel.';
-  }
-  if(remove) remove.style.display=att?"":"none";
+// v163: sélecteur de PDF partagé — la cible (élève + carte ouverte) est mémorisée avant l'ouverture.
+let pendingAttachStudentId=null, pendingAttachOpenId=null;
+function openReminderPdfPicker(studentId, openId){
+  const input=document.getElementById("reminderPdfInput");
+  if(!input || !studentId) return;
+  pendingAttachStudentId=studentId;
+  pendingAttachOpenId=openId||null;
+  input.click();
+}
+function removeReminderPdfFor(studentId, openId){
+  if(!studentId || !reminderAttachmentFor(studentId)) return;
+  delete reminderAttachmentsMap()[studentId];
+  saveState();
+  renderMails(openId||undefined);
+  showToast("PDF retiré du rappel.");
 }
 function bindReminderAttachmentControls(){
-  const choose=document.getElementById("chooseReminderPdf");
   const input=document.getElementById("reminderPdfInput");
-  const remove=document.getElementById("removeReminderPdf");
-  if(choose && input) choose.onclick=()=>input.click();
-  if(remove) remove.onclick=()=>{ state.reminderAttachment=null; saveState(); renderReminderAttachmentPanel(); renderMails(); showToast("PDF retiré du rappel."); };
-  if(input) input.onchange=()=>{
+  if(!input) return;
+  input.onchange=()=>{
     const file=input.files && input.files[0];
     input.value="";
-    if(!file) return;
+    const studentId=pendingAttachStudentId, openId=pendingAttachOpenId;
+    pendingAttachStudentId=null; pendingAttachOpenId=null;
+    if(!file || !studentId) return;
     const isPdf=(file.type==="application/pdf") || /\.pdf$/i.test(file.name||"");
     if(!isPdf){ alert("Veuillez choisir un fichier PDF."); return; }
     if(file.size>REMINDER_ATTACHMENT_MAX_BYTES){ alert("Le PDF est trop lourd. Maximum conseillé : 3 Mo."); return; }
@@ -2749,13 +2765,23 @@ function bindReminderAttachmentControls(){
     reader.onload=()=>{
       const dataUrl=String(reader.result||"");
       const contentBytes=dataUrl.includes(",") ? dataUrl.split(",").pop() : "";
-      state.reminderAttachment=sanitizeReminderAttachment({name:file.name||"rappel.pdf", mime:"application/pdf", size:file.size, contentBytes});
-      if(!state.reminderAttachment){ alert("Impossible d’attacher ce PDF."); return; }
-      if(!saveState()){ state.reminderAttachment=null; alert("Le PDF est trop lourd pour être conservé dans l’application. Essayez un fichier plus léger."); renderReminderAttachmentPanel(); renderMails(); return; } renderReminderAttachmentPanel(); renderMails(); showToast("PDF joint au rappel ✓");
+      const map=reminderAttachmentsMap();
+      const prev=map[studentId]||null;
+      const next=sanitizeReminderAttachment({name:file.name||"rappel.pdf", mime:"application/pdf", size:file.size, contentBytes});
+      if(!next){ alert("Impossible d’attacher ce PDF."); return; }
+      map[studentId]=next;
+      if(!saveState()){
+        if(prev) map[studentId]=prev; else delete map[studentId];
+        saveState();
+        alert("Le PDF est trop lourd pour être conservé dans l’application (mémoire pleine). Essayez un fichier plus léger ou retirez d’autres PDF.");
+        renderMails(openId||undefined);
+        return;
+      }
+      renderMails(openId||undefined);
+      showToast("PDF joint au rappel ✓");
     };
     reader.readAsDataURL(file);
   };
-  renderReminderAttachmentPanel();
 }
 function bindSettings(){
   const su=document.getElementById("tplSubject"), body=document.getElementById("tplBodyEditor");
@@ -2796,7 +2822,6 @@ function bindSettings(){
     // Bei e-Bichelchen-Meldungen: Signatur/Logo/Rappel ausblenden, „Objet“ → „Titre“.
     const card=document.getElementById("templateCard");
     if(card){ card.classList.toggle("mode-ebichelchen", isEb); card.classList.toggle("mode-reminder", mode==="reminder"); card.classList.toggle("no-email", !em); }
-    renderReminderAttachmentPanel();
     const subjLabel=document.querySelector('label[for="tplSubject"]');
     if(subjLabel) subjLabel.textContent = isEb ? "Titre" : "Objet";
     // Karten-Titel passt sich an die aktiven Kanäle an.
@@ -3184,7 +3209,7 @@ function buildReminderMessages(onlyDue=true){
         }
         if(state.template.logo && state.template.logo.dataUrl){ html=html.split(state.template.logo.dataUrl).join("cid:siglogo"); }
         const dueAt=reminderDueAt(d), appointmentAt=appointmentDateTime(d,s.start), appointmentEnd=appointmentDateTime(d,s.end);
-        msgs.push({id:rid,kind:"reminder",student:fullStudent,studentDisplay:displayStudentName(fullStudent),parentLabel:labelWithLang(label,lang),contactLabel:label,to,subject,defaultSubject,html,previewHtml,dueAt:dueAt.toISOString(),appointmentAt:appointmentAt.toISOString(),appointmentEnd:appointmentEnd.toISOString(),lang,hasAttachment:!!reminderAttachment()});
+        msgs.push({id:rid,kind:"reminder",student:fullStudent,studentId:stu.id,studentDisplay:displayStudentName(fullStudent),parentLabel:labelWithLang(label,lang),contactLabel:label,to,subject,defaultSubject,html,previewHtml,dueAt:dueAt.toISOString(),appointmentAt:appointmentAt.toISOString(),appointmentEnd:appointmentEnd.toISOString(),lang,hasAttachment:!!reminderAttachmentFor(stu.id)});
       };
       const groups=contactGroupsByLang(details);
       Object.keys(groups).forEach(lang=>{
@@ -3338,7 +3363,7 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
 const _signInBtn=document.getElementById("signIn"); if(_signInBtn) _signInBtn.onclick=()=>startMicrosoftLogin("loginBox","signIn");
 const _signOutBtn=document.getElementById("signOut"); if(_signOutBtn) _signOutBtn.onclick=async()=>{ try{ await api("/api/graph/logout"); }catch(e){} account=null; renderAuth(); renderSetup(); renderMails(); };
 function logoPayload(){ const lg=state.template.logo; if(logoIsVisible() && lg&&lg.dataUrl) return {name:lg.name||"logo.png",mime:lg.mime||"image/png",contentBytes:lg.dataUrl.split(",")[1]}; return null; }
-async function graphSend(messages){ return api("/api/graph/send", {messages:messages.map(m=>({id:m.id,kind:m.kind||"",subject:m.subject,html:m.html,to:m.to,deferUntil:m.deferUntil||m.dueAt||null})), logo:logoPayload(), reminderAttachment:reminderAttachmentPayload()}); }
+async function graphSend(messages){ return api("/api/graph/send", {messages:messages.map(m=>({id:m.id,kind:m.kind||"",subject:m.subject,html:m.html,to:m.to,deferUntil:m.deferUntil||m.dueAt||null,attachment:(m.kind==="reminder"?reminderAttachmentPayloadFor(m.studentId):null)})), logo:logoPayload()}); }
 let graphCapabilityCache=null;
 async function graphCapabilities(){
   if(graphCapabilityCache) return graphCapabilityCache;
@@ -3391,7 +3416,7 @@ function selectedPlannedRemindersForConfirmations(confirmMsgs){
   return plannedReminderMessagesForConfirmations(confirmMsgs).filter(m=>!excludedReminderSet.has(m.id));
 }
 function ovkOf(id){ return id.split("__").slice(0,4).join("__"); }
-function richToolbarHTML(forId){ const tpl=document.querySelector(".rich-toolbar"); return '<div class="rich-toolbar" data-for="'+forId+'" style="margin-top:10px">'+(tpl?tpl.innerHTML:"")+'</div>'; }
+function richToolbarHTML(forId, extraHtml){ const tpl=document.querySelector(".rich-toolbar"); return '<div class="rich-toolbar" data-for="'+forId+'" style="margin-top:10px">'+(tpl?tpl.innerHTML:"")+(extraHtml||"")+'</div>'; }
 function mailEditedByKey(ovk, defaultSubject){
   const bodyEdited=!!(state.overrides && state.overrides[ovk]);
   const subjectEdited=!!(state.subjectOverrides && Object.prototype.hasOwnProperty.call(state.subjectOverrides, ovk) && state.subjectOverrides[ovk]!==defaultSubject);
@@ -3553,19 +3578,19 @@ function reminderRowHtml(m, openId){
           <span class="who" title="${esc(m.student)}">${esc(m.studentDisplay||displayStudentName(m.student))}</span><span class="m-cts">${esc(m.contactLabel||"")}</span><span class="m-lang">${esc(langMeta(m.lang).short)}</span><span class="when">${esc(compactDueLabel(m.dueAt))}</span><span class="m-mails" title="${esc(m.to.join(", "))}">${esc(m.to.join(", "))}</span>
         </div>
         <span class="status">
-          ${reminderAttachmentPill()}
+          ${reminderAttachmentPillFor(m)}
           ${edited?'<span class="pill warn">modifié</span>':''}
           ${done?'<span class="pill ok">programmé</span>':''}
           <span class="toggle">${openId===m.id?'Fermer ▴':'Modifier ▾'}</span>
         </span>
       </div>
       <div class="mailbody">
-        ${richToolbarHTML('mr_'+m.id)}
+        ${richToolbarHTML('mr_'+m.id, reminderAttachBtnHtml(m))}
         <div class="mail-compose-shell">
           <div class="mailbody-head"><label class="mail-subject-label" for="mrs_${m.id}">Objet</label><input id="mrs_${m.id}" class="mail-subject-input" data-ovk="${m.id}" data-msgid="${m.id}" data-default-subject="${esc(m.defaultSubject||'')}" value="${esc(m.subject)}" title="Modifier l’objet du rappel"></div>
           <div id="mr_${m.id}" class="rich-editor mail-editor" style="min-height:220px" contenteditable="true" data-ovk="${m.id}">${m.previewHtml}</div>
         </div>
-        ${reminderAttachmentNoteHtml()}
+        ${reminderAttachmentNoteHtmlFor(m)}
         <div class="mail-reset" style="${edited?'':'display:none'}"><a href="#" class="reset-ov icon-btn" data-ovk="${m.id}" title="Réinitialiser au modèle standard">↺</a></div>
       </div>
     </div>`;
@@ -3709,6 +3734,11 @@ function renderMails(openId){
     else state.subjectOverrides[k]=input.value;
     saveState();
     setMailEditedVisual(item, mailEditedByKey(k, defaultSubject));
+  });
+  list.querySelectorAll(".remove-reminder-pdf").forEach(a=>a.onclick=e=>{
+    e.preventDefault();
+    const item=a.closest(".mailitem");
+    removeReminderPdfFor(a.dataset.student, item ? item.dataset.id : null);
   });
   list.querySelectorAll(".reset-ov").forEach(a=>a.onclick=e=>{
     e.preventDefault();

@@ -582,16 +582,32 @@ function Handle-Request($stream, $req) {
                 $results += @{ id = $m.id; ok = $false; error = $_.Exception.Message }
                 continue
             }
+            $atts = @()
             if ($data.logo -and $data.logo.contentBytes -and ($m.html -match 'cid:siglogo')) {
-                $msg["attachments"] = @(@{
+                $atts += @{
                     "@odata.type" = "#microsoft.graph.fileAttachment"
                     name          = $data.logo.name
                     contentType   = $data.logo.mime
                     contentBytes  = $data.logo.contentBytes
                     isInline      = $true
                     contentId     = "siglogo"
-                })
+                }
             }
+            # v163: PDF individuel par message (rappels) ; repli sur l'ancien PDF global (< v163).
+            $att = $null
+            if ($m.PSObject.Properties.Name -contains "attachment" -and $m.attachment -and $m.attachment.contentBytes) { $att = $m.attachment }
+            elseif ($m.kind -eq "reminder" -and $data.PSObject.Properties.Name -contains "reminderAttachment" -and $data.reminderAttachment -and $data.reminderAttachment.contentBytes) { $att = $data.reminderAttachment }
+            if ($att) {
+                $attName = if ($att.name) { $att.name } else { "rappel.pdf" }
+                $attType = if ($att.contentType) { $att.contentType } elseif ($att.mime) { $att.mime } else { "application/pdf" }
+                $atts += @{
+                    "@odata.type" = "#microsoft.graph.fileAttachment"
+                    name          = $attName
+                    contentType   = $attType
+                    contentBytes  = $att.contentBytes
+                }
+            }
+            if ($atts.Count -gt 0) { $msg["attachments"] = $atts }
             $r = GraphSendMail $token @{ message = $msg; saveToSentItems = $true }
             if ($r.ok) { $results += @{ id = $m.id; ok = $true; deferredUntil = $deferUntil } }
             else { $results += @{ id = $m.id; ok = $false; error = $r.error } }

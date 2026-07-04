@@ -603,7 +603,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         data = self._read_json()
         messages = data.get("messages", []) or []
         logo = data.get("logo")  # {name, mime, contentBytes} oder None
-        reminder_attachment = data.get("reminderAttachment") or None  # PDF pour les e-mails de rappel
+        # PDF global pour les rappels (compat < v163) ; depuis v163 chaque message porte son propre "attachment".
+        reminder_attachment = data.get("reminderAttachment") or None
         if not messages:
             return self._json(200, {"ok": False, "error": "Aucun e-mail."})
         token = _access_token()
@@ -638,13 +639,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "contentBytes": logo["contentBytes"],
                     "isInline": True, "contentId": "siglogo",
                 })
-            if (m.get("kind") == "reminder" and reminder_attachment
+            att = m.get("attachment") or None
+            if (not att and m.get("kind") == "reminder" and reminder_attachment
                     and reminder_attachment.get("contentBytes")):
+                att = reminder_attachment
+            if att and att.get("contentBytes"):
                 attachments.append({
                     "@odata.type": "#microsoft.graph.fileAttachment",
-                    "name": reminder_attachment.get("name", "rappel.pdf"),
-                    "contentType": reminder_attachment.get("contentType") or reminder_attachment.get("mime") or "application/pdf",
-                    "contentBytes": reminder_attachment["contentBytes"],
+                    "name": att.get("name", "rappel.pdf"),
+                    "contentType": att.get("contentType") or att.get("mime") or "application/pdf",
+                    "contentBytes": att["contentBytes"],
                 })
             if attachments:
                 payload["message"]["attachments"] = attachments
