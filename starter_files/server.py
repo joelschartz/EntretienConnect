@@ -421,6 +421,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
+
     def log_message(self, fmt, *args):
         # Etwas ruhiger im Terminal
         pass
@@ -441,7 +447,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 88, "ebichelchen": EB_AVAILABLE})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 162, "ebichelchen": EB_AVAILABLE})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path == "/api/find-logo":
