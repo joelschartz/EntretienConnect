@@ -26,6 +26,25 @@ from urllib.parse import parse_qs, urlparse
 PORT = 8765
 CDP_PORT = 9223
 ROOT = pathlib.Path(__file__).resolve().parent
+
+def _user_app_data_dir() -> pathlib.Path:
+    """Dauerhafter, benutzerspezifischer Speicher ohne Admin-Rechte."""
+    system = platform.system().lower()
+    if system == "darwin":
+        base = pathlib.Path.home() / "Library" / "Application Support"
+    elif system == "windows":
+        base = pathlib.Path(os.environ.get("APPDATA") or os.environ.get("LOCALAPPDATA") or str(pathlib.Path.home()))
+    else:
+        base = pathlib.Path(os.environ.get("XDG_CONFIG_HOME") or (pathlib.Path.home() / ".config"))
+    path = base / "EntretienConnect"
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        path = ROOT
+    return path
+
+DATA_ROOT = _user_app_data_dir()
+PROFILE_ROOT = DATA_ROOT / "profiles"
 EB_URL = "https://ssl.education.lu/ebichelchen/app/tabs/calendar"
 
 # Eigener Zertifikats-Context für direkte Hintergrund-Requests zu ssl.education.lu.
@@ -164,7 +183,7 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     browser_name = browser["name"]
 
     profile = sanitize_profile_name(profile)
-    profile_dir = ROOT / "profiles" / browser_id / profile
+    profile_dir = PROFILE_ROOT / browser_id / profile
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     # Falls schon ein Browser mit CDP-Port läuft, nur neuen e-Bichelchen-Tab öffnen.
@@ -943,7 +962,7 @@ def reset_login_session(profile: str = "default") -> dict:
     geschlossen) die nächste EduKey-Sicherheitsanfrage."""
     closed = force_close_launched_browser()
     removed = []
-    prof_root = ROOT / "profiles"
+    prof_root = PROFILE_ROOT
     try:
         if prof_root.exists():
             for sub in prof_root.iterdir():

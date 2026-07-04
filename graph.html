@@ -434,7 +434,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v174</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v177</span></h1>
 </header>
 
 <nav class="tabs">
@@ -473,6 +473,9 @@
       <div id="setupReminderChoice" class="setup-reminder-choice" style="display:none"></div>
       <div id="setupStatusGrid" class="setup-status-grid"></div>
       <div class="setup-actions">
+        <button type="button" class="ghost sm" id="exportAppData">Exporter les données</button>
+        <button type="button" class="ghost sm" id="importAppData">Importer les données</button>
+        <input type="file" id="importAppDataFile" accept="application/json,.json" style="display:none">
         <span class="hint" id="setupNavHint" style="display:none"></span>
       </div>
     </div>
@@ -578,6 +581,7 @@ Langues : FR, DE, EN, LU">?</span>
 {DATE} — date du rendez-vous
 {TIME} — heure
 {ENFANT} — prénom de l’élève
+{DE_ENFANT} — « de » ou « d’ » + prénom (ex. d’Agustina)
 {TRIMESTRE} — trimestre choisi
 {RAPPEL_DELAI} — délai du rappel">?</span></div>
       </div>
@@ -691,7 +695,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 174;
+const APP_VERSION = 177;
 
 window.addEventListener("error", function(ev){
   try{
@@ -935,6 +939,13 @@ function migrateUserDefaultsToVariables(ud){
     const f=factoryTemplate("fr","confirmation");
     out.subject=f.subject; out.bodyHtml=f.bodyHtml; out.body=f.body;
   }
+  if(out.subject!=null) out.subject=upgradeFrenchDeEnfantText(out.subject);
+  if(out.bodyHtml!=null) out.bodyHtml=upgradeFrenchDeEnfantText(out.bodyHtml);
+  if(out.reminderSubject!=null) out.reminderSubject=upgradeFrenchDeEnfantText(out.reminderSubject);
+  if(out.reminderBodyHtml!=null) out.reminderBodyHtml=upgradeFrenchDeEnfantText(out.reminderBodyHtml);
+  if(out.ebichelchenSubject!=null) out.ebichelchenSubject=upgradeFrenchDeEnfantText(out.ebichelchenSubject);
+  if(out.ebichelchenBodyHtml!=null) out.ebichelchenBodyHtml=upgradeFrenchDeEnfantText(out.ebichelchenBodyHtml);
+  migrateOldEbichelchenUserDefaults(out);
   return out;
 }
 const TRIMESTER_TEXTS={
@@ -985,36 +996,109 @@ function compactDueLabel(iso){
   return wd+" "+String(dt.getDate()).padStart(2,"0")+"."+String(dt.getMonth()+1).padStart(2,"0")+" · "+hh;
 }
 function formatFrenchTime(hhmm){ return formatTimeByLang(hhmm,"fr"); }
+function startsWithFrenchElisionSound(name){
+  const n=String(name||"").trim();
+  if(!n) return false;
+  const first=n.charAt(0).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  return "aeiouyh".indexOf(first)>=0;
+}
+function frenchDeName(name){
+  const n=String(name||"").trim();
+  if(!n) return "de";
+  return (startsWithFrenchElisionSound(n) ? "d’" : "de ") + n;
+}
+function upgradeFrenchDeEnfantText(txt){
+  return String(txt||"").replace(/\bde\s+\{ENFANT\}/g,"{DE_ENFANT}").replace(/\bde\s+\{ENFANT_COMPLET\}/g,"{DE_ENFANT_COMPLET}");
+}
+function upgradeFrenchTemplatePlaceholders(tpl){
+  if(!tpl) return tpl;
+  if(tpl.subject!=null) tpl.subject=upgradeFrenchDeEnfantText(tpl.subject);
+  if(tpl.body!=null) tpl.body=upgradeFrenchDeEnfantText(tpl.body);
+  if(tpl.bodyHtml!=null) tpl.bodyHtml=upgradeFrenchDeEnfantText(tpl.bodyHtml);
+  return tpl;
+}
 function messageMap(ds, hhmm, stu, lang){
   const fullName = studentFullName(stu);
   const firstName = studentFirstName(stu) || fullName;
   lang=normalizeLang(lang);
-  return {DATE:formatDateByLang(ds,lang),TIME:formatTimeByLang(hhmm,lang),NAME:state.account.name||"",ENFANT:firstName,ENFANT_COMPLET:fullName,TRIMESTRE:trimesterText(lang),TRIMESTER:trimesterText(lang),TRIMESTRE_NUM:String(trimesterNumber()),RAPPEL_DELAI:reminderLeadText(lang),RAPPEL_JOURS:String(reminderDaysBefore())};
+  const deFirst=frenchDeName(firstName);
+  const deFull=frenchDeName(fullName);
+  return {DATE:formatDateByLang(ds,lang),TIME:formatTimeByLang(hhmm,lang),NAME:state.account.name||"",ENFANT:firstName,ENFANT_COMPLET:fullName,DE_ENFANT:deFirst,DE_ENFANT_COMPLET:deFull,de_enfant:deFirst,de_enfant_complet:deFull,TRIMESTRE:trimesterText(lang),TRIMESTER:trimesterText(lang),TRIMESTRE_NUM:String(trimesterNumber()),RAPPEL_DELAI:reminderLeadText(lang),RAPPEL_JOURS:String(reminderDaysBefore())};
 }
 const TEMPLATE_DEFAULTS={
   fr:{
-    confirmation:{subject:"Confirmation de rendez-vous – bilan intermédiaire de {ENFANT}",body:"Chers parents,\n\nJe vous confirme notre rendez-vous individuel concernant le bilan intermédiaire du {TRIMESTRE} de votre enfant {ENFANT}, prévu le {DATE} à {TIME}.\n\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
-    reminder:{subject:"Rappel de rendez-vous – bilan intermédiaire de {ENFANT}",body:"Chers parents,\n\nJe me permets de vous rappeler notre rendez-vous individuel prévu {RAPPEL_DELAI}, le {DATE}, à {TIME}, concernant votre enfant {ENFANT}.\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
-    ebichelchen:{subject:"Rendez-vous individuel – bilan intermédiaire",body:"Chers parents,\n\nJe vous confirme notre rendez-vous individuel concernant le bilan intermédiaire du {TRIMESTRE} de votre enfant {ENFANT}, prévu le {DATE} à {TIME}, dans ma salle de classe.\n\nBien cordialement"}
+    confirmation:{subject:"Confirmation de rendez-vous – bilan intermédiaire {DE_ENFANT}",body:"Chers parents,\n\nJe vous confirme notre rendez-vous individuel concernant le bilan intermédiaire du {TRIMESTRE} de votre enfant {ENFANT}, prévu le {DATE} à {TIME}.\n\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
+    reminder:{subject:"Rappel de rendez-vous – bilan intermédiaire {DE_ENFANT}",body:"Chers parents,\n\nJe me permets de vous rappeler notre rendez-vous individuel prévu {RAPPEL_DELAI}, le {DATE}, à {TIME}, concernant votre enfant {ENFANT}.\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
+    ebichelchen:{subject:"Entretien parents – {ENFANT}",body:"Entretien individuel avec les parents {DE_ENFANT} à {TIME}, dans la salle de classe.\nDurée prévue : environ 20 minutes."}
   },
   de:{
     confirmation:{subject:"Terminbestätigung – Zwischenbilanz von {ENFANT}",body:"Liebe Eltern,\n\nich bestätige Ihnen unseren Einzeltermin zur Zwischenbilanz im {TRIMESTRE} Ihres Kindes {ENFANT}, vorgesehen am {DATE} um {TIME}.\n\nDas Gespräch dauert ungefähr zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihre Anwesenheit."},
     reminder:{subject:"Terminerinnerung – Zwischenbilanz von {ENFANT}",body:"Liebe Eltern,\n\nich möchte Sie gerne an unser individuelles Gespräch {RAPPEL_DELAI}, am {DATE} um {TIME}, bezüglich Ihres Kindes {ENFANT} erinnern.\nDas Gespräch dauert ungefähr zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihre Anwesenheit."},
-    ebichelchen:{subject:"Einzelgespräch – Zwischenbilanz",body:"Liebe Eltern,\n\nich bestätige Ihnen unseren Einzeltermin zur Zwischenbilanz im {TRIMESTRE} Ihres Kindes {ENFANT}, vorgesehen am {DATE} um {TIME}, in meinem Klassensaal.\n\nMit freundlichen Grüßen"}
+    ebichelchen:{subject:"Elterngespräch – {ENFANT}",body:"Einzelgespräch mit den Eltern von {ENFANT} um {TIME} im Klassensaal.\nVorgesehene Dauer: etwa 20 Minuten."}
   },
   en:{
     confirmation:{subject:"Appointment confirmation – interim report for {ENFANT}",body:"Dear parents,\n\nI confirm our individual meeting regarding the interim report of the {TRIMESTRE} for your child {ENFANT}, scheduled for {DATE} at {TIME}.\n\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for your attendance."},
     reminder:{subject:"Appointment reminder – interim report for {ENFANT}",body:"Dear parents,\n\nI would like to remind you of our individual meeting scheduled for {RAPPEL_DELAI}, on {DATE} at {TIME}, concerning your child {ENFANT}.\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for your attendance."},
-    ebichelchen:{subject:"Individual meeting – interim report",body:"Dear parents,\n\nI confirm our individual meeting regarding the interim report of the {TRIMESTRE} for your child {ENFANT}, scheduled for {DATE} at {TIME}, in my classroom.\n\nKind regards"}
+    ebichelchen:{subject:"Parent meeting – {ENFANT}",body:"Individual meeting with the parents of {ENFANT} at {TIME} in the classroom.\nExpected duration: about 20 minutes."}
   },
   lb:{
     confirmation:{subject:"Confirmatioun vum Rendez-vous – Zwëschebilan vun {ENFANT}",body:"Léif Elteren,\n\nEch confirméieren Iech eist individuellt Gespréich iwwer de Zwëschebilan vum {TRIMESTRE} vun Ärem Kand {ENFANT}, virgesinn den {DATE} um {TIME}.\n\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Är Presenz."},
     reminder:{subject:"Rappel vum Rendez-vous – Zwëschebilan vun {ENFANT}",body:"Léif Elteren,\n\nEch erënneren Iech gär un eist individuellt Gespréich {RAPPEL_DELAI}, den {DATE} um {TIME}, betreffend Äert Kand {ENFANT}.\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Är Presenz."},
-    ebichelchen:{subject:"Individuellt Gespréich – Zwëschebilan",body:"Léif Elteren,\n\nEch confirméieren Iech eist individuellt Gespréich iwwer de Zwëschebilan vum {TRIMESTRE} vun Ärem Kand {ENFANT}, virgesinn den {DATE} um {TIME}, a mengem Klassesall.\n\nMat frëndleche Gréiss"}
+    ebichelchen:{subject:"Elteregespréich – {ENFANT}",body:"Individuellt Gespréich mat den Eltere vum {ENFANT} um {TIME} am Klassesall.\nGeplangten Dauer: ongeféier 20 Minutten."}
   }
 };
 function normalizeTemplateMode(mode){ return (mode==="reminder"||mode==="ebichelchen") ? mode : "confirmation"; }
-function factoryTemplate(lang, mode){ lang=normalizeLang(lang); mode=normalizeTemplateMode(mode); const src=(TEMPLATE_DEFAULTS[lang]||TEMPLATE_DEFAULTS.fr)[mode]; return {v:1,subject:src.subject,body:src.body,bodyHtml:bodyHtmlFromPlain(src.body)}; }
+function factoryTemplate(lang, mode){ lang=normalizeLang(lang); mode=normalizeTemplateMode(mode); const src=(TEMPLATE_DEFAULTS[lang]||TEMPLATE_DEFAULTS.fr)[mode]; const tpl={v:1,subject:src.subject,body:src.body,bodyHtml:bodyHtmlFromPlain(src.body)}; return lang==="fr" ? upgradeFrenchTemplatePlaceholders(tpl) : tpl; }
+// v176: e-Bichelchen-Altvorlagen (bis v174) automatisch auf den neuen Agenda-Text umstellen,
+// aber nur wenn der Text noch eindeutig der alten Bestätigungs-Vorlage entspricht.
+function normEbMigrationText(s){ return String(s||"").replace(/\u00a0/g," ").replace(/[’‘`]/g,"'").replace(/\s+/g," ").trim().toLowerCase(); }
+function oldEbSubjectLooksDefault(lang, subject){
+  const s=normEbMigrationText(subject);
+  if(!s) return true;
+  if(lang==="fr") return /^rendez-vous individuel\s*[—-]\s*bilan intermediaire$/.test(s) || /^rendez-vous individuel\s*[—-]\s*bilan interm[eé]diaire$/.test(s);
+  if(lang==="de") return /^einzelgespr[aä]ch\s*[—-]\s*zwischenbilanz$/.test(s);
+  if(lang==="en") return /^individual meeting\s*[—-]\s*interim report$/.test(s);
+  if(lang==="lb") return /^individuellt gespr[eé]ich\s*[—-]\s*zw[eë]schebilan$/.test(s);
+  return false;
+}
+function oldEbBodyLooksDefault(lang, html, body){
+  const raw=(textFromHtml(html||"") || body || "");
+  const s=normEbMigrationText(raw);
+  if(!s) return false;
+  if(lang==="fr") return /chers parents/.test(s) && /je vous confirme/.test(s) && /rendez-vous individuel/.test(s) && /bilan interm[eé]diaire|bilan intermediaire/.test(s) && /bien cordialement/.test(s);
+  if(lang==="de") return /liebe eltern/.test(s) && /(ich best[aä]tige|ich bestaetige)/.test(s) && /einzeltermin/.test(s) && /zwischenbilanz/.test(s) && /mit freundlichen gr[uü]ßen|mit freundlichen gruessen/.test(s);
+  if(lang==="en") return /dear parents/.test(s) && /i confirm/.test(s) && /individual meeting/.test(s) && /interim report/.test(s) && /kind regards/.test(s);
+  if(lang==="lb") return /l[eé]if elteren/.test(s) && /ech confirm[eé]ieren|ech confirmeieren|ech confirméieren/.test(s) && /individuellt gespr[eé]ich/.test(s) && /zw[eë]schebilan/.test(s) && /mat fr[eë]ndleche gr[eé]iss|mat frendleche greiss/.test(s);
+  return false;
+}
+function migrateOldEbichelchenTemplate(tpl, lang){
+  if(!tpl) return tpl;
+  lang=normalizeLang(lang||"fr");
+  if(oldEbBodyLooksDefault(lang, tpl.bodyHtml, tpl.body)){
+    const f=factoryTemplate(lang,"ebichelchen");
+    if(oldEbSubjectLooksDefault(lang, tpl.subject)) tpl.subject=f.subject;
+    tpl.body=f.body; tpl.bodyHtml=f.bodyHtml; tpl.v=1;
+    return tpl;
+  }
+  if(lang==="fr") upgradeFrenchTemplatePlaceholders(tpl);
+  return tpl;
+}
+function migrateOldEbichelchenUserDefaults(ud){
+  if(!ud) return ud;
+  if(oldEbBodyLooksDefault("fr", ud.ebichelchenBodyHtml, ud.ebichelchenBody)){
+    const f=factoryTemplate("fr","ebichelchen");
+    if(oldEbSubjectLooksDefault("fr", ud.ebichelchenSubject)) ud.ebichelchenSubject=f.subject;
+    ud.ebichelchenBodyHtml=f.bodyHtml; ud.ebichelchenBody=f.body;
+  }
+  if(ud.localizedTemplates && typeof ud.localizedTemplates==="object"){
+    Object.keys(ud.localizedTemplates).forEach(lang=>{
+      const l=normalizeLang(lang);
+      const eb=ud.localizedTemplates[lang] && ud.localizedTemplates[lang].ebichelchen;
+      if(eb) migrateOldEbichelchenTemplate(eb,l);
+    });
+  }
+  return ud;
+}
 function defaultBodyText(lang="fr"){ return factoryTemplate(lang,"confirmation").body; }
 function defaultBodyHtml(lang="fr"){ return factoryTemplate(lang,"confirmation").bodyHtml; }
 function defaultReminderSubject(lang="fr"){ return factoryTemplate(lang,"reminder").subject; }
@@ -1112,17 +1196,17 @@ function normalizeLocalizedTemplates(src){
       if(!tpl.bodyHtml) tpl.bodyHtml=bodyHtmlFromPlain(tpl.body || base.body);
       tpl.body=textFromHtml(tpl.bodyHtml) || tpl.body || base.body;
       tpl.v=1;
+      if(mode==="ebichelchen") migrateOldEbichelchenTemplate(tpl,l.code);
       out[l.code][mode]=tpl;
     });
   });
   return out;
 }
 let state = loadState();
-function loadState(){
+function normalizeStateObject(s){
   try{
-    const raw = localStorage.getItem(LS_KEY); const d = defaultState();
-    if(!raw) return d;
-    const s = JSON.parse(raw);
+    const d = defaultState();
+    if(!s || typeof s!=="object") return d;
     const oldVersion = (s.template && Number(s.template.v)) || 1;
     const tpl = Object.assign({}, d.template, s.template||{});
     if(!tpl.bodyHtml) tpl.bodyHtml = htmlFromPlain(tpl.body || d.template.body);
@@ -1165,6 +1249,12 @@ function loadState(){
       const f=factoryTemplate("fr","confirmation");
       tpl.subject=f.subject; tpl.bodyHtml=f.bodyHtml; tpl.body=f.body;
     }
+    if((s.appVersion||0) < 175 && !s.userDefaults){
+      const f=factoryTemplate("fr","confirmation");
+      tpl.subject=f.subject; tpl.bodyHtml=f.bodyHtml; tpl.body=f.body;
+    } else if((s.appVersion||0) < 175){
+      upgradeFrenchTemplatePlaceholders(tpl);
+    }
     delete tpl.sigFields;
     tpl.v = 17;
     const reminderTpl = Object.assign({}, d.reminderTemplate, s.reminderTemplate||{});
@@ -1181,6 +1271,12 @@ function loadState(){
     if((s.appVersion||0) < 144 && !s.userDefaults){
       const rf=factoryTemplate("fr","reminder");
       reminderTpl.subject=rf.subject; reminderTpl.bodyHtml=rf.bodyHtml; reminderTpl.body=rf.body;
+    }
+    if((s.appVersion||0) < 175 && !s.userDefaults){
+      const rf=factoryTemplate("fr","reminder");
+      reminderTpl.subject=rf.subject; reminderTpl.bodyHtml=rf.bodyHtml; reminderTpl.body=rf.body;
+    } else if((s.appVersion||0) < 175){
+      upgradeFrenchTemplatePlaceholders(reminderTpl);
     }
     reminderTpl.v = 1;
     const options = Object.assign({}, d.options, s.options||{});
@@ -1227,6 +1323,7 @@ function loadState(){
     }
     return {
       appVersion: APP_VERSION,
+      _savedAt: Number(s._savedAt||0) || 0,
       students: (Array.isArray(s.students)? s.students : []).map(st=>Object.assign({}, st, {lang1: normalizeLang(st.lang1||options.defaultLang||"fr"), lang2: normalizeLang(st.lang2||options.defaultLang||"fr"), langEb: normalizeLang(st.langEb||st.lang1||options.defaultLang||"fr")})),
       config: config,
       assignments: s.assignments||{},
@@ -1247,12 +1344,89 @@ function loadState(){
       userDefaults: migrateUserDefaultsToVariables(s.userDefaults || null),
       template: tpl,
       reminderTemplate: reminderTpl,
-      ebichelchenTemplate: (function(){ const f=factoryTemplate("fr","ebichelchen"); const refresh=((s.appVersion||0) < 144 && !s.userDefaults); const t=Object.assign({}, f, refresh ? {} : (s.ebichelchenTemplate||{})); if(!t.bodyHtml) t.bodyHtml=bodyHtmlFromPlain(t.body||f.body); t.body=textFromHtml(t.bodyHtml)||t.body||f.body; if(!t.subject) t.subject=f.subject; t.v=1; return t; })(),
-      localizedTemplates: normalizeLocalizedTemplates(((s.appVersion||0) < 144 && !s.userDefaults) ? {} : (s.localizedTemplates||{}))
+      ebichelchenTemplate: (function(){ const f=factoryTemplate("fr","ebichelchen"); const t=Object.assign({}, f, (s.ebichelchenTemplate||{})); if(!t.bodyHtml) t.bodyHtml=bodyHtmlFromPlain(t.body||f.body); t.body=textFromHtml(t.bodyHtml)||t.body||f.body; if(!t.subject) t.subject=f.subject; t.v=1; upgradeFrenchTemplatePlaceholders(t); return migrateOldEbichelchenTemplate(t,"fr"); })(),
+      localizedTemplates: normalizeLocalizedTemplates(s.localizedTemplates||{})
     };
   }catch(e){ return defaultState(); }
 }
-function saveState(){ state.appVersion = APP_VERSION; try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); return true; }catch(e){ return false; } }
+
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return defaultState();
+    return normalizeStateObject(JSON.parse(raw));
+  }catch(e){ return defaultState(); }
+}
+let durableSaveTimer=null, durableSaveBusy=false, durableSaveQueued=false;
+function localBackendAvailableEarly(){
+  const h=(location.hostname||"").toLowerCase();
+  return h==="127.0.0.1" || h==="localhost" || h==="::1";
+}
+function queueDurableStateSave(){
+  try{
+    if(!localBackendAvailableEarly()) return;
+    if(durableSaveTimer) clearTimeout(durableSaveTimer);
+    durableSaveTimer=setTimeout(syncDurableStateNow, 700);
+  }catch(e){}
+}
+async function syncDurableStateNow(){
+  if(!localBackendAvailableEarly()) return;
+  if(durableSaveBusy){ durableSaveQueued=true; return; }
+  durableSaveBusy=true;
+  try{
+    const payload={state:state};
+    await fetch("/api/app/storage", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload), cache:"no-store"});
+  }catch(e){} finally{
+    durableSaveBusy=false;
+    if(durableSaveQueued){ durableSaveQueued=false; queueDurableStateSave(); }
+  }
+}
+function saveState(){
+  state.appVersion = APP_VERSION;
+  state._savedAt = Date.now();
+  let ok=true;
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){ ok=false; }
+  queueDurableStateSave();
+  return ok;
+}
+function stateHasWorkData(st){
+  st=st||{};
+  const hasStudents=(st.students||[]).some(x=>x && Object.values(x).some(v=>String(v||"").trim()));
+  const hasDates=!!(st.config && Array.isArray(st.config.dates) && st.config.dates.length);
+  const hasAssignments=!!(st.assignments && Object.keys(st.assignments).length);
+  const hasMailEdits=!!((st.overrides && Object.keys(st.overrides).length) || (st.subjectOverrides && Object.keys(st.subjectOverrides).length) || (st.ebOverrides && Object.keys(st.ebOverrides).length) || (st.reminderAttachments && Object.keys(st.reminderAttachments).length));
+  const hasStatus=!!((st.sent&&st.sent.length) || (st.reminderSent&&st.reminderSent.length) || (st.ebichelchenSent&&st.ebichelchenSent.length));
+  return hasStudents || hasDates || hasAssignments || hasMailEdits || hasStatus;
+}
+function hydrateRuntimeSetsFromState(){
+  try{ sentSet=new Set(state.sent||[]); }catch(e){}
+  try{ reminderSentSet=new Set(state.reminderSent||[]); }catch(e){}
+  try{ ebSentSet=new Set(state.ebichelchenSent||[]); }catch(e){}
+  try{ excludedSet=new Set(); excludedReminderSet=new Set(); }catch(e){}
+}
+async function loadDurableStateAtStartup(){
+  if(!localBackendAvailableEarly()) return false;
+  try{
+    const localRaw=localStorage.getItem(LS_KEY);
+    const localHadData=!!localRaw;
+    const res=await fetch("/api/app/storage", {method:"GET", cache:"no-store"});
+    const d=await res.json();
+    if(!d || !d.ok || !d.state){ if(localHadData) queueDurableStateSave(); return false; }
+    const durable=normalizeStateObject(d.state);
+    const localSaved=Number((state&&state._savedAt)||0);
+    const durableSaved=Number((durable&&durable._savedAt)||0);
+    const shouldUseDurable = !localHadData || (durableSaved && (!localSaved || durableSaved > localSaved + 1000)) || (!stateHasWorkData(state) && stateHasWorkData(durable));
+    if(shouldUseDurable){
+      state=durable;
+      try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
+      hydrateRuntimeSetsFromState();
+      return true;
+    }
+    queueDurableStateSave();
+  }catch(e){}
+  return false;
+}
 
 function sessionHasWorkData(){
   const hasStudents=(state.students||[]).some(st=>!isEmptyStudentEntry(st));
@@ -1394,6 +1568,8 @@ function templateDataForMode(mode, lang){
       if(!state.ebichelchenTemplate.bodyHtml) state.ebichelchenTemplate.bodyHtml=bodyHtmlFromPlain(state.ebichelchenTemplate.body||base.body);
       if(!state.ebichelchenTemplate.subject) state.ebichelchenTemplate.subject=base.subject;
       state.ebichelchenTemplate.body=textFromHtml(state.ebichelchenTemplate.bodyHtml)||state.ebichelchenTemplate.body||base.body;
+      upgradeFrenchTemplatePlaceholders(state.ebichelchenTemplate);
+      migrateOldEbichelchenTemplate(state.ebichelchenTemplate,"fr");
       return state.ebichelchenTemplate;
     }
     if(mode==="reminder"){
@@ -1402,11 +1578,13 @@ function templateDataForMode(mode, lang){
       if(!state.reminderTemplate.bodyHtml) state.reminderTemplate.bodyHtml=bodyHtmlFromPlain(state.reminderTemplate.body||base.body);
       if(!state.reminderTemplate.subject) state.reminderTemplate.subject=base.subject;
       state.reminderTemplate.body=textFromHtml(state.reminderTemplate.bodyHtml)||state.reminderTemplate.body||base.body;
+      upgradeFrenchTemplatePlaceholders(state.reminderTemplate);
       return state.reminderTemplate;
     }
     const base=factoryTemplate("fr","confirmation");
     state.template = Object.assign({}, state.template||{}, {subject:(state.template&&state.template.subject)||base.subject, body:(state.template&&state.template.body)||base.body, bodyHtml:(state.template&&state.template.bodyHtml)||base.bodyHtml});
     migrateTemplateDefaultsToVariables(state.template);
+    upgradeFrenchTemplatePlaceholders(state.template);
     return state.template;
   }
   ensureLocalizedTemplates();
@@ -1601,6 +1779,45 @@ function showToast(msg){
   t.textContent=msg; t.style.opacity="1";
   clearTimeout(t._hideTimer); t._hideTimer=setTimeout(()=>{ t.style.opacity="0"; },1900);
 }
+
+function exportAppData(){
+  try{
+    saveState();
+    const payload={exportedBy:"EntretienConnect", version:APP_VERSION, exportedAt:new Date().toISOString(), state:state};
+    const blob=new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+    const a=document.createElement("a");
+    const d=new Date();
+    const stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0")+"-"+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0");
+    a.href=URL.createObjectURL(blob);
+    a.download="EntretienConnect-backup-"+stamp+".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    showToast("Données exportées ✓");
+  }catch(e){ alert("Export impossible : "+(e&&e.message?e.message:e)); }
+}
+function importAppDataFile(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed=JSON.parse(String(reader.result||"{}"));
+      const rawState=(parsed && parsed.state && typeof parsed.state==="object") ? parsed.state : parsed;
+      const imported=normalizeStateObject(rawState);
+      if(!confirm("Importer cette sauvegarde ?\n\nLes données actuellement affichées seront remplacées sur cet ordinateur.")) return;
+      state=imported;
+      hydrateRuntimeSetsFromState();
+      saveState();
+      refreshAllViews();
+      showToast("Données importées ✓");
+    }catch(e){ alert("Import impossible : fichier JSON invalide."); }
+  };
+  reader.readAsText(file);
+}
+function bindDataImportExport(){
+  const ex=document.getElementById("exportAppData"); if(ex) ex.onclick=exportAppData;
+  const im=document.getElementById("importAppData"); const fi=document.getElementById("importAppDataFile");
+  if(im && fi){ im.onclick=()=>fi.click(); fi.onchange=()=>{ const f=fi.files && fi.files[0]; fi.value=""; importAppDataFile(f); }; }
+}
 function unwrapNodeKeepChildren(node){
   const parent=node && node.parentNode; if(!parent) return;
   while(node.firstChild) parent.insertBefore(node.firstChild,node);
@@ -1773,6 +1990,7 @@ function renderSetup(){
   }
 }
 function bindSetup(){
+  bindDataImportExport();
   document.querySelectorAll('[data-choose-mode]').forEach(btn=>{
     btn.onclick=(ev)=>{
       if(ev) ev.stopPropagation();
@@ -3424,12 +3642,24 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   if(inBtn) inBtn.disabled=true;
   lb.style.display="block";
   lb.innerHTML='<div class="banner info">Préparation de la connexion …</div>';
+  try{ await api("/api/graph/login-reset"); }catch(e){}
   // v174: connexion SANS code — le helper local reçoit la redirection OAuth (PKCE).
   // Si le helper n'est pas encore à jour (endpoint inconnu), on retombe sur le code d'appareil.
   let w=null;
   try{ w=await api("/api/graph/login-start-web"); }catch(e){ w=null; }
   if(w && w.ok && w.authUrl) return runWebLoginFlow(lb, inBtn, w.authUrl, loginBoxId, buttonId);
   return startMicrosoftLoginDevice(loginBoxId, buttonId);
+}
+function microsoftRetryHtml(message){
+  return '<div class="banner err" style="line-height:1.7"><b>Connexion impossible.</b><br>'+esc(message||"La connexion n’a pas abouti.")+'<br><button type="button" class="ghost sm" data-ms-retry style="margin-top:8px">Réessayer</button> <button type="button" class="ghost sm" data-ms-reset style="margin-top:8px">Réinitialiser la connexion</button></div>';
+}
+function bindMicrosoftRetryButtons(lb, loginBoxId, buttonId){
+  try{
+    const retry=lb && lb.querySelector('[data-ms-retry]');
+    if(retry) retry.onclick=()=>startMicrosoftLogin(loginBoxId, buttonId);
+    const reset=lb && lb.querySelector('[data-ms-reset]');
+    if(reset) reset.onclick=async()=>{ try{ await api("/api/graph/login-reset"); }catch(e){} startMicrosoftLogin(loginBoxId, buttonId); };
+  }catch(e){}
 }
 function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
   lb.innerHTML='<div class="banner info" style="line-height:1.7"><b>1.</b> Une page Microsoft s’ouvre — connectez-vous avec votre compte (IAM). <b>Aucun code à saisir.</b><br><b>2.</b> Revenez ensuite ici : la connexion se termine automatiquement.<br><span class="muted">Rien ne s’est ouvert ? <a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>Cliquez ici</b></a> — ou <a href="#" id="deviceFlowFallback">utilisez la méthode classique avec code</a>.</span></div>';
@@ -3449,9 +3679,15 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
       lb.innerHTML="";
       if(inBtn) inBtn.disabled=false;
       renderAuth(); renderSetup(); renderMails();
+    } else if(d && d.lastLoginError){
+      clearInterval(pollTimer);
+      lb.innerHTML=microsoftRetryHtml(d.lastLoginError);
+      bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
+      if(inBtn) inBtn.disabled=false;
     } else if(Date.now()-startedAt > 6*60*1000){
       clearInterval(pollTimer);
-      lb.innerHTML='<div class="banner err">La connexion n’a pas abouti. Cliquez à nouveau sur « Connecter » pour réessayer.</div>';
+      lb.innerHTML=microsoftRetryHtml('La connexion n’a pas abouti. Vous pouvez réessayer sans recharger la page.');
+      bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
     }
   },3000);
@@ -3496,7 +3732,8 @@ async function startMicrosoftLoginDevice(loginBoxId, buttonId){
     try{ r=await api("/api/graph/login-poll"); }catch(e){ return; }
     if(!r.ok){
       clearInterval(pollTimer);
-      lb.innerHTML='<div class="banner err">'+esc(r.error||"Erreur")+'</div>';
+      lb.innerHTML=microsoftRetryHtml(r.error||"Erreur");
+      bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
       return;
     }
@@ -3510,7 +3747,8 @@ async function startMicrosoftLoginDevice(loginBoxId, buttonId){
       renderAuth(); renderSetup(); renderMails();
     } else if(r.status==="error"){
       clearInterval(pollTimer);
-      lb.innerHTML='<div class="banner err">Connexion impossible : '+esc(r.error||"")+'</div>';
+      lb.innerHTML=microsoftRetryHtml(r.error||"Connexion impossible.");
+      bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
     }
   },4000);
@@ -4501,13 +4739,17 @@ document.getElementById("confirmGo").onclick=async()=>{
 
 /* Init */
 try{ window.setWorkflowMode=setWorkflowMode; window.workflowMode=workflowMode; window.ecSafeChooseMode=ecSafeChooseMode; }catch(e){}
-try{
-  startLocalAppHeartbeat(); bindSetup(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); checkAccount(); showStartupSessionChoice();
-}catch(e){
-  console.error("Erreur init EntretienConnect", e);
-  try{ var b=document.getElementById("setupCurrent"); if(b) b.innerHTML='<div class="banner warn compact">Erreur au démarrage : '+esc(String(e&&e.message||e))+'</div>'; }catch(_){}
-  try{ bindSetup(); }catch(_){}
+async function bootEntretienConnect(){
+  try{
+    await loadDurableStateAtStartup();
+    startLocalAppHeartbeat(); bindSetup(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); checkAccount(); showStartupSessionChoice();
+  }catch(e){
+    console.error("Erreur init EntretienConnect", e);
+    try{ var b=document.getElementById("setupCurrent"); if(b) b.innerHTML='<div class="banner warn compact">Erreur au démarrage : '+esc(String(e&&e.message||e))+'</div>'; }catch(_){}
+    try{ bindSetup(); }catch(_){}
+  }
 }
+bootEntretienConnect();
 </script>
 
 

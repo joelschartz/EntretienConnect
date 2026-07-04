@@ -22,10 +22,14 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RuntimeDir = Join-Path $env:LOCALAPPDATA "EntretienConnect"
 try { if (-not (Test-Path $RuntimeDir -PathType Container)) { New-Item -ItemType Directory -Path $RuntimeDir -Force | Out-Null } } catch { $RuntimeDir = $ScriptDir }
 $TokenFile = Join-Path $RuntimeDir "graph_token.json"
+$StateFile = Join-Path $RuntimeDir "state.json"
+$BackupDir = Join-Path $RuntimeDir "backups"
+try { if (-not (Test-Path $BackupDir -PathType Container)) { New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null } } catch {}
 $LogFile   = Join-Path $RuntimeDir "EntretienConnect-log.txt"
 $EbCacheFile = Join-Path $RuntimeDir "ebichelchen_cache.json"
 $script:Pending = $null
-$script:PendingWeb = $null   # v174: état PKCE du login sans code (state/verifier/redirect)
+$script:PendingWeb = $null   # v176: état PKCE du login sans code (state/verifier/redirect)
+$script:LastLoginError = $null
 $script:LastHeartbeatUtc = $null
 $script:ServerStartedUtc = [DateTime]::UtcNow
 $script:ShutdownRequested = $false
@@ -33,9 +37,9 @@ $script:ShutdownRequested = $false
 # Le helper s’arrête alors seul pour libérer le dossier/OneDrive.
 # v167: 25 s était trop court — Chrome ne laisse battre les onglets en arrière-plan
 # qu'une fois par minute (après 5 min), et une mise en veille coupait le helper.
-$script:HeartbeatTimeoutSeconds = 300
+$script:HeartbeatTimeoutSeconds = 0   # v177: kein automatischer Timeout
 $script:LastWatchdogTickUtc = $null
-$script:StartupNoHeartbeatTimeoutSeconds = 180
+$script:StartupNoHeartbeatTimeoutSeconds = 0
 
 function Log($msg) {
     $line = ((Get-Date -Format "HH:mm:ss") + "  " + $msg)
@@ -534,18 +538,51 @@ function Handle-Request($stream, $req) {
         Send-Json $stream @{ ok = $true; shuttingDown = $true }
         return
     }
+    if ($path -eq "/api/app/storage") {
+        if ($method -eq "GET") {
+            if (Test-Path $StateFile -PathType Leaf) {
+                try {
+                    $raw = Get-Content -LiteralPath $StateFile -Raw -ErrorAction Stop
+                    $st = if ($raw) { $raw | ConvertFrom-Json } else { $null }
+                    Send-Json $stream @{ ok = $true; state = $st; path = $StateFile }
+                } catch { Send-Json $stream @{ ok = $false; error = $_.Exception.Message } }
+            } else { Send-Json $stream @{ ok = $true; state = $null; path = $StateFile } }
+        } else {
+            try {
+                $data = if ($req.Body) { $req.Body | ConvertFrom-Json } else { $null }
+                if (-not $data -or -not $data.state) { Send-Json $stream @{ ok = $false; error = "Aucun état à enregistrer." }; return }
+                try {
+                    if ((Test-Path $StateFile -PathType Leaf) -and (Test-Path $BackupDir -PathType Container)) {
+                        $recent = Get-ChildItem -LiteralPath $BackupDir -Filter "state-*.json" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                        if ((-not $recent) -or (((Get-Date) - $recent.LastWriteTime).TotalHours -ge 6)) { Copy-Item -LiteralPath $StateFile -Destination (Join-Path $BackupDir ("state-" + (Get-Date -Format "yyyyMMdd-HHmmss") + ".json")) -Force }
+                        Get-ChildItem -LiteralPath $BackupDir -Filter "state-*.json" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -Skip 12 | Remove-Item -Force -ErrorAction SilentlyContinue
+                    }
+                } catch {}
+                try { $data.state | Add-Member -NotePropertyName "_savedAt" -NotePropertyValue ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()) -Force } catch {}
+                ($data.state | ConvertTo-Json -Depth 100 -Compress) | Set-Content -LiteralPath $StateFile -Encoding UTF8
+                Send-Json $stream @{ ok = $true; path = $StateFile }
+            } catch { Send-Json $stream @{ ok = $false; error = $_.Exception.Message } }
+        }
+        return
+    }
     if ($path -eq "/api/graph/capabilities") {
-        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = 174 }
+        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = 177 }
         return
     }
     if ($path -eq "/api/graph/account") {
         $t = Load-Tokens
-        if ($t -and $t.account -and (Get-AccessToken)) { Send-Json $stream @{ ok = $true; signedIn = $true; account = $t.account } }
-        else { Send-Json $stream @{ ok = $true; signedIn = $false } }
+        if ($t -and $t.account -and (Get-AccessToken)) { Send-Json $stream @{ ok = $true; signedIn = $true; account = $t.account; lastLoginError = "" } }
+        else { Send-Json $stream @{ ok = $true; signedIn = $false; lastLoginError = $script:LastLoginError } }
         return
     }
-    # ---- v174: Login sans code (auth-code + PKCE, redirection loopback) ----
+    if ($path -eq "/api/graph/login-reset") {
+        $script:Pending = $null; $script:PendingWeb = $null; $script:LastLoginError = $null
+        Send-Json $stream @{ ok = $true }
+        return
+    }
+    # ---- v176: Login sans code (auth-code + PKCE, redirection loopback) ----
     if ($path -eq "/api/graph/login-start-web") {
+        $script:Pending = $null; $script:LastLoginError = $null
         $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
         $vb = New-Object byte[] 64
         $rng.GetBytes($vb)
@@ -555,7 +592,7 @@ function Handle-Request($stream, $req) {
         $sb = New-Object byte[] 24
         $rng.GetBytes($sb)
         $oauthState = [Convert]::ToBase64String($sb).TrimEnd('=').Replace('+','-').Replace('/','_')
-        # v174: Racine seulement. Azure accepte le port loopback, mais le chemin
+        # v176: Racine seulement. Azure accepte le port loopback, mais le chemin
         # doit correspondre à http://localhost ; /oauth/redirect donnait AADSTS50011.
         $redirect = "http://localhost:$Port/"
         $script:PendingWeb = @{ state = $oauthState; verifier = $verifier; redirect = $redirect }
@@ -609,8 +646,10 @@ function Handle-Request($stream, $req) {
             }
         }
         if ($ok) {
+            $script:LastLoginError = $null
             $inner = "<div style='font-size:42px'>&#9989;</div><h2>Connexion r&#233;ussie</h2><p>Vous pouvez fermer cet onglet et revenir &#224; EntretienConnect.</p><script>setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);</script>"
         } else {
+            $script:LastLoginError = $msg
             $safeMsg = ("" + $msg).Replace("&","&amp;").Replace("<","&lt;").Replace(">","&gt;")
             $inner = "<div style='font-size:42px'>&#9888;&#65039;</div><h2>Connexion impossible</h2><p>" + $safeMsg + "</p><p>Fermez cet onglet et r&#233;essayez depuis EntretienConnect.</p>"
         }
@@ -619,6 +658,7 @@ function Handle-Request($stream, $req) {
         return
     }
     if ($path -eq "/api/graph/login-start") {
+        $script:PendingWeb = $null; $script:LastLoginError = $null
         $dc = PostForm "$Base/devicecode" @{ client_id = $ClientId; scope = $Scope }
         if ($dc.device_code) {
             Write-Host ("  login-start: Code erhalten (" + $dc.user_code + ")")
@@ -658,7 +698,7 @@ function Handle-Request($stream, $req) {
     }
     if ($path -eq "/api/graph/logout") {
         try { if (Test-Path $TokenFile) { Remove-Item $TokenFile -Force } } catch {}
-        $script:Pending = $null
+        $script:Pending = $null; $script:PendingWeb = $null; $script:LastLoginError = $null
         Send-Json $stream @{ ok = $true }
         return
     }
@@ -804,7 +844,7 @@ try {
 
 try { [System.IO.File]::WriteAllText($LogFile, ("=== Start " + (Get-Date) + " ===" + [Environment]::NewLine), [Text.Encoding]::UTF8) } catch {}
 Write-Host "============================================================"
-Write-Host "  EntretienConnect est lancé.   [Version : v174 GitHub Starter - sans Python]"
+Write-Host "  EntretienConnect est lancé.   [Version : v177 GitHub Starter - sans Python]"
 Write-Host "  Dans le navigateur :  $url"
 Write-Host "  Laissez cette fenêtre ouverte. La fermer = quitter."
 Write-Host "============================================================"
@@ -835,12 +875,12 @@ while (-not $script:ShutdownRequested) {
             if ($null -ne $script:LastHeartbeatUtc) { $script:LastHeartbeatUtc = $now }
         }
         $script:LastWatchdogTickUtc = $now
-        if ($null -ne $script:LastHeartbeatUtc) {
+        if (($script:HeartbeatTimeoutSeconds -gt 0) -and ($null -ne $script:LastHeartbeatUtc)) {
             if (($now - $script:LastHeartbeatUtc).TotalSeconds -gt $script:HeartbeatTimeoutSeconds) {
                 Log "Kein EntretienConnect-Tab mehr aktiv. Lokaler Helfer beendet sich automatisch."
                 break
             }
-        } elseif (($now - $script:ServerStartedUtc).TotalSeconds -gt $script:StartupNoHeartbeatTimeoutSeconds) {
+        } elseif (($script:StartupNoHeartbeatTimeoutSeconds -gt 0) -and (($now - $script:ServerStartedUtc).TotalSeconds -gt $script:StartupNoHeartbeatTimeoutSeconds)) {
             Log "Kein EntretienConnect-Tab gestartet. Lokaler Helfer beendet sich automatisch."
             break
         }

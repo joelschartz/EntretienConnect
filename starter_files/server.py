@@ -52,8 +52,8 @@ def _initial_port():
 PORT = _initial_port()
 last_heartbeat_time = None
 server_started_time = time.time()
-HEARTBEAT_TIMEOUT_SECONDS = 600  # v167: tolère la limitation des minuteries par Chrome (onglet en arrière-plan)
-STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS = 600
+HEARTBEAT_TIMEOUT_SECONDS = 0  # v177: kein automatischer Timeout; Helper bleibt offen, bis man ihn beendet
+STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS = 0
 
 
 def _port_is_in_use_error(exc):
@@ -81,6 +81,31 @@ else:
     RES_DIR = os.path.dirname(os.path.abspath(__file__))
     DATA_DIR = RES_DIR
 DIRECTORY = RES_DIR
+
+
+def _user_app_data_dir():
+    """Dauerhafter, benutzerspezifischer Speicher ohne Admin-Rechte."""
+    if sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support")
+    elif sys.platform.startswith("win"):
+        base = os.environ.get("APPDATA") or os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    else:
+        base = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+    path = os.path.join(base, "EntretienConnect")
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception:
+        path = DATA_DIR
+    return path
+
+
+PERSIST_DIR = _user_app_data_dir()
+STATE_FILE = os.path.join(PERSIST_DIR, "state.json")
+STATE_BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
+try:
+    os.makedirs(STATE_BACKUP_DIR, exist_ok=True)
+except Exception:
+    STATE_BACKUP_DIR = PERSIST_DIR
 
 
 def _as_line(s):
@@ -277,10 +302,11 @@ GRAPH_TENANT = "organizations"
 GRAPH_SCOPE = ("https://graph.microsoft.com/Mail.Send "
                "https://graph.microsoft.com/User.Read offline_access")
 OAUTH_BASE = "https://login.microsoftonline.com/" + GRAPH_TENANT + "/oauth2/v2.0"
-TOKEN_FILE = os.path.join(DATA_DIR, "graph_token.json")
+TOKEN_FILE = os.path.join(PERSIST_DIR, "graph_token.json")
 
 _pending_device = {}   # zwischen Login-Start und Polling
-_pending_web = {}      # v174: state -> {verifier, redirect_uri} für den Login ohne Code (PKCE)
+_pending_web = {}      # v176: state -> {verifier, redirect_uri} für den Login ohne Code (PKCE)
+_last_login_result = {"ok": None, "message": "", "at": 0}
 
 
 def _gctx():
@@ -418,6 +444,61 @@ def normalize_defer_until(value):
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _json_load_file(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _atomic_write_json(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+def _backup_state_if_needed():
+    """Legt höchstens etwa alle 6 Stunden ein Backup an und behält die letzten 12."""
+    if not os.path.exists(STATE_FILE):
+        return
+    try:
+        os.makedirs(STATE_BACKUP_DIR, exist_ok=True)
+        last = 0
+        for name in os.listdir(STATE_BACKUP_DIR):
+            if name.startswith("state-") and name.endswith(".json"):
+                try:
+                    last = max(last, os.path.getmtime(os.path.join(STATE_BACKUP_DIR, name)))
+                except Exception:
+                    pass
+        if time.time() - last < 6 * 3600:
+            return
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        dst = os.path.join(STATE_BACKUP_DIR, "state-" + stamp + ".json")
+        try:
+            import shutil
+            shutil.copy2(STATE_FILE, dst)
+        except Exception:
+            return
+        items = []
+        for name in os.listdir(STATE_BACKUP_DIR):
+            if name.startswith("state-") and name.endswith(".json"):
+                p = os.path.join(STATE_BACKUP_DIR, name)
+                try:
+                    items.append((os.path.getmtime(p), p))
+                except Exception:
+                    pass
+        for _, old in sorted(items, reverse=True)[12:]:
+            try:
+                os.remove(old)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
@@ -440,10 +521,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.split("?",1)[0] == "/api/app/shutdown":
             threading.Thread(target=self.server.shutdown, daemon=True).start()
             return self._json(200, {"ok": True, "shuttingDown": True})
+        if self.path.split("?",1)[0] == "/api/app/storage":
+            return self.handle_app_storage_get()
+        if self.path.split("?",1)[0] == "/api/app/session-status":
+            return self.handle_app_session_status()
         parsed0 = urllib.parse.urlparse(self.path)
         path0 = parsed0.path
         qs0 = urllib.parse.parse_qs(parsed0.query)
-        # v174: OAuth-Code-Login kehrt auf die Wurzel zurueck:
+        # v176: OAuth-Code-Login kehrt auf die Wurzel zurueck:
         # http://localhost:<port>/?code=...&state=...
         # Der Microsoft-Client "Graph Command Line Tools" ist nur fuer
         # http://localhost ohne Pfad registriert. Azure ignoriert beim
@@ -459,7 +544,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 174, "ebichelchen": EB_AVAILABLE})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 177, "ebichelchen": EB_AVAILABLE})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -469,6 +554,44 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith("/api/eb/"):
             return self.handle_eb_get()
         return super().do_GET()
+
+    # ---------------------------------------------------------- App-Speicher / Status
+    def handle_app_storage_get(self):
+        st = _json_load_file(STATE_FILE)
+        try:
+            mtime = os.path.getmtime(STATE_FILE) if os.path.exists(STATE_FILE) else 0
+        except Exception:
+            mtime = 0
+        return self._json(200, {"ok": True, "state": st, "updatedAt": mtime, "path": STATE_FILE})
+
+    def handle_app_storage_post(self):
+        data = self._read_json()
+        st = data.get("state") if isinstance(data, dict) else None
+        if not isinstance(st, dict):
+            return self._json(400, {"ok": False, "error": "Aucun état à enregistrer."})
+        try:
+            _backup_state_if_needed()
+            st["_savedAt"] = int(time.time() * 1000)
+            _atomic_write_json(STATE_FILE, st)
+            return self._json(200, {"ok": True, "path": STATE_FILE})
+        except Exception as exc:
+            return self._json(500, {"ok": False, "error": str(exc)})
+
+    def handle_app_session_status(self):
+        acct = None
+        signed = False
+        t = _load_tokens()
+        if t and t.get("account") and _access_token():
+            signed = True
+            acct = t.get("account")
+        eb_status = {"available": EB_AVAILABLE, "hasData": False}
+        if EB_AVAILABLE:
+            try:
+                data, at = eb.get_current()
+                eb_status.update({"hasData": bool(data), "receivedAt": at})
+            except Exception as exc:
+                eb_status.update({"error": str(exc)})
+        return self._json(200, {"ok": True, "microsoft": {"signedIn": signed, "account": acct}, "ebichelchen": eb_status})
 
     # ---------------------------------------------------------- e-Bichelchen
     def handle_eb_get(self):
@@ -557,18 +680,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # ---- Graph: Konto-Status ----
     def handle_graph_account(self):
         t = _load_tokens()
+        extra = {}
+        try:
+            if _last_login_result.get("ok") is False and time.time() - float(_last_login_result.get("at") or 0) < 600:
+                extra["lastLoginError"] = _last_login_result.get("message") or "Connexion impossible."
+        except Exception:
+            pass
         if t and t.get("account") and _access_token():
-            return self._json(200, {"ok": True, "signedIn": True, "account": t["account"]})
-        return self._json(200, {"ok": True, "signedIn": False})
+            extra["lastLoginError"] = ""
+            return self._json(200, dict({"ok": True, "signedIn": True, "account": t["account"]}, **extra))
+        return self._json(200, dict({"ok": True, "signedIn": False}, **extra))
 
-    # ---- Graph: Login starten (page web, sans code à saisir) — v174 ----
+    # ---- Graph: Login starten (page web, sans code à saisir) — v176 ----
     # Auth-code + PKCE avec redirection loopback vers ce helper. L'utilisateur ne fait
     # que la connexion IAM ; aucun code d'appareil à copier.
-    # IMPORTANT v174 : redirect_uri = http://localhost:<port>/ (racine).
+    # IMPORTANT v176 : redirect_uri = http://localhost:<port>/ (racine).
     # Avec ce client public, Azure accepte le port loopback mais le chemin doit
     # rester la racine enregistrée ; /oauth/redirect provoque AADSTS50011.
     def handle_graph_login_start_web(self):
         import base64, secrets
+        global _last_login_result
+        _last_login_result = {"ok": None, "message": "", "at": time.time()}
+        _pending_device.clear()
         verifier = secrets.token_urlsafe(64)[:128]
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode("ascii")).digest()).decode("ascii").rstrip("=")
         state = secrets.token_urlsafe(24)
@@ -587,6 +720,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def handle_oauth_redirect(self):
         import html as _html
+        global _last_login_result
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         state = (qs.get("state") or [""])[0]
         code = (qs.get("code") or [""])[0]
@@ -616,6 +750,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 ok = True
             else:
                 msg = tok.get("error_description") or tok.get("error") or "Échec de l'échange du code."
+        _last_login_result = {"ok": bool(ok), "message": ("" if ok else msg), "at": time.time()}
         if ok:
             inner = ("<div style='font-size:42px'>✅</div><h2>Connexion réussie</h2>"
                      "<p>Vous pouvez fermer cet onglet et revenir à EntretienConnect.</p>"
@@ -636,6 +771,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     # ---- Graph: Login starten (Geraetecode) ----
     def handle_graph_login_start(self):
+        global _last_login_result
+        _last_login_result = {"ok": None, "message": "", "at": time.time()}
+        _pending_web.clear()
         st, dc = _form_post(OAUTH_BASE + "/devicecode",
                             {"client_id": GRAPH_CLIENT_ID, "scope": GRAPH_SCOPE})
         if "device_code" not in dc:
@@ -675,6 +813,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return self._json(200, {"ok": True, "status": "error",
                                 "error": tok.get("error_description") or err or "Erreur"})
 
+    # ---- Graph: hängenden Loginversuch zurücksetzen ----
+    def handle_graph_login_reset(self):
+        global _last_login_result
+        _pending_device.clear()
+        _pending_web.clear()
+        _last_login_result = {"ok": None, "message": "", "at": time.time()}
+        return self._json(200, {"ok": True})
+
     # ---- Graph: Abmelden ----
     def handle_graph_logout(self):
         try:
@@ -683,6 +829,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception:
             pass
         _pending_device.clear()
+        _pending_web.clear()
+        try:
+            global _last_login_result
+            _last_login_result = {"ok": None, "message": "", "at": time.time()}
+        except Exception:
+            pass
         return self._json(200, {"ok": True})
 
     # ---- Graph: Senden ----
@@ -761,6 +913,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.split("?",1)[0] == "/api/app/shutdown":
             threading.Thread(target=self.server.shutdown, daemon=True).start()
             return self._json(200, {"ok": True, "shuttingDown": True})
+        if self.path.split("?",1)[0] == "/api/app/storage":
+            return self.handle_app_storage_post()
+        if self.path.split("?",1)[0] == "/api/app/session-status":
+            return self.handle_app_session_status()
+        if self.path.split("?",1)[0] == "/api/graph/login-reset":
+            return self.handle_graph_login_reset()
         if self.path == "/api/send":
             self.handle_send()
         elif self.path == "/api/outlook-send":
@@ -1128,14 +1286,14 @@ def main():
                     last_tick = now
                     continue
                 last_tick = now
-                if last_heartbeat_time is not None and now - last_heartbeat_time > HEARTBEAT_TIMEOUT_SECONDS:
+                if HEARTBEAT_TIMEOUT_SECONDS and last_heartbeat_time is not None and now - last_heartbeat_time > HEARTBEAT_TIMEOUT_SECONDS:
                     print("Aucun onglet EntretienConnect actif. Arrêt automatique du helper local.")
                     try:
                         httpd.shutdown()
                     except Exception:
                         pass
                     return
-                if last_heartbeat_time is None and now - server_started_time > STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS:
+                if STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS and last_heartbeat_time is None and now - server_started_time > STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS:
                     print("Aucun onglet EntretienConnect démarré. Arrêt automatique du helper local.")
                     try:
                         httpd.shutdown()
