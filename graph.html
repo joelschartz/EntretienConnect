@@ -266,15 +266,21 @@
   .reminder-toggle{display:flex;align-items:center;gap:8px;margin-left:auto;color:var(--muted);font-size:13px;font-weight:750;cursor:pointer}
   .reminder-toggle input{width:16px;height:16px;min-width:16px;margin:0}
   .reminder-note,.template-note{margin:2px 0 12px;font-size:12.5px;color:var(--muted)}
-  .template-settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 16px;padding:0;border:0;border-radius:0;background:transparent;align-items:start}
+  .template-settings{display:flex;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
   .student-lang-default{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 14px;padding:0;border:0;background:transparent}.student-lang-default label{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}.student-lang-default select{height:40px;width:auto;min-width:170px;padding:7px 10px;border-radius:999px;background:#fff}
   .setting-field{display:flex;flex-direction:column;gap:6px;min-width:0}.setting-field label,.setting-title{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}.setting-help{font-size:11.5px;line-height:1.35;color:var(--muted)}.setting-field select,.setting-field input[type=time]{height:40px;padding:7px 10px;border-radius:12px;background:#fff}.reminder-setting{gap:8px;align-items:flex-start;min-width:0}.reminder-setting .setting-title{align-self:flex-start}.reminder-main,.signature-toggle{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:800;font-size:13px;cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;user-select:none;-webkit-tap-highlight-color:transparent;box-shadow:var(--shadow-sm);white-space:nowrap}.reminder-main:hover,.signature-toggle:hover{border-color:var(--line-strong);background:#fff;box-shadow:0 6px 16px rgba(20,30,60,.06)}.reminder-main input,.signature-toggle input{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;flex:0 0 16px;margin:0;padding:0;border:1px solid var(--line-strong);border-radius:4px;background:#fff;box-shadow:none;outline:none;display:inline-grid;place-content:center;transition:background .12s ease,border-color .12s ease}.reminder-main input:focus,.reminder-main input:focus-visible,.signature-toggle input:focus,.signature-toggle input:focus-visible{outline:none;box-shadow:none}.reminder-main input:checked,.signature-toggle input:checked{background:var(--accent);border-color:var(--accent)}.reminder-main input:checked:after,.signature-toggle input:checked:after{content:"";width:8px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-top:-1px}.reminder-controls{display:flex;gap:8px;align-items:center;justify-content:flex-start;flex-wrap:nowrap;color:var(--muted);font-size:13px;text-align:left;white-space:nowrap}.reminder-controls select{width:auto;min-width:82px}.reminder-controls input[type=time]{width:104px}.reminder-setting{justify-self:start;margin-left:58px}.signature-setting{padding-left:0;align-items:flex-start;justify-self:end}.signature-setting .signature-toggle{align-self:flex-start}.template-language-edit{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:750}.template-language-edit select{width:auto;min-width:148px;height:38px;padding:6px 10px;border-radius:999px;background:#fff}.student-contact-grid .group-head th{background:#f8f8fb}.student-contact-grid .contact-group{text-align:left}.student-contact-grid .contact2-start{border-left:0!important}.student-contact-grid th.contact2-start,.student-contact-grid td.contact2-start{padding-left:10px!important}.student-contact-grid .contact-cell{min-width:0}.student-contact-grid .contact-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .contact-inline input{flex:1 1 auto;min-width:0}.student-contact-grid .lang-select{flex:0 0 58px;width:58px;min-width:58px;height:36px;padding:5px 6px;border-radius:10px;background:#fff;font-size:12.5px;font-weight:400;letter-spacing:.01em;text-align:center;color:var(--ink)}.student-contact-grid .lang-select option{font-weight:400}.student-contact-grid .student-name-inline{display:flex;align-items:center;gap:8px;min-width:0}.student-contact-grid .student-name-inline input{flex:1 1 auto;min-width:0}.student-index{width:22px;min-width:22px;height:22px;border-radius:999px;background:var(--accent-soft);color:#4a55a2;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}.student-contact-grid .actions-cell{width:62px!important;padding-left:10px!important;padding-right:10px!important;text-align:center}.student-contact-grid .actions-cell .st-del{width:42px;min-width:42px;padding-left:0;padding-right:0}.csv-hint{margin-top:2px;text-align:right}.email-invalid{border-color:#ffb4aa!important;background:#fff8f7!important}.email-invalid:focus{border-color:#ef6f61!important;box-shadow:0 0 0 4px rgba(239,111,97,.12)!important}.student-email-warning{margin-top:10px;text-align:left}.lang-pill{display:inline-flex;align-items:center;border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:700;color:var(--muted);margin-left:4px}
-  .template-settings{grid-template-columns:minmax(170px,240px) minmax(320px,1fr) auto;align-items:start}
-  .template-settings .setting-field{gap:8px}
-  .template-settings .setting-field label,.template-settings .setting-title{margin:0;line-height:1.2}
-  .reminder-inline,.signature-inline{min-height:40px}
-  .reminder-main,.signature-toggle{height:40px;box-sizing:border-box}
-  .reminder-controls input[type=time],.reminder-controls select{height:40px}
+  .template-settings .setting-title{margin:0}
+  #trimesterSelect{width:auto;min-width:220px;height:40px;border-radius:12px;background:#fff}
+  .reminder-tab-group{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .reminder-tab{display:inline-flex;align-items:center}
+  .rt-check{appearance:none;-webkit-appearance:none;pointer-events:none;width:15px;height:15px;min-width:15px;margin:0 7px 0 0;padding:0;border:1px solid var(--line-strong);border-radius:4px;background:#fff;display:inline-grid;place-content:center}
+  .rt-check:checked{background:var(--accent);border-color:var(--accent)}
+  .rt-check:checked:after{content:"";width:7px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-top:-1px}
+  .template-tab.active .rt-check{border-color:#fff;background:transparent}
+  .template-tab.active .rt-check:checked{background:#fff;border-color:#fff}
+  .template-tab.active .rt-check:checked:after{border-left-color:var(--accent);border-bottom-color:var(--accent)}
+  .reminder-tab-group .reminder-controls input[type=time]{width:104px;height:36px}
+  .reminder-tab-group .reminder-controls select{width:auto;min-width:82px;height:36px}
   .template-settings .setting-field{justify-content:end}
   .signature-setting{justify-self:end;align-items:flex-start;min-width:300px;padding-left:0}
   .signature-setting .signature-toggle{align-self:flex-start}
@@ -410,41 +416,11 @@
   .source-lang-inline{justify-content:flex-end}
   .source-lang-inline .source-pill{margin-right:auto}
 
-
-  /* v152: ruhiger Kopfbereich im Vorlagen-Editor */
-  .template-main-row{margin:0 0 14px;gap:10px;border-top:1px solid var(--line);padding-top:14px}
-  .template-main-row .template-language-edit{margin-left:auto}
-  .template-options-compact{display:flex;flex-direction:column;gap:12px;margin:0 0 14px}
-  .template-text-option{display:flex;align-items:center;gap:10px;max-width:360px}
-  .template-text-option .option-label,.email-option-card .option-label,.email-options-title span:first-child{font-size:12px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.03em}
-  .template-text-option select{height:38px;border-radius:12px;background:#fff;padding:6px 10px;min-width:180px}
-  .email-options-panel{border:1px solid var(--line);background:linear-gradient(180deg,#fff,#fbfcff);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow-sm)}
-  .email-options-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
-  .email-options-summary{font-size:12.5px;color:var(--muted);font-weight:650;text-transform:none;letter-spacing:0}
-  .email-options-grid{display:grid;grid-template-columns:minmax(330px,1fr) minmax(300px,1fr);gap:12px}
-  .email-option-card{border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px;min-width:0}
-  .email-option-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
-  .legacy-hidden{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important}
-  .reminder-choice{display:inline-flex;align-items:center;border:1px solid var(--line);background:#f7f8ff;border-radius:999px;padding:3px;gap:2px}
-  .reminder-choice-btn{border:0;background:transparent;color:var(--muted);box-shadow:none;border-radius:999px;padding:7px 11px;font-size:12.5px;font-weight:850;white-space:nowrap}
-  .reminder-choice-btn.active{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(56,98,220,.18)}
-  .reminder-choice-btn:hover{box-shadow:none}
-  .email-option-card .reminder-controls{margin-top:0}
-  .email-option-card.reminder-off .reminder-controls{display:none!important}
-  .email-option-card .signature-toggle{height:34px;padding:6px 10px;box-shadow:none}
-  .email-option-card .signature-inline{justify-content:flex-start}
-  .email-option-card .sig-logo-inline{display:flex;align-items:center;gap:8px}
-  .email-option-card .logo-mode-select{height:38px;border-radius:12px;background:#fff}
-  .template-card.mode-ebichelchen #templateEmailOptions,
-  .template-card.no-email #templateEmailOptions{display:none!important}
-  .template-card.mode-ebichelchen #trimesterOption{display:flex}
-  @media (max-width:1000px){.email-options-grid{grid-template-columns:1fr}.template-main-row .template-language-edit{margin-left:0;width:100%}}
-
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v152</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v153</span></h1>
 </header>
 
 <nav class="tabs">
@@ -466,14 +442,17 @@
         <div class="setup-mode-card" data-mode="ebichelchen">
           <span class="setup-chip ok">Le plus rapide</span>
           <h3>Uniquement e-Bichelchen</h3>
+          <p>Se connecte à e-Bichelchen et importe la classe automatiquement.</p>
         </div>
         <div class="setup-mode-card" data-mode="email">
           <span class="setup-chip">Classique</span>
           <h3>Uniquement e-mail</h3>
+          <p>Se connecte à Microsoft 365 et envoie les confirmations aux parents.</p>
         </div>
         <div class="setup-mode-card" data-mode="both">
           <span class="setup-chip warn">Complet</span>
           <h3>e-Bichelchen + e-mail</h3>
+          <p>Élèves depuis e-Bichelchen + e-mails via Microsoft 365.</p>
         </div>
       </div>
       <div id="setupCurrent" class="setup-current"></div>
@@ -568,15 +547,18 @@ Langues : FR, DE, EN, LU">?</span>
         <div id="templateToggleZone" class="template-toggle-zone" role="button" tabindex="0" aria-label="Déplier ou replier le modèle d’e-mail">
           <button id="toggleTemplate" class="template-chevron" type="button" aria-expanded="true" aria-label="Déplier ou replier le modèle d’e-mail">▾</button>
           <div class="template-title">
-            <h2>Modèles de messages</h2>
+            <h2>Modèle d’e-mail</h2>
           </div>
         </div>
       </div>
       <div id="templateEditorArea" class="template-editor-area">
-      <div class="template-tabs template-main-row" id="templateModeTabs" role="tablist" aria-label="Choisir le modèle de message">
+      <div class="template-tabs" id="templateModeTabs" role="tablist" aria-label="Choisir le modèle de message">
         <button type="button" class="template-tab" data-template-mode="ebichelchen" style="display:none">e-Bichelchen</button>
         <button type="button" class="template-tab active" data-template-mode="confirmation">E-mail</button>
-        <button type="button" class="template-tab" data-template-mode="reminder">Rappel</button>
+        <span id="emailSub" class="reminder-tab-group">
+          <button type="button" class="template-tab reminder-tab" data-template-mode="reminder" title="Rappel automatique — programmé dans Outlook au moment de l’envoi"><input type="checkbox" id="reminderEnabled" class="rt-check" tabindex="-1"> Activer Rappel</button>
+          <span class="reminder-controls"><span>à</span><input type="time" id="reminderTime"><span>,</span><select id="reminderDays"><option value="1">1 jour</option><option value="2">2 jours</option><option value="3">3 jours</option></select><span>avant le rendez-vous</span></span>
+        </span>
         <div class="template-language-edit"><span>Langue du modèle</span><select id="templateLang"><option value="fr">Français</option><option value="de">Deutsch</option><option value="en">English</option><option value="lb">Lëtzebuergesch</option></select><span class="tip tip-left tip-down" tabindex="0" data-tip="Variables remplacées automatiquement à l’envoi :
 {DATE} — date du rendez-vous
 {TIME} — heure
@@ -584,53 +566,13 @@ Langues : FR, DE, EN, LU">?</span>
 {TRIMESTRE} — trimestre choisi
 {RAPPEL_DELAI} — délai du rappel">?</span></div>
       </div>
-
-      <div class="template-options-compact" id="templateOptionsCompact" aria-label="Options du modèle">
-        <div class="template-text-option" id="trimesterOption">
-          <span class="option-label">Trimestre</span>
-          <select id="trimesterSelect">
-            <option value="1">1er trimestre</option>
-            <option value="2">2e trimestre</option>
-            <option value="3">3e trimestre</option>
-          </select>
-        </div>
-
-        <div class="email-options-panel" id="templateEmailOptions">
-          <div class="email-options-title">
-            <span>Options e-mail</span>
-            <span class="email-options-summary" id="emailOptionsSummary"></span>
-          </div>
-          <div class="email-options-grid">
-            <div class="email-option-card reminder-field" id="emailSub">
-              <div class="email-option-head">
-                <span class="option-label">Rappel</span>
-                <div class="reminder-choice" role="group" aria-label="Choisir l'envoi avec ou sans rappel">
-                  <button type="button" class="reminder-choice-btn" id="reminderOffBtn">E-mail seul</button>
-                  <button type="button" class="reminder-choice-btn" id="reminderOnBtn">E-mail + rappel</button>
-                </div>
-              </div>
-              <label class="reminder-main legacy-hidden" title="Les rappels sont programmés dans Outlook au moment de l’envoi."><input type="checkbox" id="reminderEnabled"> Rappel automatique</label>
-              <div class="reminder-controls"><span>à</span><input type="time" id="reminderTime"><span>,</span><select id="reminderDays"><option value="1">1 jour</option><option value="2">2 jours</option><option value="3">3 jours</option></select><span>avant le rendez-vous</span></div>
-            </div>
-            <div class="email-option-card signature-setting">
-              <div class="email-option-head">
-                <span class="option-label">Signature</span>
-                <label class="signature-toggle"><input type="checkbox" id="useSigTop"> Ajouter</label>
-              </div>
-              <div class="signature-inline">
-                <div id="inlineSignatureControls" class="sig-logo-inline">
-                  <select id="logoModeSelect" class="logo-mode-select" aria-label="Logo dans la signature">
-                    <option value="unesco">Logo UNESCO</option>
-                    <option value="custom">Logo personnel…</option>
-                    <option value="none">Aucun logo</option>
-                  </select>
-                  <input type="file" id="logoFile" accept="image/*" style="display:none">
-                </div>
-              </div>
-              <span id="sigStatus" class="hint" style="margin:0"></span>
-            </div>
-          </div>
-        </div>
+      <div class="template-settings" aria-label="Paramètres des messages">
+        <label for="trimesterSelect" class="setting-title">Trimestre</label>
+        <select id="trimesterSelect">
+          <option value="1">1er trimestre</option>
+          <option value="2">2e trimestre</option>
+          <option value="3">3e trimestre</option>
+        </select>
       </div>
       <div id="mailTemplatePreview"></div>
       <div class="rich-toolbar" data-for="tplBodyEditor" aria-label="Barre de mise en forme">
@@ -732,7 +674,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 152;
+const APP_VERSION = 153;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1565,6 +1507,11 @@ function templateBodyIsDefault(){
   return htmlMatch && subj===effDefaultSubject();
 }
 function templateSignatureIsDefault(){
+  // Signature entfernt (useSig aus) oder Logo abgewählt zählt als Abweichung,
+  // damit die ↺-Schaltfläche zum Wiederherstellen sichtbar wird (v153).
+  if(state.options.useSig===false) return false;
+  const defLogo=(state.userDefaults && state.userDefaults.logoMode) || "unesco";
+  if((state.options.logoMode||"unesco")!==defLogo) return false;
   const parts=liveTemplateParts();
   let sig=parts.signatureHtml;
   if(sig===null || sig===undefined) sig=state.template.signatureHtml||"";
@@ -2526,9 +2473,20 @@ function commitEditor(editor){
       return;
     }
     sanitizePastedImages(editor);
+    // Signature/Logo direkt im Editor löschen = Einstellung übernehmen (v153):
+    const sigExpected = state.options.useSig!==false;
+    const sigNodePresent = !!editor.querySelector('[data-signature-inline="true"]');
+    const logoNodePresent = !!editor.querySelector('[data-logo-inline="true"]');
     const parts=splitComposeEditorHtml(editor.innerHTML);
     tpl.bodyHtml=parts.bodyHtml; tpl.body=textFromHtml(parts.bodyHtml);
     if(parts.signatureHtml!==null){ state.template.signatureHtml=parts.signatureHtml; state.template.signature=textFromHtml(parts.signatureHtml); }
+    if(sigExpected && !sigNodePresent){
+      state.options.useSig=false;
+      if(typeof showToast==="function") showToast("Signature retirée — ↺ sous l’éditeur pour la rétablir.");
+    } else if(sigExpected && sigNodePresent && logoIsVisible() && state.template.logo && state.template.logo.dataUrl && !logoNodePresent){
+      state.options.logoMode="none"; state.options.includeLogo=false;
+      if(typeof showToast==="function") showToast("Logo retiré — ↺ sous l’éditeur pour le rétablir.");
+    }
     renderTemplatePreview(); renderLogoPreview();
     saveState(); renderMails(); updateTplResetVisibility();
   } else if(editor.classList && editor.classList.contains("mail-editor")){
@@ -2746,7 +2704,7 @@ function bindSettings(){
       const tm=btn.dataset.templateMode;
       let show=true;
       if(tm==="confirmation") show=em;
-      else if(tm==="reminder") show=em && reminderOn;
+      else if(tm==="reminder") show=em;
       else if(tm==="ebichelchen") show=ebOn;
       btn.style.display = show ? "" : "none";
       btn.classList.toggle("active", tm===mode);
@@ -2791,7 +2749,30 @@ function bindSettings(){
     saveState();
     reloadTemplateEditor();
   }
-  if(templateModeTabs){ templateModeTabs.querySelectorAll(".template-tab").forEach(btn=>{ btn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); switchTemplateMode(btn.dataset.templateMode); }; }); }
+  if(templateModeTabs){ templateModeTabs.querySelectorAll(".template-tab").forEach(btn=>{ btn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation();
+    const tm=btn.dataset.templateMode;
+    if(tm==="reminder"){
+      const on=state.options.reminderEnabled!==false;
+      if(!on){
+        // Aus -> Ein : activer et afficher le modèle de rappel
+        commitEditor(body);
+        state.options.reminderEnabled=true;
+        state.options.templateMode="reminder";
+        saveState(); if(typeof applyChannelVisibility==="function") applyChannelVisibility();
+        reloadTemplateEditor(); renderMails();
+        return;
+      }
+      if(currentTemplateMode()!=="reminder"){ switchTemplateMode("reminder"); return; }
+      // Actif + déjà affiché -> désactiver
+      commitEditor(body);
+      state.options.reminderEnabled=false;
+      state.options.templateMode = emailEnabled() ? "confirmation" : (ebichelchenEnabled()?"ebichelchen":"confirmation");
+      saveState(); if(typeof applyChannelVisibility==="function") applyChannelVisibility();
+      reloadTemplateEditor(); renderMails();
+      return;
+    }
+    switchTemplateMode(tm);
+  }; }); }
   if(templateLang){ templateLang.onchange=()=>switchTemplateLang(templateLang.value); }
   if(defaultLangStudents){ defaultLangStudents.onchange=()=>{ state.options.defaultLang=normalizeLang(defaultLangStudents.value); saveState(); refreshTemplateControls(); renderStudents(); renderMails(); }; }
   if(trimesterSelect){ trimesterSelect.onchange=()=>{ state.options.trimester=Math.min(3,Math.max(1,Number(trimesterSelect.value)||3)); saveState(); renderTemplatePreview(); renderMails(); refreshTemplateControls(); }; }
@@ -2945,14 +2926,16 @@ function bindSettings(){
     }, true);
   }
   const useSigTop=document.getElementById("useSigTop");
-  useSigTop.checked=state.options.useSig!==false;
-  useSigTop.onchange=()=>{
-    commitEditor(body);
-    state.options.useSig=useSigTop.checked;
-    if(state.options.useSig && !state.options.logoMode) state.options.logoMode="unesco";
-    saveState();
-    updateTemplateSignatureView(body, renderTemplateCollapseState);
-  };
+  if(useSigTop){
+    useSigTop.checked=state.options.useSig!==false;
+    useSigTop.onchange=()=>{
+      commitEditor(body);
+      state.options.useSig=useSigTop.checked;
+      if(state.options.useSig && !state.options.logoMode) state.options.logoMode="unesco";
+      saveState();
+      updateTemplateSignatureView(body, renderTemplateCollapseState);
+    };
+  }
   const logoFile=document.getElementById("logoFile");
   const logoModeSelect=document.getElementById("logoModeSelect");
   let logoModeBeforeUpload=state.options.logoMode || "unesco";
@@ -2979,7 +2962,7 @@ function bindSettings(){
   if(logoModeSelect){
     logoModeSelect.onchange=()=>applyLogoMode(logoModeSelect.value);
   }
-  logoFile.onchange=e=>{
+  if(logoFile) logoFile.onchange=e=>{
     const f=e.target.files[0];
     if(!f){
       state.options.logoMode=logoModeBeforeUpload;
@@ -4414,87 +4397,6 @@ try{
 })();
 </script>
 
-
-
-<script>
-// v152: kompakte E-Mail-Optionen im Vorlagenbereich
-(function(){
-  function reminderOn(){
-    try { return !(window.state && state.options && state.options.reminderEnabled===false); } catch(e){ return true; }
-  }
-  function logoLabel(){
-    try{
-      var m=(state.options && state.options.logoMode) || "unesco";
-      if(m==="none") return "sans logo";
-      if(m==="custom") return "logo personnel";
-      return "Logo UNESCO";
-    }catch(e){ return "Logo UNESCO"; }
-  }
-  function updateTemplateOptionUi(){
-    try{
-      var on=reminderOn();
-      var offBtn=document.getElementById("reminderOffBtn");
-      var onBtn=document.getElementById("reminderOnBtn");
-      var card=document.getElementById("emailSub");
-      var cb=document.getElementById("reminderEnabled");
-      var summary=document.getElementById("emailOptionsSummary");
-      var useSig=document.getElementById("useSigTop");
-      if(cb) cb.checked=on;
-      if(offBtn) offBtn.classList.toggle("active", !on);
-      if(onBtn) onBtn.classList.toggle("active", on);
-      if(card) card.classList.toggle("reminder-off", !on);
-      if(summary){
-        var sig=(useSig && useSig.checked) ? ("signature · "+logoLabel()) : "sans signature";
-        var rappel=on ? "rappel activé" : "sans rappel";
-        summary.textContent=sig+" · "+rappel;
-      }
-    }catch(e){}
-  }
-  function setReminder(on){
-    try{
-      var cb=document.getElementById("reminderEnabled");
-      if(cb){
-        cb.checked=!!on;
-        cb.dispatchEvent(new Event("change", {bubbles:true}));
-      }else if(window.state && state.options){
-        state.options.reminderEnabled=!!on;
-        if(typeof saveState==="function") saveState();
-      }
-      setTimeout(updateTemplateOptionUi, 0);
-    }catch(e){}
-  }
-  function bindTemplateOptionUi(){
-    var offBtn=document.getElementById("reminderOffBtn");
-    var onBtn=document.getElementById("reminderOnBtn");
-    if(offBtn && !offBtn.dataset.boundV152){ offBtn.dataset.boundV152="1"; offBtn.onclick=function(){ setReminder(false); }; }
-    if(onBtn && !onBtn.dataset.boundV152){ onBtn.dataset.boundV152="1"; onBtn.onclick=function(){ setReminder(true); }; }
-    ["reminderEnabled","reminderTime","reminderDays","useSigTop","logoModeSelect"].forEach(function(id){
-      var el=document.getElementById(id);
-      if(el && !el.dataset.boundV152Refresh){ el.dataset.boundV152Refresh="1"; el.addEventListener("change", function(){ setTimeout(updateTemplateOptionUi,0); }); }
-    });
-    updateTemplateOptionUi();
-  }
-  var oldApply=window.applyChannelVisibility || (typeof applyChannelVisibility==="function" ? applyChannelVisibility : null);
-  if(oldApply){
-    window.applyChannelVisibility=function(){
-      var r=oldApply.apply(this, arguments);
-      setTimeout(bindTemplateOptionUi, 0);
-      return r;
-    };
-  }
-  var oldRenderMails=window.renderMails || (typeof renderMails==="function" ? renderMails : null);
-  if(oldRenderMails){
-    window.renderMails=function(){
-      var r=oldRenderMails.apply(this, arguments);
-      setTimeout(bindTemplateOptionUi, 0);
-      return r;
-    };
-  }
-  document.addEventListener("DOMContentLoaded", bindTemplateOptionUi);
-  setTimeout(bindTemplateOptionUi, 300);
-  setInterval(updateTemplateOptionUi, 1500);
-})();
-</script>
 
 </body>
 </html>
