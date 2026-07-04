@@ -434,7 +434,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v167</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v168</span></h1>
 </header>
 
 <nav class="tabs">
@@ -450,7 +450,7 @@
   <section class="panel active" id="panel-setup">
     <div class="card">
       <div class="setup-intro">
-        <h2>Que voulez-vous faire ?</h2>
+        <h2>Choisissez votre mode de communication</h2>
       </div>
       <div class="setup-mode-grid" id="setupModeGrid">
         <div class="setup-mode-card" data-mode="ebichelchen">
@@ -691,7 +691,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 167;
+const APP_VERSION = 168;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1972,9 +1972,12 @@ function renderStudents(){
     const txt=langLabel.firstChild;
     if(txt && txt.nodeType===3) txt.nodeValue = (eb && !em) ? "Langue standard pour nouveaux élèves " : "Langue standard pour nouveaux contacts ";
     const tip=langLabel.querySelector(".tip");
+    // v168: en mode e-mail seul, plus aucune mention d'e-Bichelchen dans l'info-bulle.
     if(tip) tip.dataset.tip = (eb && !em)
       ? "La langue standard définit la langue du message e-Bichelchen pour les élèves ajoutés ou importés."
-      : "La langue standard est utilisée quand un contact n’a pas de langue.\nEn mode complet, la langue du contact 1 définit aussi la langue du message e-Bichelchen.";
+      : (eb && em)
+        ? "La langue standard est utilisée quand un contact n’a pas de langue.\nEn mode complet, la langue du contact 1 définit aussi la langue du message e-Bichelchen."
+        : "La langue standard est utilisée quand un contact n’a pas de langue.";
   }
   if(note){
     // Le titre + l’introduction suffisent. On garde seulement un rappel tant qu’aucun mode n’a été choisi.
@@ -2132,6 +2135,7 @@ document.getElementById("csvFile").onchange=e=>{
         added++;
       }
     });
+    sortStudentsAlphabetically();
     saveState(); renderStudents(); renderMails();
     if(merged||added){
       const parts=[];
@@ -3929,6 +3933,18 @@ function autofillEbMap(){
   });
   saveState();
 }
+// v168: après un import (CSV ou e-Bichelchen), toute la liste est triée alphabétiquement
+// (tri français, accents corrects). L'ajout manuel ne re-trie pas — le nouvel élève reste en bas.
+function sortStudentsAlphabetically(){
+  const coll=new Intl.Collator("fr",{sensitivity:"base"});
+  (state.students||[]).sort((a,b)=>{
+    const an=String(a.name||"").trim(), bn=String(b.name||"").trim();
+    if(!an && !bn) return 0;
+    if(!an) return 1;
+    if(!bn) return -1;
+    return coll.compare(an,bn);
+  });
+}
 function importEbStudentsToList(auto=false){
   const arr=ebStudents();
   if(!arr.length) return 0;
@@ -3952,6 +3968,7 @@ function importEbStudentsToList(auto=false){
     }
     if(e.id) state.ebichelchenMap[stu.id]=e.id;
   });
+  sortStudentsAlphabetically();
   saveState();
   renderStudents(); renderSetup(); renderEbPanel(); renderMails();
   if(added && !auto) showToast(added+" élève(s) importé(s) depuis e-Bichelchen.");
