@@ -13,6 +13,7 @@ Start:  python3 server.py
 import http.server
 import socketserver
 import json
+import hashlib
 import smtplib
 import ssl
 import sys

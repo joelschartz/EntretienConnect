@@ -1,11 +1,11 @@
 {
-  "version": "v160",
+  "version": "v161",
   "files": [
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "7b1f57a4563762c3e9253f580a1609709c6d1a303389172521b33386d485caf2",
-      "size": 41235
+      "sha256": "50347d0ded32ae346d5592bc7f3ad4df569d011b414f690215f233a7541a1693",
+      "size": 41250
     },
     {
       "target": "ebichelchen.py",
@@ -46,8 +46,8 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "1cbc82e08cc96f8f865717a8beb8b62658d3fa54f3641ba65f43dd8aef556815",
-      "size": 4
+      "sha256": "ff4e27eac8986ddfff5106ac3cd004fd86dd8f240ba098f7ab3c44c304b1c29e",
+      "size": 5
     }
   ]
 }
