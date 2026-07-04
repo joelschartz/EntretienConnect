@@ -250,6 +250,10 @@
   .mail-subject-input:focus{outline:none;box-shadow:none;background:#fff}
   .mail-compose-shell .mail-editor{min-height:360px;margin:0;font-size:11pt;background:#fff;border:0;border-radius:0;padding:18px 18px 22px;box-shadow:none}
   .mail-compose-shell .mail-editor:focus{outline:none;border-color:transparent;box-shadow:none}
+  .template-attachment-panel{display:none;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;border:1px dashed #cfd6e6;border-radius:14px;background:#fff;padding:11px 13px;flex-wrap:wrap}
+  .mode-reminder .template-attachment-panel{display:flex}
+  .attachment-info{display:flex;align-items:center;gap:8px;min-width:0;color:var(--muted);font-size:13px;font-weight:700}.attachment-info strong{color:var(--ink);font-weight:850;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(460px,60vw)}
+  .attachment-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.attachment-note{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:2px}.pill.attach{background:#eef2ff;color:#4353a8;border:1px solid #dfe3fc}.mail-attachment-note{display:flex;gap:8px;align-items:center;margin-top:10px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:9px 12px;color:var(--muted);font-size:13px;font-weight:750}
   .template-editor-area .rich-toolbar{margin:0!important;border-radius:16px 16px 0 0;border-bottom:0}
   .mode-ebichelchen .template-editor-area > .rich-toolbar{display:none!important}
   #tplBodyEditor.plain-template-editor{min-height:170px;white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5;background:#fff;padding:16px;border-radius:14px}
@@ -618,6 +622,15 @@ Langues : FR, DE, EN, LU">?</span>
         </div>
         <div id="tplBodyEditor" class="rich-editor mail-editor template-mail-editor" contenteditable="true" spellcheck="true"></div>
       </div>
+      <div id="reminderAttachmentPanel" class="template-attachment-panel" aria-label="Pièce jointe du rappel">
+        <div class="attachment-info" id="reminderAttachmentInfo">📎 Aucun PDF joint au rappel.</div>
+        <div class="attachment-actions">
+          <button type="button" class="ghost sm" id="chooseReminderPdf">Joindre un PDF</button>
+          <button type="button" class="ghost sm" id="removeReminderPdf" style="display:none">Retirer</button>
+          <input type="file" id="reminderPdfInput" accept="application/pdf,.pdf" style="display:none">
+        </div>
+        <div class="attachment-note">Ce PDF sera envoyé avec chaque e-mail de rappel.</div>
+      </div>
       <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Enregistrer le texte + l’objet comme standard personnel">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Réinitialiser le texte par défaut">↺</a></div>
       <div id="sigMissing" style="margin-top:12px"></div>
       <div class="editor-actions" id="resetSigRow" style="display:none"><a href="#" id="saveSig" class="icon-btn save" title="Enregistrer la signature (et le logo) comme standard personnel">✓</a><a href="#" id="defaultSigBtn" class="icon-btn" title="Réinitialiser la signature">↺</a></div>
@@ -678,7 +691,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 159;
+const APP_VERSION = 160;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1019,12 +1032,28 @@ function defaultSignatureTemplate(){ return '<div style="font-family:Calibri,Ari
 '<div style="font-family:Calibri,Arial,Helvetica,sans-serif;font-size:8pt;line-height:1.15"><a href="mailto:joel.schartz@education.lu" style="color:#0563c1;text-decoration:underline">joel.schartz@education.lu</a></div>'+ 
 '<div style="font-family:Calibri,Arial,Helvetica,sans-serif;color:#1f4e79;font-size:8pt;line-height:1.15">Tél: 31 02 62 508</div>'+ 
 '</div>'; }
+const REMINDER_ATTACHMENT_MAX_BYTES = 3 * 1024 * 1024;
+function sanitizeReminderAttachment(att){
+  if(!att || typeof att!=="object") return null;
+  const name=String(att.name||"rappel.pdf").replace(/[\\/]+/g,"_").slice(0,180) || "rappel.pdf";
+  const contentBytes=String(att.contentBytes||"");
+  const size=Number(att.size)||Math.floor(contentBytes.length*3/4);
+  const mime=String(att.mime||att.contentType||"application/pdf");
+  if(!contentBytes || !/\.pdf$/i.test(name) || size>REMINDER_ATTACHMENT_MAX_BYTES) return null;
+  return {name, mime:"application/pdf", size, contentBytes};
+}
+function reminderAttachment(){ state.reminderAttachment=sanitizeReminderAttachment(state.reminderAttachment); return state.reminderAttachment; }
+function formatFileSize(bytes){ bytes=Number(bytes)||0; if(bytes<1024) return bytes+" o"; if(bytes<1024*1024) return (bytes/1024).toFixed(bytes<100*1024?1:0).replace(".0","")+" Ko"; return (bytes/(1024*1024)).toFixed(1).replace(".0","")+" Mo"; }
+function reminderAttachmentPayload(){ const a=reminderAttachment(); return a ? {name:a.name, contentType:"application/pdf", contentBytes:a.contentBytes, size:a.size} : null; }
+function reminderAttachmentPill(){ const a=reminderAttachment(); return a ? '<span class="pill attach" title="PDF joint : '+esc(a.name)+'">📎 PDF</span>' : ''; }
+function reminderAttachmentNoteHtml(){ const a=reminderAttachment(); return a ? '<div class="mail-attachment-note" title="'+esc(a.name)+'">📎 <strong>'+esc(a.name)+'</strong><span>sera joint à ce rappel.</span></div>' : ''; }
 function defaultState(){
   return {
     appVersion: APP_VERSION,
     students: [],
     config: { dates: [], start:"14:00", end:"18:00", durationMin:20 },
     assignments: {}, sent: [], reminderSent: [], subjectOverrides: {},
+    reminderAttachment: null,
     ebOverrides: {},
     ebichelchenData: null,
     ebichelchenGroups: [],
@@ -1186,6 +1215,7 @@ function loadState(){
       assignments: s.assignments||{},
       overrides: s.overrides||{},
       subjectOverrides: s.subjectOverrides||{},
+      reminderAttachment: sanitizeReminderAttachment(s.reminderAttachment),
       ebOverrides: (s.ebOverrides && typeof s.ebOverrides==="object") ? s.ebOverrides : {},
       ebichelchenData: null, // v138: ne jamais reprendre d’anciennes données e-Bichelchen depuis le localStorage
       sent: Array.isArray(s.sent)? s.sent : [],
@@ -1205,7 +1235,7 @@ function loadState(){
     };
   }catch(e){ return defaultState(); }
 }
-function saveState(){ state.appVersion = APP_VERSION; try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+function saveState(){ state.appVersion = APP_VERSION; try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); return true; }catch(e){ return false; } }
 
 function sessionHasWorkData(){
   const hasStudents=(state.students||[]).some(st=>!isEmptyStudentEntry(st));
@@ -2690,6 +2720,43 @@ function updateTemplateSignatureView(body, renderTemplateCollapseState){
   renderLogoPreview();
   scheduleRenderMails();
 }
+function renderReminderAttachmentPanel(){
+  const panel=document.getElementById("reminderAttachmentPanel");
+  const info=document.getElementById("reminderAttachmentInfo");
+  const remove=document.getElementById("removeReminderPdf");
+  const att=reminderAttachment();
+  if(info){
+    if(att) info.innerHTML='📎 <strong title="'+esc(att.name)+'">'+esc(att.name)+'</strong><span>'+esc(formatFileSize(att.size))+'</span>';
+    else info.textContent='📎 Aucun PDF joint au rappel.';
+  }
+  if(remove) remove.style.display=att?"":"none";
+}
+function bindReminderAttachmentControls(){
+  const choose=document.getElementById("chooseReminderPdf");
+  const input=document.getElementById("reminderPdfInput");
+  const remove=document.getElementById("removeReminderPdf");
+  if(choose && input) choose.onclick=()=>input.click();
+  if(remove) remove.onclick=()=>{ state.reminderAttachment=null; saveState(); renderReminderAttachmentPanel(); renderMails(); showToast("PDF retiré du rappel."); };
+  if(input) input.onchange=()=>{
+    const file=input.files && input.files[0];
+    input.value="";
+    if(!file) return;
+    const isPdf=(file.type==="application/pdf") || /\.pdf$/i.test(file.name||"");
+    if(!isPdf){ alert("Veuillez choisir un fichier PDF."); return; }
+    if(file.size>REMINDER_ATTACHMENT_MAX_BYTES){ alert("Le PDF est trop lourd. Maximum conseillé : 3 Mo."); return; }
+    const reader=new FileReader();
+    reader.onerror=()=>alert("Impossible de lire ce PDF.");
+    reader.onload=()=>{
+      const dataUrl=String(reader.result||"");
+      const contentBytes=dataUrl.includes(",") ? dataUrl.split(",").pop() : "";
+      state.reminderAttachment=sanitizeReminderAttachment({name:file.name||"rappel.pdf", mime:"application/pdf", size:file.size, contentBytes});
+      if(!state.reminderAttachment){ alert("Impossible d’attacher ce PDF."); return; }
+      if(!saveState()){ state.reminderAttachment=null; alert("Le PDF est trop lourd pour être conservé dans l’application. Essayez un fichier plus léger."); renderReminderAttachmentPanel(); renderMails(); return; } renderReminderAttachmentPanel(); renderMails(); showToast("PDF joint au rappel ✓");
+    };
+    reader.readAsDataURL(file);
+  };
+  renderReminderAttachmentPanel();
+}
 function bindSettings(){
   const su=document.getElementById("tplSubject"), body=document.getElementById("tplBodyEditor");
   const trimesterSelect=document.getElementById("trimesterSelect");
@@ -2705,7 +2772,7 @@ function bindSettings(){
   body.addEventListener("keyup", updateTplResetVisibility);
   body.addEventListener("blur", updateTplResetVisibility);
   updateTplResetVisibility();
-  wireRichEditor("tplBodyEditor"); bindRichToolbars();
+  wireRichEditor("tplBodyEditor"); bindRichToolbars(); bindReminderAttachmentControls();
 
   const templateModeTabs=document.getElementById("templateModeTabs");
   const reminderEnabled=document.getElementById("reminderEnabled");
@@ -2728,7 +2795,8 @@ function bindSettings(){
     }); }
     // Bei e-Bichelchen-Meldungen: Signatur/Logo/Rappel ausblenden, „Objet“ → „Titre“.
     const card=document.getElementById("templateCard");
-    if(card){ card.classList.toggle("mode-ebichelchen", isEb); card.classList.toggle("no-email", !em); }
+    if(card){ card.classList.toggle("mode-ebichelchen", isEb); card.classList.toggle("mode-reminder", mode==="reminder"); card.classList.toggle("no-email", !em); }
+    renderReminderAttachmentPanel();
     const subjLabel=document.querySelector('label[for="tplSubject"]');
     if(subjLabel) subjLabel.textContent = isEb ? "Titre" : "Objet";
     // Karten-Titel passt sich an die aktiven Kanäle an.
@@ -3116,7 +3184,7 @@ function buildReminderMessages(onlyDue=true){
         }
         if(state.template.logo && state.template.logo.dataUrl){ html=html.split(state.template.logo.dataUrl).join("cid:siglogo"); }
         const dueAt=reminderDueAt(d), appointmentAt=appointmentDateTime(d,s.start), appointmentEnd=appointmentDateTime(d,s.end);
-        msgs.push({id:rid,kind:"reminder",student:fullStudent,studentDisplay:displayStudentName(fullStudent),parentLabel:labelWithLang(label,lang),contactLabel:label,to,subject,defaultSubject,html,previewHtml,dueAt:dueAt.toISOString(),appointmentAt:appointmentAt.toISOString(),appointmentEnd:appointmentEnd.toISOString(),lang});
+        msgs.push({id:rid,kind:"reminder",student:fullStudent,studentDisplay:displayStudentName(fullStudent),parentLabel:labelWithLang(label,lang),contactLabel:label,to,subject,defaultSubject,html,previewHtml,dueAt:dueAt.toISOString(),appointmentAt:appointmentAt.toISOString(),appointmentEnd:appointmentEnd.toISOString(),lang,hasAttachment:!!reminderAttachment()});
       };
       const groups=contactGroupsByLang(details);
       Object.keys(groups).forEach(lang=>{
@@ -3270,7 +3338,7 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
 const _signInBtn=document.getElementById("signIn"); if(_signInBtn) _signInBtn.onclick=()=>startMicrosoftLogin("loginBox","signIn");
 const _signOutBtn=document.getElementById("signOut"); if(_signOutBtn) _signOutBtn.onclick=async()=>{ try{ await api("/api/graph/logout"); }catch(e){} account=null; renderAuth(); renderSetup(); renderMails(); };
 function logoPayload(){ const lg=state.template.logo; if(logoIsVisible() && lg&&lg.dataUrl) return {name:lg.name||"logo.png",mime:lg.mime||"image/png",contentBytes:lg.dataUrl.split(",")[1]}; return null; }
-async function graphSend(messages){ return api("/api/graph/send", {messages:messages.map(m=>({id:m.id,subject:m.subject,html:m.html,to:m.to,deferUntil:m.deferUntil||m.dueAt||null})), logo:logoPayload()}); }
+async function graphSend(messages){ return api("/api/graph/send", {messages:messages.map(m=>({id:m.id,kind:m.kind||"",subject:m.subject,html:m.html,to:m.to,deferUntil:m.deferUntil||m.dueAt||null})), logo:logoPayload(), reminderAttachment:reminderAttachmentPayload()}); }
 let graphCapabilityCache=null;
 async function graphCapabilities(){
   if(graphCapabilityCache) return graphCapabilityCache;
@@ -3485,6 +3553,7 @@ function reminderRowHtml(m, openId){
           <span class="who" title="${esc(m.student)}">${esc(m.studentDisplay||displayStudentName(m.student))}</span><span class="m-cts">${esc(m.contactLabel||"")}</span><span class="m-lang">${esc(langMeta(m.lang).short)}</span><span class="when">${esc(compactDueLabel(m.dueAt))}</span><span class="m-mails" title="${esc(m.to.join(", "))}">${esc(m.to.join(", "))}</span>
         </div>
         <span class="status">
+          ${reminderAttachmentPill()}
           ${edited?'<span class="pill warn">modifié</span>':''}
           ${done?'<span class="pill ok">programmé</span>':''}
           <span class="toggle">${openId===m.id?'Fermer ▴':'Modifier ▾'}</span>
@@ -3496,6 +3565,7 @@ function reminderRowHtml(m, openId){
           <div class="mailbody-head"><label class="mail-subject-label" for="mrs_${m.id}">Objet</label><input id="mrs_${m.id}" class="mail-subject-input" data-ovk="${m.id}" data-msgid="${m.id}" data-default-subject="${esc(m.defaultSubject||'')}" value="${esc(m.subject)}" title="Modifier l’objet du rappel"></div>
           <div id="mr_${m.id}" class="rich-editor mail-editor" style="min-height:220px" contenteditable="true" data-ovk="${m.id}">${m.previewHtml}</div>
         </div>
+        ${reminderAttachmentNoteHtml()}
         <div class="mail-reset" style="${edited?'':'display:none'}"><a href="#" class="reset-ov icon-btn" data-ovk="${m.id}" title="Réinitialiser au modèle standard">↺</a></div>
       </div>
     </div>`;

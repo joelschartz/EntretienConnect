@@ -596,6 +596,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         data = self._read_json()
         messages = data.get("messages", []) or []
         logo = data.get("logo")  # {name, mime, contentBytes} oder None
+        reminder_attachment = data.get("reminderAttachment") or None  # PDF pour les e-mails de rappel
         if not messages:
             return self._json(200, {"ok": False, "error": "Aucun e-mail."})
         token = _access_token()
@@ -621,14 +622,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "id": "SystemTime 0x3FEF",
                     "value": defer_until,
                 }]
+            attachments = []
             if logo and logo.get("contentBytes") and "cid:siglogo" in m.get("html", ""):
-                payload["message"]["attachments"] = [{
+                attachments.append({
                     "@odata.type": "#microsoft.graph.fileAttachment",
                     "name": logo.get("name", "logo.png"),
                     "contentType": logo.get("mime", "image/png"),
                     "contentBytes": logo["contentBytes"],
                     "isInline": True, "contentId": "siglogo",
-                }]
+                })
+            if (m.get("kind") == "reminder" and reminder_attachment
+                    and reminder_attachment.get("contentBytes")):
+                attachments.append({
+                    "@odata.type": "#microsoft.graph.fileAttachment",
+                    "name": reminder_attachment.get("name", "rappel.pdf"),
+                    "contentType": reminder_attachment.get("contentType") or reminder_attachment.get("mime") or "application/pdf",
+                    "contentBytes": reminder_attachment["contentBytes"],
+                })
+            if attachments:
+                payload["message"]["attachments"] = attachments
             code, body = _graph_post("https://graph.microsoft.com/v1.0/me/sendMail", token, payload)
             if code == 202:
                 results.append({"id": m.get("id"), "ok": True})
