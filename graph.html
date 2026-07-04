@@ -434,7 +434,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v169</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v171</span></h1>
 </header>
 
 <nav class="tabs">
@@ -691,7 +691,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 169;
+const APP_VERSION = 171;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3351,6 +3351,46 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   if(inBtn) inBtn.disabled=true;
   lb.style.display="block";
   lb.innerHTML='<div class="banner info">Préparation de la connexion …</div>';
+  // v171: connexion SANS code — le helper local reçoit la redirection OAuth (PKCE).
+  // Si le helper n'est pas encore à jour (endpoint inconnu), on retombe sur le code d'appareil.
+  let w=null;
+  try{ w=await api("/api/graph/login-start-web"); }catch(e){ w=null; }
+  if(w && w.ok && w.authUrl) return runWebLoginFlow(lb, inBtn, w.authUrl, loginBoxId, buttonId);
+  return startMicrosoftLoginDevice(loginBoxId, buttonId);
+}
+function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
+  lb.innerHTML='<div class="banner info" style="line-height:1.7"><b>1.</b> Une page Microsoft s’ouvre — connectez-vous avec votre compte (IAM). <b>Aucun code à saisir.</b><br><b>2.</b> Revenez ensuite ici : la connexion se termine automatiquement.<br><span class="muted">Rien ne s’est ouvert ? <a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>Cliquez ici</b></a> — ou <a href="#" id="deviceFlowFallback">utilisez la méthode classique avec code</a>.</span></div>';
+  const fb=document.getElementById("deviceFlowFallback");
+  if(fb) fb.onclick=(e)=>{ e.preventDefault(); if(pollTimer) clearInterval(pollTimer); startMicrosoftLoginDevice(loginBoxId, buttonId); };
+  try{ window.open(authUrl,"_blank","noopener"); }catch(e){}
+  if(pollTimer) clearInterval(pollTimer);
+  const startedAt=Date.now();
+  pollTimer=setInterval(async()=>{
+    let d=null;
+    try{ const res=await fetch("/api/graph/account",{cache:"no-store"}); d=await res.json(); }catch(e){ return; }
+    if(d && d.signedIn){
+      clearInterval(pollTimer);
+      account=d.account;
+      if(typeof applyChannelVisibility==="function") applyChannelVisibility();
+      lb.style.display="none";
+      lb.innerHTML="";
+      if(inBtn) inBtn.disabled=false;
+      renderAuth(); renderSetup(); renderMails();
+    } else if(Date.now()-startedAt > 6*60*1000){
+      clearInterval(pollTimer);
+      lb.innerHTML='<div class="banner err">La connexion n’a pas abouti. Cliquez à nouveau sur « Connecter » pour réessayer.</div>';
+      if(inBtn) inBtn.disabled=false;
+    }
+  },3000);
+}
+// Ancien flux « code d'appareil » — utilisé si le helper local n'est pas à jour,
+// ou via le lien de secours du flux sans code.
+async function startMicrosoftLoginDevice(loginBoxId, buttonId){
+  const lb=typeof loginBoxId==="string" ? document.getElementById(loginBoxId) : loginBoxId;
+  const inBtn=typeof buttonId==="string" ? document.getElementById(buttonId) : buttonId;
+  if(!lb) return;
+  if(inBtn) inBtn.disabled=true;
+  lb.style.display="block";
   let d;
   try{
     d=await api("/api/graph/login-start");
@@ -3366,12 +3406,17 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   }
   const url=d.verification_uri||"https://login.microsoft.com/device";
   const userCode=d.user_code||"";
-  // v169: la page Microsoft s'ouvre avec le code déjà prérempli (paramètre otc) — il ne
-  // reste que la connexion IAM. Le code est aussi copié dans le presse-papiers en secours.
-  const prefillUrl=userCode ? ("https://login.microsoftonline.com/common/oauth2/deviceauth?otc="+encodeURIComponent(userCode)) : url;
+  // v170: le code est copié automatiquement dans le presse-papiers — il suffit de le coller
+  // (⌘V) sur la page Microsoft, puis de faire la connexion IAM. (Le préremplissage via
+  // « otc » a été désactivé par Microsoft ; le paramètre reste au cas où il reviendrait.)
+  const openUrl=userCode ? ("https://login.microsoftonline.com/common/oauth2/deviceauth?otc="+encodeURIComponent(userCode)) : url;
   try{ if(userCode && navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(userCode).catch(function(){}); }catch(e){}
-  lb.innerHTML=`<div class="banner info" style="line-height:1.7"><b>1.</b> Une page Microsoft s’ouvre avec le code <code class="k" style="font-size:16px;letter-spacing:.04em">${esc(userCode)}</code> déjà rempli — cliquez sur <b>Suivant</b>.<br><b>2.</b> Connectez-vous avec votre compte (IAM) et cliquez sur <b>Accepter</b>.<br><span class="muted">Rien ne s’est ouvert ? <a href="${esc(prefillUrl)}" target="_blank" rel="noopener"><b>Cliquez ici</b></a>. Si le code n’est pas prérempli : ouvrez <a href="${url}" target="_blank" rel="noopener">${esc(url)}</a> et collez le code — il est déjà copié dans le presse-papiers.<br>Laissez cette app ouverte : la connexion continue automatiquement ici dès que vous avez terminé.</span></div>`;
-  try{ window.open(prefillUrl,"_blank","noopener"); }catch(e){}
+  const isMac=/Mac/i.test(navigator.platform||"");
+  const pasteKey=isMac ? "⌘V" : "Ctrl+V";
+  lb.innerHTML=`<div class="banner info" style="line-height:1.7"><b>1.</b> Une page Microsoft s’ouvre — collez-y le code avec <b>${pasteKey}</b> (déjà copié) : <code class="k" id="deviceCodeCopy" style="font-size:18px;letter-spacing:.04em;cursor:pointer" title="Cliquer pour copier à nouveau">${esc(userCode)}</code><br><b>2.</b> Connectez-vous avec votre compte (IAM) et cliquez sur <b>Accepter</b>.<br><span class="muted">Rien ne s’est ouvert ? <a href="${esc(openUrl)}" target="_blank" rel="noopener"><b>Cliquez ici</b></a> — ou ouvrez <a href="${url}" target="_blank" rel="noopener">${esc(url)}</a>.<br>Laissez cette app ouverte : la connexion continue automatiquement ici dès que vous avez terminé.</span></div>`;
+  const codeEl=document.getElementById("deviceCodeCopy");
+  if(codeEl) codeEl.onclick=()=>{ try{ navigator.clipboard.writeText(userCode).then(()=>showToast("Code copié ✓")).catch(function(){}); }catch(e){} };
+  try{ window.open(openUrl,"_blank","noopener"); }catch(e){}
   if(pollTimer) clearInterval(pollTimer);
   pollTimer=setInterval(async()=>{
     let r;

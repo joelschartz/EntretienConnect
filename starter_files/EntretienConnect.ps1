@@ -25,6 +25,7 @@ $TokenFile = Join-Path $RuntimeDir "graph_token.json"
 $LogFile   = Join-Path $RuntimeDir "EntretienConnect-log.txt"
 $EbCacheFile = Join-Path $RuntimeDir "ebichelchen_cache.json"
 $script:Pending = $null
+$script:PendingWeb = $null   # v171: état PKCE du login sans code (state/verifier/redirect)
 $script:LastHeartbeatUtc = $null
 $script:ServerStartedUtc = [DateTime]::UtcNow
 $script:ShutdownRequested = $false
@@ -512,6 +513,77 @@ function Handle-Request($stream, $req) {
         $t = Load-Tokens
         if ($t -and $t.account -and (Get-AccessToken)) { Send-Json $stream @{ ok = $true; signedIn = $true; account = $t.account } }
         else { Send-Json $stream @{ ok = $true; signedIn = $false } }
+        return
+    }
+    # ---- v171: Login sans code (auth-code + PKCE, redirection loopback) ----
+    if ($path -eq "/api/graph/login-start-web") {
+        $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+        $vb = New-Object byte[] 64
+        $rng.GetBytes($vb)
+        $verifier = [Convert]::ToBase64String($vb).TrimEnd('=').Replace('+','-').Replace('/','_')
+        $sha = [Security.Cryptography.SHA256]::Create()
+        $challenge = [Convert]::ToBase64String($sha.ComputeHash([Text.Encoding]::ASCII.GetBytes($verifier))).TrimEnd('=').Replace('+','-').Replace('/','_')
+        $sb = New-Object byte[] 24
+        $rng.GetBytes($sb)
+        $oauthState = [Convert]::ToBase64String($sb).TrimEnd('=').Replace('+','-').Replace('/','_')
+        $redirect = "http://localhost:$Port/oauth/redirect"
+        $script:PendingWeb = @{ state = $oauthState; verifier = $verifier; redirect = $redirect }
+        $q = "client_id=" + [Uri]::EscapeDataString($ClientId) +
+             "&response_type=code" +
+             "&redirect_uri=" + [Uri]::EscapeDataString($redirect) +
+             "&scope=" + [Uri]::EscapeDataString($Scope) +
+             "&state=" + $oauthState +
+             "&code_challenge=" + $challenge +
+             "&code_challenge_method=S256&prompt=select_account"
+        Send-Json $stream @{ ok = $true; authUrl = ($Base + "/authorize?" + $q) }
+        return
+    }
+    if ($path -eq "/oauth/redirect") {
+        $qs = @{}
+        if ($req.Path -match '\?') {
+            $qraw = ($req.Path -split '\?', 2)[1]
+            foreach ($pair in ($qraw -split '&')) {
+                if ($pair -match '=') {
+                    $kv = $pair -split '=', 2
+                    $qs[[Uri]::UnescapeDataString($kv[0])] = [Uri]::UnescapeDataString(($kv[1] -replace '\+', ' '))
+                }
+            }
+        }
+        $ok = $false
+        $msg = ""
+        $pend = $script:PendingWeb
+        if ((-not $pend) -or (-not $qs["state"]) -or ($qs["state"] -ne $pend.state)) {
+            $msg = "Session de connexion inconnue ou expirée. Réessayez depuis EntretienConnect."
+        } elseif (-not $qs["code"]) {
+            if ($qs["error_description"]) { $msg = $qs["error_description"] }
+            elseif ($qs["error"]) { $msg = $qs["error"] }
+            else { $msg = "Connexion annulée." }
+        } else {
+            $script:PendingWeb = $null
+            $tok = PostForm "$Base/token" @{ grant_type = "authorization_code"; client_id = $ClientId; code = $qs["code"]; redirect_uri = $pend.redirect; code_verifier = $pend.verifier; scope = $Scope }
+            if ($tok -and $tok.access_token) {
+                $acct = @{ name = ""; email = "" }
+                try {
+                    $me = GraphGet 'https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName' $tok.access_token
+                    $mail = if ($me.mail) { $me.mail } else { $me.userPrincipalName }
+                    $acct = @{ name = ("" + $me.displayName); email = ("" + $mail) }
+                } catch {}
+                Save-Tokens $tok $acct
+                $ok = $true
+                Log ("login OK (web): " + $acct.email)
+            } else {
+                if ($tok -and $tok.error_description) { $msg = "" + $tok.error_description }
+                else { $msg = "Échec de l'échange du code." }
+            }
+        }
+        if ($ok) {
+            $inner = "<div style='font-size:42px'>&#9989;</div><h2>Connexion r&#233;ussie</h2><p>Vous pouvez fermer cet onglet et revenir &#224; EntretienConnect.</p><script>setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);</script>"
+        } else {
+            $safeMsg = ("" + $msg).Replace("&","&amp;").Replace("<","&lt;").Replace(">","&gt;")
+            $inner = "<div style='font-size:42px'>&#9888;&#65039;</div><h2>Connexion impossible</h2><p>" + $safeMsg + "</p><p>Fermez cet onglet et r&#233;essayez depuis EntretienConnect.</p>"
+        }
+        $page = "<!doctype html><html lang='fr'><head><meta charset='utf-8'><title>EntretienConnect</title></head><body style=""font-family:-apple-system,'Segoe UI',Arial,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f6f7fb;color:#1c2333""><div style='text-align:center;max-width:480px;padding:20px'>" + $inner + "</div></body></html>"
+        Send-Bytes $stream "200 OK" "text/html; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes($page))
         return
     }
     if ($path -eq "/api/graph/login-start") {

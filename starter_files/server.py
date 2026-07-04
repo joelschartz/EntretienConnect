@@ -280,6 +280,7 @@ OAUTH_BASE = "https://login.microsoftonline.com/" + GRAPH_TENANT + "/oauth2/v2.0
 TOKEN_FILE = os.path.join(DATA_DIR, "graph_token.json")
 
 _pending_device = {}   # zwischen Login-Start und Polling
+_pending_web = {}      # v171: state -> {verifier, redirect_uri} für den Login ohne Code (PKCE)
 
 
 def _gctx():
@@ -450,6 +451,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 162, "ebichelchen": EB_AVAILABLE})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
+        if self.path.split("?", 1)[0] == "/oauth/redirect":
+            return self.handle_oauth_redirect()
         if self.path == "/api/find-logo":
             return self.handle_find_logo()
         if self.path.startswith("/api/eb/"):
@@ -546,6 +549,77 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if t and t.get("account") and _access_token():
             return self._json(200, {"ok": True, "signedIn": True, "account": t["account"]})
         return self._json(200, {"ok": True, "signedIn": False})
+
+    # ---- Graph: Login starten (page web, sans code à saisir) — v171 ----
+    # Auth-code + PKCE avec redirection loopback vers ce helper. L'utilisateur ne fait
+    # que la connexion IAM ; aucun code d'appareil à copier. (Le même client public
+    # accepte les redirections http://localhost — vérifié avec IAMSingleSignOn_v1.)
+    def handle_graph_login_start_web(self):
+        import base64, secrets
+        verifier = secrets.token_urlsafe(64)[:128]
+        challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode("ascii")).digest()).decode("ascii").rstrip("=")
+        state = secrets.token_urlsafe(24)
+        host = self.headers.get("Host", "") or "127.0.0.1"
+        port = host.split(":")[1] if ":" in host else "80"
+        redirect_uri = "http://localhost:" + port + "/oauth/redirect"
+        _pending_web.clear()
+        _pending_web[state] = {"verifier": verifier, "redirect_uri": redirect_uri, "created": time.time()}
+        auth_url = OAUTH_BASE + "/authorize?" + urllib.parse.urlencode({
+            "client_id": GRAPH_CLIENT_ID, "response_type": "code",
+            "redirect_uri": redirect_uri, "scope": GRAPH_SCOPE,
+            "state": state, "code_challenge": challenge,
+            "code_challenge_method": "S256", "prompt": "select_account",
+        })
+        return self._json(200, {"ok": True, "authUrl": auth_url})
+
+    def handle_oauth_redirect(self):
+        import html as _html
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        state = (qs.get("state") or [""])[0]
+        code = (qs.get("code") or [""])[0]
+        err = (qs.get("error_description") or qs.get("error") or [""])[0]
+        pend = _pending_web.pop(state, None) if state else None
+        ok = False
+        msg = ""
+        if not pend:
+            msg = "Session de connexion inconnue ou expirée. Réessayez depuis EntretienConnect."
+        elif not code:
+            msg = err or "Connexion annulée."
+        else:
+            st, tok = _form_post(OAUTH_BASE + "/token", {
+                "grant_type": "authorization_code", "client_id": GRAPH_CLIENT_ID,
+                "code": code, "redirect_uri": pend["redirect_uri"],
+                "code_verifier": pend["verifier"], "scope": GRAPH_SCOPE})
+            if "access_token" in tok:
+                account = {"name": "", "email": ""}
+                try:
+                    me = _graph_get("https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName",
+                                    tok["access_token"])
+                    account = {"name": me.get("displayName", ""),
+                               "email": me.get("mail") or me.get("userPrincipalName", "")}
+                except Exception:
+                    pass
+                _save_tokens(tok, account)
+                ok = True
+            else:
+                msg = tok.get("error_description") or tok.get("error") or "Échec de l'échange du code."
+        if ok:
+            inner = ("<div style='font-size:42px'>✅</div><h2>Connexion réussie</h2>"
+                     "<p>Vous pouvez fermer cet onglet et revenir à EntretienConnect.</p>"
+                     "<script>setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);</script>")
+        else:
+            inner = ("<div style='font-size:42px'>⚠️</div><h2>Connexion impossible</h2>"
+                     "<p>" + _html.escape(msg) + "</p><p>Fermez cet onglet et réessayez depuis EntretienConnect.</p>")
+        page = ("<!doctype html><html lang='fr'><head><meta charset='utf-8'><title>EntretienConnect</title></head>"
+                "<body style=\"font-family:-apple-system,'Segoe UI',Arial,sans-serif;display:flex;align-items:center;"
+                "justify-content:center;height:100vh;margin:0;background:#f6f7fb;color:#1c2333\">"
+                "<div style='text-align:center;max-width:480px;padding:20px'>" + inner + "</div></body></html>")
+        body = page.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     # ---- Graph: Login starten (Geraetecode) ----
     def handle_graph_login_start(self):
@@ -680,6 +754,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.handle_outlook_send()
         elif self.path == "/api/graph/login-start":
             self.handle_graph_login_start()
+        elif self.path == "/api/graph/login-start-web":
+            self.handle_graph_login_start_web()
         elif self.path == "/api/graph/login-poll":
             self.handle_graph_login_poll()
         elif self.path == "/api/graph/logout":
