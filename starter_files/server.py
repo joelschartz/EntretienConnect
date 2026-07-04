@@ -52,7 +52,7 @@ def _initial_port():
 PORT = _initial_port()
 last_heartbeat_time = None
 server_started_time = time.time()
-HEARTBEAT_TIMEOUT_SECONDS = 180
+HEARTBEAT_TIMEOUT_SECONDS = 600  # v167: tolère la limitation des minuteries par Chrome (onglet en arrière-plan)
 STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS = 600
 
 
@@ -987,9 +987,19 @@ def main():
         threading.Timer(1.0, lambda: _open_in_browser(url)).start()
         def _watchdog():
             global last_heartbeat_time
+            last_tick = time.time()
             while True:
                 time.sleep(5)
                 now = time.time()
+                # v167: un grand saut d'horloge = le Mac sortait de veille. Le navigateur se
+                # réveille en même temps ; on lui redonne une fenêtre complète pour renvoyer
+                # un battement au lieu d'arrêter le helper immédiatement.
+                if now - last_tick > 60:
+                    if last_heartbeat_time is not None:
+                        last_heartbeat_time = now
+                    last_tick = now
+                    continue
+                last_tick = now
                 if last_heartbeat_time is not None and now - last_heartbeat_time > HEARTBEAT_TIMEOUT_SECONDS:
                     print("Aucun onglet EntretienConnect actif. Arrêt automatique du helper local.")
                     try:

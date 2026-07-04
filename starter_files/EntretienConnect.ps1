@@ -30,7 +30,10 @@ $script:ServerStartedUtc = [DateTime]::UtcNow
 $script:ShutdownRequested = $false
 # Si l’onglet App est fermé, aucun heartbeat n’arrive plus.
 # Le helper s’arrête alors seul pour libérer le dossier/OneDrive.
-$script:HeartbeatTimeoutSeconds = 25
+# v167: 25 s était trop court — Chrome ne laisse battre les onglets en arrière-plan
+# qu'une fois par minute (après 5 min), et une mise en veille coupait le helper.
+$script:HeartbeatTimeoutSeconds = 300
+$script:LastWatchdogTickUtc = $null
 $script:StartupNoHeartbeatTimeoutSeconds = 180
 
 function Log($msg) {
@@ -722,6 +725,12 @@ while (-not $script:ShutdownRequested) {
 
     try {
         $now = [DateTime]::UtcNow
+        # v167: grand saut d'horloge = sortie de veille. On redonne à l'onglet une fenêtre
+        # complète pour renvoyer un battement au lieu d'arrêter le helper immédiatement.
+        if ($null -ne $script:LastWatchdogTickUtc -and ($now - $script:LastWatchdogTickUtc).TotalSeconds -gt 60) {
+            if ($null -ne $script:LastHeartbeatUtc) { $script:LastHeartbeatUtc = $now }
+        }
+        $script:LastWatchdogTickUtc = $now
         if ($null -ne $script:LastHeartbeatUtc) {
             if (($now - $script:LastHeartbeatUtc).TotalSeconds -gt $script:HeartbeatTimeoutSeconds) {
                 Log "Kein EntretienConnect-Tab mehr aktiv. Lokaler Helfer beendet sich automatisch."

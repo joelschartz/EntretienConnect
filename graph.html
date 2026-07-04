@@ -434,7 +434,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v166</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v167</span></h1>
 </header>
 
 <nav class="tabs">
@@ -691,7 +691,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 166;
+const APP_VERSION = 167;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1965,6 +1965,17 @@ function renderStudents(){
   if(intro) intro.textContent = eb && !em
     ? "Les élèves peuvent être importés depuis e-Bichelchen. Les adresses e-mail ne sont pas nécessaires dans ce mode."
     : (eb && em ? "Les noms peuvent être importés depuis e-Bichelchen ; complétez ensuite les adresses e-mail des parents pour l’envoi." : "Inscrivez chaque élève une seule fois avec les adresses e-mail de contact et choisissez la langue souhaitée pour chaque contact. Les champs vides seront ignorés lors de l’envoi.");
+  // v167: libellé + info-bulle de la langue standard adaptés au mode (en mode e-Bichelchen seul,
+  // parler de « contacts » et de « mode complet » n'avait pas de sens).
+  const langLabel=document.querySelector('label[for="defaultLangStudents"]');
+  if(langLabel){
+    const txt=langLabel.firstChild;
+    if(txt && txt.nodeType===3) txt.nodeValue = (eb && !em) ? "Langue standard pour nouveaux élèves " : "Langue standard pour nouveaux contacts ";
+    const tip=langLabel.querySelector(".tip");
+    if(tip) tip.dataset.tip = (eb && !em)
+      ? "La langue standard définit la langue du message e-Bichelchen pour les élèves ajoutés ou importés."
+      : "La langue standard est utilisée quand un contact n’a pas de langue.\nEn mode complet, la langue du contact 1 définit aussi la langue du message e-Bichelchen.";
+  }
   if(note){
     // Le titre + l’introduction suffisent. On garde seulement un rappel tant qu’aucun mode n’a été choisi.
     note.innerHTML='';
@@ -3297,6 +3308,11 @@ function startLocalAppHeartbeat(){
     };
     beat();
     window.__ecHeartbeatTimer=setInterval(beat, 15000);
+    // v167: battement immédiat quand l'onglet redevient visible (retour de veille /
+    // d'arrière-plan) — Chrome ralentit les minuteries des onglets cachés.
+    document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") beat(); });
+    window.addEventListener("focus", beat);
+    window.addEventListener("online", beat);
     window.addEventListener("pagehide", beat);
     window.addEventListener("beforeunload", function(){
       try{ if(navigator.sendBeacon) navigator.sendBeacon("/api/app/heartbeat", new Blob(["{}"], {type:"application/json"})); }catch(e){}
