@@ -198,7 +198,7 @@
   .rich-editor{min-height:170px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;font-family:Calibri,Helvetica,Arial,sans-serif;font-size:11pt;line-height:1.45;overflow:auto}
   .outlook-editor{border:0;border-radius:0 0 18px 18px;min-height:310px;padding:22px 26px;font-size:12pt;line-height:1.5;box-shadow:none}
   .outlook-editor:focus{outline:none;box-shadow:inset 0 0 0 2px #e3e7fd;border-color:transparent}
-  .inline-signature{margin-top:18px;border-radius:8px;padding:2px 4px;margin-left:-4px;display:inline-block;max-width:100%}.inline-signature:focus,.inline-signature:focus-within{outline:2px solid #e3e7fd;background:#fafaff}.signature-logo-separator{margin-top:12px;margin-bottom:6px;border-top:1px solid #000;width:245px;max-width:100%;height:0;line-height:0;font-size:0}.inline-logo{margin-top:0;border-radius:8px;display:block;width:max-content;max-width:100%;padding:0 4px}.inline-logo img{max-height:90px;border:0;display:block}.inline-sig-controls{border:0;border-radius:14px;background:var(--surface-soft);padding:14px;margin-top:14px}.signature-options-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.signature-options-label{font-size:13px;font-weight:800;color:var(--ink);margin-right:2px}.logo-mode-buttons{display:flex;gap:8px;flex-wrap:wrap}.logo-mode-btn{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}.logo-mode-btn:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}.logo-mode-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:none}.reset-sig-btn{margin-left:auto}.inline-sig-controls .toolbar{margin-bottom:0}.sig-editor{min-height:250px}.sig-logo-block{margin-top:12px}.sig-editor-logo{margin-top:7px}.sig-editor-logo img{max-height:90px;border:0;display:block}
+  .inline-signature{margin-top:18px;border-radius:8px;padding:2px 4px;margin-left:-4px;display:inline-block;max-width:100%}.inline-signature:focus,.inline-signature:focus-within{outline:2px solid #e3e7fd;background:#fafaff}.signature-logo-separator{margin-top:12px;margin-bottom:6px;border-top:1px solid #000;width:245px;max-width:100%;height:0;line-height:0;font-size:0}.inline-logo{margin-top:0;border-radius:8px;display:block;width:max-content;max-width:100%;padding:0 4px;cursor:pointer}.inline-logo:hover{outline:2px solid #e3e7fd;background:#fafaff}.inline-logo img{max-height:90px;border:0;display:block}.inline-sig-controls{border:0;border-radius:14px;background:var(--surface-soft);padding:14px;margin-top:14px}.signature-options-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.signature-options-label{font-size:13px;font-weight:800;color:var(--ink);margin-right:2px}.logo-mode-buttons{display:flex;gap:8px;flex-wrap:wrap}.logo-mode-btn{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}.logo-mode-btn:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}.logo-mode-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:none}.reset-sig-btn{margin-left:auto}.inline-sig-controls .toolbar{margin-bottom:0}.sig-editor{min-height:250px}.sig-logo-block{margin-top:12px}.sig-editor-logo{margin-top:7px}.sig-editor-logo img{max-height:90px;border:0;display:block}
 
   .signature-toggle input[type="checkbox"]:focus,.signature-toggle input[type="checkbox"]:focus-visible{outline:none!important;box-shadow:none!important}
   .signature-toggle input[type="checkbox"]{transform:none!important}
@@ -437,7 +437,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v179</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v180</span></h1>
 </header>
 
 <nav class="tabs">
@@ -635,6 +635,7 @@ Langues : FR, DE, EN, LU">?</span>
       </div>
       <!-- v163: le PDF de rappel se joint individuellement par élève dans l’aperçu (📎 dans la barre de l’éditeur). -->
       <input type="file" id="reminderPdfInput" accept="application/pdf,.pdf" style="display:none">
+      <input type="file" id="logoFile" accept="image/*" style="display:none">
       <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Définir le texte actuel comme standard personnel">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Recharger le standard actuel">↺</a></div>
       <div id="sigMissing" style="margin-top:12px"></div>
       <div class="editor-actions" id="resetSigRow" style="display:none"><a href="#" id="saveSig" class="icon-btn save" title="Définir la signature actuelle comme standard personnel">✓</a><a href="#" id="defaultSigBtn" class="icon-btn" title="Recharger la signature standard">↺</a></div>
@@ -695,7 +696,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 179;
+const APP_VERSION = 180;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1390,6 +1391,13 @@ function saveState(){
   queueDurableStateSave();
   return ok;
 }
+async function hardSaveState(){
+  // Wird beim ✓ benutzt: sofort in die lokale Datei schreiben, nicht erst verzögert.
+  const ok=saveState();
+  try{ if(durableSaveTimer){ clearTimeout(durableSaveTimer); durableSaveTimer=null; } }catch(e){}
+  try{ await syncDurableStateNow(); }catch(e){}
+  return ok;
+}
 function stateHasWorkData(st){
   st=st||{};
   const hasStudents=(st.students||[]).some(x=>x && Object.values(x).some(v=>String(v||"").trim()));
@@ -1545,7 +1553,7 @@ function signatureSeparatorHtml(){
   return '<div style="margin-top:12px;margin-bottom:6px;border-top:1px solid #000;width:245px;max-width:100%;height:0;line-height:0;font-size:0"></div>';
 }
 function logoIsVisible(){ return state.options.useSig!==false && state.options.logoMode!=="none" && state.options.includeLogo!==false; }
-function composeLogoHtml(){ const lg=state.template.logo; if(logoIsVisible() && lg&&lg.dataUrl){ return '<div class="signature-logo-separator" data-signature-separator="true" contenteditable="false" aria-hidden="true"></div><div class="inline-logo" data-logo-inline="true" contenteditable="false" title="Logo"><img src="'+lg.dataUrl+'" alt=""></div>'; } return ''; }
+function composeLogoHtml(){ const lg=state.template.logo; if(logoIsVisible() && lg&&lg.dataUrl){ return '<div class="signature-logo-separator" data-signature-separator="true" contenteditable="false" aria-hidden="true"></div><div class="inline-logo" data-logo-inline="true" contenteditable="false" title="Cliquer pour choisir un logo personnel"><img src="'+lg.dataUrl+'" alt=""></div>'; } return ''; }
 function ebichelchenEnabled(){ return !!(state.options && state.options.ebichelchenEnabled); }
 function emailEnabled(){ return !state.options || state.options.emailEnabled!==false; }
 function currentTemplateMode(){
@@ -1737,6 +1745,7 @@ function effDefaultSignatureHtml(){ return (state.userDefaults && state.userDefa
 function effDefaultSignatureText(){ return (state.userDefaults && state.userDefaults.signatureHtml) ? textFromHtml(state.userDefaults.signatureHtml) : plainDefaultSignature(); }
 function effDefaultLogoMode(){ return (state.userDefaults && state.userDefaults.logoMode) || "unesco"; }
 function effDefaultIncludeLogo(){ return state.userDefaults ? (state.userDefaults.includeLogo!==false) : true; }
+function effDefaultLogo(){ return cloneJsonSafe(state.userDefaults && state.userDefaults.logo ? state.userDefaults.logo : null); }
 function hasUserBodyDefault(){ const ud=userDefaultTemplateFor(); return !!ud.bodyHtml; }
 function hasUserSignatureDefault(){ return !!(state.userDefaults && state.userDefaults.signatureHtml); }
 function templateBodyIsDefault(){
@@ -1762,6 +1771,7 @@ function templateSignatureIsDefault(){
   if(state.options.useSig===false) return false;
   const defLogo=(state.userDefaults && state.userDefaults.logoMode) || "unesco";
   if((state.options.logoMode||"unesco")!==defLogo) return false;
+  if(defLogo==="custom" && state.userDefaults && state.userDefaults.logo && (state.template.logo||{}).dataUrl !== state.userDefaults.logo.dataUrl) return false;
   const parts=liveTemplateParts();
   let sig=parts.signatureHtml;
   if(sig===null || sig===undefined) sig=state.template.signatureHtml||"";
@@ -3344,6 +3354,8 @@ function bindSettings(){
       state.options.useSig=true;
       state.options.logoMode=effDefaultLogoMode();
       state.options.includeLogo=effDefaultIncludeLogo();
+      const defLogoObj=effDefaultLogo();
+      if(defLogoObj && defLogoObj.dataUrl) state.template.logo=defLogoObj;
       const top=document.getElementById("useSigTop"); if(top) top.checked=true;
       saveState();
       renderTemplateCollapseState();
@@ -3390,34 +3402,39 @@ function bindSettings(){
       applyTemplateBodyReset();
     }, true);
   }
-  function saveTemplateBodyAsDefault(){
+  async function saveTemplateBodyAsDefault(){
     commitEditor(body);
     const mode=currentTemplateMode();
     const lang=currentTemplateLang();
     const activeTpl=templateDataForMode(mode, lang);
     const su=document.getElementById("tplSubject"); if(su) activeTpl.subject=su.value;
     setUserDefaultTemplate(mode, lang, activeTpl.subject, activeTpl.bodyHtml);
-    saveState();
+    await hardSaveState();
     updateTplResetVisibility();
   }
-  function saveSignatureAsDefault(){
+  async function saveSignatureAsDefault(){
     commitEditor(body);
-    state.userDefaults=Object.assign({}, state.userDefaults, { signatureHtml: state.template.signatureHtml, logoMode: state.options.logoMode, includeLogo: state.options.includeLogo!==false });
-    saveState();
+    state.userDefaults=Object.assign({}, state.userDefaults, {
+      signatureHtml: state.template.signatureHtml,
+      logoMode: state.options.logoMode,
+      includeLogo: state.options.includeLogo!==false,
+      logo: cloneJsonSafe(state.template.logo||null)
+    });
+    await hardSaveState();
     updateTplResetVisibility();
   }
   const saveTplBody=document.getElementById("saveTplBody");
   if(saveTplBody){
-    saveTplBody.addEventListener("click", (e)=>{
+    saveTplBody.addEventListener("click", async (e)=>{
       if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      saveTemplateBodyAsDefault();
+      await saveTemplateBodyAsDefault();
     }, true);
   }
   const saveSig=document.getElementById("saveSig");
   if(saveSig){
-    saveSig.addEventListener("click", (e)=>{
+    saveSig.addEventListener("click", async (e)=>{
       if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      saveSignatureAsDefault();
+      await saveSignatureAsDefault();
     }, true);
   }
   const useSigTop=document.getElementById("useSigTop");
@@ -3434,6 +3451,21 @@ function bindSettings(){
   const logoFile=document.getElementById("logoFile");
   const logoModeSelect=document.getElementById("logoModeSelect");
   let logoModeBeforeUpload=state.options.logoMode || "unesco";
+  function openCustomLogoPickerFromSignature(){
+    if(!logoFile) return;
+    commitEditor(body);
+    logoModeBeforeUpload=state.options.logoMode || "unesco";
+    logoFile.click();
+  }
+  if(body && !body.dataset.logoClickWired){
+    body.dataset.logoClickWired="1";
+    body.addEventListener("click", (e)=>{
+      const logo=e.target && e.target.closest ? e.target.closest('[data-logo-inline="true"]') : null;
+      if(!logo || !body.contains(logo)) return;
+      e.preventDefault(); e.stopPropagation();
+      openCustomLogoPickerFromSignature();
+    }, true);
+  }
   function applyLogoMode(mode){
     commitEditor(body);
     if(mode==="unesco"){
@@ -3451,8 +3483,7 @@ function bindSettings(){
       saveState(); renderTemplatePreview(); refreshComposeEditor(true); renderLogoPreview(); renderMails();
       return;
     }
-    logoModeBeforeUpload=state.options.logoMode || "unesco";
-    if(logoFile) logoFile.click();
+    openCustomLogoPickerFromSignature();
   }
   if(logoModeSelect){
     logoModeSelect.onchange=()=>applyLogoMode(logoModeSelect.value);
@@ -3465,6 +3496,8 @@ function bindSettings(){
       renderLogoPreview();
       return;
     }
+    const isImage=(f.type||"").startsWith("image/") || /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name||"");
+    if(!isImage){ alert("Veuillez choisir une image."); e.target.value=""; return; }
     commitEditor(body);
     logoModeBeforeUpload="custom";
     state.options.logoMode="custom";

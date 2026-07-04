@@ -566,7 +566,7 @@ function Handle-Request($stream, $req) {
         return
     }
     if ($path -eq "/api/graph/capabilities") {
-        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = 177 }
+        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = 180 }
         return
     }
     if ($path -eq "/api/graph/account") {
