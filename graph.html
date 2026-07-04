@@ -259,7 +259,7 @@
   .mail-attachment-note .remove-reminder-pdf:hover{background:var(--err-soft);color:var(--err)}
   /* v165: repère 📎 en emplacement fixe juste avant « Modifier » — même colonne sur toutes les lignes */
   .status .m-attach{width:20px;height:20px;flex:0 0 20px;display:inline-flex;align-items:center;justify-content:center}
-  .status .m-attach svg{width:16px;height:16px;fill:none;stroke:var(--ink);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .status .m-attach svg{width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
   .template-editor-area .rich-toolbar{margin:0!important;border-radius:16px 16px 0 0;border-bottom:0}
   .mode-ebichelchen .template-editor-area > .rich-toolbar{display:none!important}
   #tplBodyEditor.plain-template-editor{min-height:170px;white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5;background:#fff;padding:16px;border-radius:14px}
@@ -434,7 +434,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v165</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v166</span></h1>
 </header>
 
 <nav class="tabs">
@@ -691,7 +691,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 165;
+const APP_VERSION = 166;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3639,7 +3639,8 @@ function renderMails(openId){
   const ebMsgs=currentMsgs.filter(m=>m.kind==="eb");
   let reminderMsgs=[];
   if(emailEnabled() && state.options.reminderEnabled!==false){
-    const planned=plannedReminderMessagesForConfirmations(emailMsgs.filter(m=>!isMsgDone(m) && !excludedSet.has(m.id)));
+    // v166: indépendant des cases cochées — l'onglet « Rappels » ne disparaît plus quand on décoche tous les e-mails.
+    const planned=plannedReminderMessagesForConfirmations(emailMsgs.filter(m=>!isMsgDone(m)));
     // v164: les rappels déjà programmés restent visibles (statut « programmé », PDF joint inclus).
     const plannedIds=new Set(planned.map(m=>m.id));
     const scheduled=buildReminderMessages(false).filter(m=>reminderSentSet.has(m.id) && !plannedIds.has(m.id));
