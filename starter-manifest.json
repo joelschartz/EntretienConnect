@@ -1,10 +1,10 @@
 {
-  "version": "v180",
+  "version": "v181",
   "files": [
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "1f95681425c2a7adc4928dcb553cb44b7adb4e13784b6813410d5cbb17e31092",
+      "sha256": "914b7c6e371f428919e1c24f85b280071ee282abf1cdd520d6030712605c1924",
       "size": 55493
     },
     {
@@ -16,7 +16,7 @@
     {
       "target": "EntretienConnect.ps1",
       "url": "starter_files/EntretienConnect.ps1",
-      "sha256": "9ac6247c7ce869ad57b2efc8a24d3a80d52a643793d903acd87c1545f868a165",
+      "sha256": "f68b64f4fbba6ddd146861d1f701e952b8bf2adfd9f2290037d74e8c23b6a469",
       "size": 43769
     },
     {
@@ -46,7 +46,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "e904ee728aae599107e9c528bbc938a35c902191cd6047097e930843076f1e1d",
+      "sha256": "d0fcfef994cf44c2d24f20d212bb787d832c750dc3f777b0e60100f6b5cd01ca",
       "size": 5
     }
   ]

@@ -544,7 +544,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 180, "ebichelchen": EB_AVAILABLE})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 181, "ebichelchen": EB_AVAILABLE})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
