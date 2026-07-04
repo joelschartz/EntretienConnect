@@ -209,7 +209,7 @@
   .preview-head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;padding:22px 24px 14px;border-bottom:1px solid var(--line);background:#fff}
   .preview-head h2{margin:0 0 3px}
   .preview-head .hint{margin:0}
-  .preview-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 22px 4px}
+  .preview-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 22px 10px}
   .preview-tab{background:#fff;color:var(--muted);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:850}
   .preview-tab:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}
   .preview-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:none}
@@ -229,7 +229,7 @@
   /* v164: les lignes décochées sont légèrement estompées — la case à cocher reste bien visible pour les réactiver */
   .mailitem.unselected .mail-main,.mailitem.unselected .status .pill{opacity:.45}
   /* v165: alignement vertical centré + largeur fixe du libellé — plus de saut entre « Tout sélectionner » et « Tout désélectionner » */
-  .mail-select-bar{display:flex;align-items:center;gap:14px;padding:4px 2px 12px 35px;flex-wrap:wrap}.mail-select-bar .check{margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.mail-select-bar .check b{display:inline-block;min-width:150px}.mail-select-bar #selectCount{font-size:12.5px;line-height:1}
+  .mail-select-bar{display:flex;align-items:center;gap:28px;padding:8px 22px 14px 22px;flex-wrap:wrap}.mail-select-bar .check{margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:28px;line-height:1}.mail-select-bar .check b{display:inline-flex;align-items:center;min-width:150px;line-height:1}.mail-select-bar #selectCount{font-size:12.5px;line-height:1;min-height:28px;display:inline-flex;align-items:center}
   .combine-option{margin-top:12px;color:var(--muted);font-weight:600;cursor:pointer}
   .mail-avatar{display:none}
   .mail-main{min-width:0;display:grid;grid-template-columns:minmax(150px,230px) 78px 26px 140px minmax(0,1fr);align-items:center;column-gap:12px;overflow:hidden}
@@ -437,7 +437,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v183</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v184</span></h1>
 </header>
 
 <nav class="tabs">
@@ -696,7 +696,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 183;
+const APP_VERSION = 184;
 
 window.addEventListener("error", function(ev){
   try{
@@ -4198,7 +4198,7 @@ function renderMails(openId){
   }
   const kinds=availablePreviewKinds(emailMsgs, ebMsgs, reminderMsgs);
   // v182: Modèles und Aperçu teilen denselben aktiven Nachrichtentyp.
-  // v183: Geöffnete Aperçu-Zeilen bleiben beim Bearbeiten oben offen; beim Öffnen synchronisiert sich die Sprache.
+  // v184: Aperçu bleibt offen; Sprache unten bleibt an den echten Kontakt gebunden.
   // Der Editor-Modus bestimmt die Vorschau, solange dieser Typ verfügbar ist;
   // wenn nicht, nimmt die Vorschau den ersten verfügbaren Typ.
   const wantedKind=previewKindForTemplateMode(currentTemplateMode());
