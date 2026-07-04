@@ -423,7 +423,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v157</span></h1>
+  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v158</span></h1>
 </header>
 
 <nav class="tabs">
@@ -455,7 +455,7 @@
         <div class="setup-mode-card" data-mode="both">
           <span class="setup-chip warn">Complet</span>
           <h3>e-Bichelchen + e-mail</h3>
-          <p>Fait les deux : messages e-Bichelchen + e-mails de confirmation.</p>
+          <p>Écrit les messages dans e-Bichelchen et envoie les e-mails de confirmation.</p>
         </div>
       </div>
       <div id="setupCurrent" class="setup-current"></div>
@@ -678,7 +678,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 157;
+const APP_VERSION = 158;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1936,11 +1936,11 @@ function renderStudents(){
     return;
   }
   if(eb && !em){
-    let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th>Élève</th><th class="contact-group" style="width:120px">Langue</th><th style="width:36px"></th></tr></thead><tbody>';
+    let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th>Élève</th><th class="contact-group" style="width:96px">Langue</th><th style="width:36px"></th></tr></thead><tbody>';
     state.students.forEach((s,idx)=>{
       if(!s.langEb) s.langEb=s.lang1||"fr";
       html += `<tr data-id="${s.id}"><td><div class="student-name-inline"><span class="student-index">${idx+1}</span><input class="st-name" value="${esc(s.name)}" placeholder="Prénom et nom de l’élève"></div></td>`+
-        `<td class="contact-cell"><div class="contact-inline source-lang-inline"><select class="st-leb lang-select" title="Langue du message e-Bichelchen">${langOptionsHtml(s.langEb, true)}</select></div></td>`+
+        `<td class="contact-cell"><select class="st-leb lang-select" title="Langue du message e-Bichelchen">${langOptionsHtml(s.langEb, true)}</select></td>`+
         `<td class="actions-cell"><button class="st-del" type="button" title="Supprimer cet élève">✕</button></td></tr>`;
     });
     html+='</tbody></table><div id="studentEmailWarnings" class="student-email-warning"></div>'; wrap.innerHTML=html;
@@ -3843,13 +3843,13 @@ function applyChannelVisibility(){
       if(ebNeedsGroupSelection()){
         bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+ebGroupChoiceHtml()+'</div>');
       }else{
-        bits.push('<div class="banner warn compact" style="margin:10px 0 0">e-Bichelchen n’est pas connecté. Les messages e-Bichelchen ne pourront pas être publiés. <button type="button" class="ghost sm" id="sendEbConnect" style="margin-left:8px">Connecter e-Bichelchen</button></div>');
+        bits.push('<div class="banner warn compact" style="margin:10px 0 0">e-Bichelchen n’est pas connecté. Les messages e-Bichelchen ne pourront pas être publiés. <button type="button" class="ghost sm" id="sendEbConnect" style="margin-left:8px">Connecter dans « Démarrage »</button></div>');
       }
     }
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
     const ms=document.getElementById("sendMsConnect"); if(ms) ms.onclick=()=>{ goTab("setup"); setTimeout(()=>{ const b=document.getElementById("setupMsConnect"); if(b) b.click(); else startMicrosoftLogin("setupLoginBox","setupMsConnect"); },50); };
-    const ebBtn=document.getElementById("sendEbConnect"); if(ebBtn) ebBtn.onclick=ebConnectFlow;
+    const ebBtn=document.getElementById("sendEbConnect"); if(ebBtn) ebBtn.onclick=()=>{ goTab("setup"); setTimeout(()=>ebConnectFlow(),50); };
   }
   renderSetup();
 }
