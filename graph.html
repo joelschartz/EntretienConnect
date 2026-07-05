@@ -433,12 +433,45 @@
   .source-lang-inline{justify-content:flex-end}
   .source-lang-inline .source-pill{margin-right:auto}
 
+  .version-btn{opacity:.45;font-size:13px;font-weight:500;cursor:pointer;border-radius:999px;padding:2px 6px;margin-left:4px;user-select:none;transition:background .15s,opacity .15s}
+  .version-btn:hover{opacity:.8;background:#eef2ff}
+  .maintenance-menu{position:fixed;z-index:10050;display:none;min-width:270px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 45px rgba(20,30,60,.16);padding:10px}
+  .maintenance-menu.open{display:block}
+  .maintenance-menu-title{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:850;margin:3px 6px 8px}
+  .maintenance-menu button{width:100%;text-align:left;background:#fff;color:var(--ink);border:0;box-shadow:none;border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:800}
+  .maintenance-menu button:hover{background:var(--accent-soft);box-shadow:none}
+  .maintenance-modal-backdrop{position:fixed;inset:0;z-index:10060;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.32);padding:22px}
+  .maintenance-modal-backdrop.open{display:flex}
+  .maintenance-modal{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 24px 70px rgba(20,30,60,.24);padding:22px}
+  .maintenance-modal h3{margin:0 0 8px;font-size:18px}
+  .maintenance-modal p{margin:0 0 12px;color:var(--muted);font-size:13.5px;line-height:1.45}
+  .maintenance-modal .confirm-word{font-weight:900;color:var(--ink);letter-spacing:.06em}
+  .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+  .maintenance-modal input{width:100%;height:42px;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span style="opacity:.4;font-size:13px;font-weight:500">v186</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v187</span></h1>
 </header>
+<div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
+  <div class="maintenance-menu-title">Maintenance</div>
+  <button type="button" id="factoryResetOpen">Réinitialiser les modèles et la signature</button>
+</div>
+<div id="factoryResetModal" class="maintenance-modal-backdrop" aria-hidden="true">
+  <div class="maintenance-modal" role="dialog" aria-modal="true" aria-labelledby="factoryResetTitle">
+    <h3 id="factoryResetTitle">Réinitialiser les modèles et la signature</h3>
+    <p>Cette action remet tous les modèles personnels, la signature et le logo sur la version standard de l’app.</p>
+    <p>Les élèves, rendez-vous, adresses, connexions et statuts d’envoi sont conservés.</p>
+    <p>Pour confirmer, tapez <span class="confirm-word">RESET</span>.</p>
+    <input id="factoryResetConfirmInput" autocomplete="off" spellcheck="false" placeholder="RESET">
+    <div class="maintenance-modal-actions">
+      <button type="button" class="ghost sm" id="factoryResetCancel">Annuler</button>
+      <button type="button" id="factoryResetDo" disabled>Réinitialiser</button>
+    </div>
+  </div>
+</div>
 
 <nav class="tabs">
   <div class="tabs-track">
@@ -696,7 +729,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 186;
+const APP_VERSION = 187;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1028,24 +1061,24 @@ function messageMap(ds, hhmm, stu, lang){
 }
 const TEMPLATE_DEFAULTS={
   fr:{
-    confirmation:{subject:"Confirmation de rendez-vous – bilan intermédiaire {DE_ENFANT}",body:"Chers parents,\n\nJe vous confirme notre rendez-vous individuel concernant le bilan intermédiaire du {TRIMESTRE} de votre enfant {ENFANT}, prévu le {DATE} à {TIME}.\n\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
-    reminder:{subject:"Rappel de rendez-vous – bilan intermédiaire {DE_ENFANT}",body:"Chers parents,\n\nJe me permets de vous rappeler notre rendez-vous individuel prévu {RAPPEL_DELAI}, le {DATE}, à {TIME}, concernant votre enfant {ENFANT}.\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
+    confirmation:{subject:"Confirmation de rendez-vous – bilan intermédiaire {DE_ENFANT}",body:"Chers parents,\n\nJe vous confirme notre entretien individuel concernant le bilan intermédiaire du {TRIMESTRE} de votre enfant {ENFANT}, prévu le {DATE} à {TIME}.\n\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
+    reminder:{subject:"Rappel de rendez-vous – bilan intermédiaire {DE_ENFANT}",body:"Chers parents,\n\nJe me permets de vous rappeler notre entretien individuel prévu {RAPPEL_DELAI}, le {DATE}, à {TIME}, concernant le bilan intermédiaire de votre enfant {ENFANT}.\n\nL’entretien durera environ vingt minutes et se déroulera dans ma salle de classe.\n\nJe vous remercie d’avance pour votre présence."},
     ebichelchen:{subject:"Entretien parents – {ENFANT}",body:"Entretien individuel avec les parents {DE_ENFANT} à {TIME}, dans la salle de classe.\nDurée prévue : environ 20 minutes."}
   },
   de:{
-    confirmation:{subject:"Terminbestätigung – Zwischenbilanz von {ENFANT}",body:"Liebe Eltern,\n\nich bestätige Ihnen unseren Einzeltermin zur Zwischenbilanz im {TRIMESTRE} Ihres Kindes {ENFANT}, vorgesehen am {DATE} um {TIME}.\n\nDas Gespräch dauert ungefähr zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihre Anwesenheit."},
-    reminder:{subject:"Terminerinnerung – Zwischenbilanz von {ENFANT}",body:"Liebe Eltern,\n\nich möchte Sie gerne an unser individuelles Gespräch {RAPPEL_DELAI}, am {DATE} um {TIME}, bezüglich Ihres Kindes {ENFANT} erinnern.\nDas Gespräch dauert ungefähr zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihre Anwesenheit."},
-    ebichelchen:{subject:"Elterngespräch – {ENFANT}",body:"Einzelgespräch mit den Eltern von {ENFANT} um {TIME} im Klassensaal.\nVorgesehene Dauer: etwa 20 Minuten."}
+    confirmation:{subject:"Bestätigung des Elterngesprächs – Zwischenbilanz {ENFANT}",body:"Liebe Eltern,\n\nhiermit bestätige ich unser individuelles Elterngespräch zur Zwischenbilanz im {TRIMESTRE} für Ihr Kind {ENFANT}, am {DATE} um {TIME}.\n\nDas Gespräch dauert etwa zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihr Kommen."},
+    reminder:{subject:"Erinnerung an das Elterngespräch – Zwischenbilanz {ENFANT}",body:"Liebe Eltern,\n\nich möchte Sie an unser individuelles Elterngespräch {RAPPEL_DELAI}, am {DATE} um {TIME}, zur Zwischenbilanz Ihres Kindes {ENFANT} erinnern.\n\nDas Gespräch dauert etwa zwanzig Minuten und findet in meinem Klassensaal statt.\n\nVielen Dank im Voraus für Ihr Kommen."},
+    ebichelchen:{subject:"Elterngespräch – {ENFANT}",body:"Individuelles Elterngespräch zur Zwischenbilanz von {ENFANT} um {TIME} im Klassensaal.\nVorgesehene Dauer: etwa 20 Minuten."}
   },
   en:{
-    confirmation:{subject:"Appointment confirmation – interim report for {ENFANT}",body:"Dear parents,\n\nI confirm our individual meeting regarding the interim report of the {TRIMESTRE} for your child {ENFANT}, scheduled for {DATE} at {TIME}.\n\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for your attendance."},
-    reminder:{subject:"Appointment reminder – interim report for {ENFANT}",body:"Dear parents,\n\nI would like to remind you of our individual meeting scheduled for {RAPPEL_DELAI}, on {DATE} at {TIME}, concerning your child {ENFANT}.\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for your attendance."},
-    ebichelchen:{subject:"Parent meeting – {ENFANT}",body:"Individual meeting with the parents of {ENFANT} at {TIME} in the classroom.\nExpected duration: about 20 minutes."}
+    confirmation:{subject:"Parent-teacher meeting confirmation – interim report for {ENFANT}",body:"Dear parents,\n\nI confirm our individual parent-teacher meeting regarding the interim report for the {TRIMESTRE} for your child {ENFANT}, scheduled for {DATE} at {TIME}.\n\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for attending."},
+    reminder:{subject:"Parent-teacher meeting reminder – interim report for {ENFANT}",body:"Dear parents,\n\nI would like to remind you of our individual parent-teacher meeting scheduled for {RAPPEL_DELAI}, on {DATE} at {TIME}, regarding the interim report for your child {ENFANT}.\n\nThe meeting will last about twenty minutes and will take place in my classroom.\n\nThank you in advance for attending."},
+    ebichelchen:{subject:"Parent-teacher meeting – {ENFANT}",body:"Individual parent-teacher meeting regarding the interim report for {ENFANT} at {TIME} in the classroom.\nExpected duration: about 20 minutes."}
   },
   lb:{
-    confirmation:{subject:"Confirmatioun vum Rendez-vous – Zwëschebilan vun {ENFANT}",body:"Léif Elteren,\n\nEch confirméieren Iech eist individuellt Gespréich iwwer de Zwëschebilan vum {TRIMESTRE} vun Ärem Kand {ENFANT}, virgesinn den {DATE} um {TIME}.\n\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Är Presenz."},
-    reminder:{subject:"Rappel vum Rendez-vous – Zwëschebilan vun {ENFANT}",body:"Léif Elteren,\n\nEch erënneren Iech gär un eist individuellt Gespréich {RAPPEL_DELAI}, den {DATE} um {TIME}, betreffend Äert Kand {ENFANT}.\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Är Presenz."},
-    ebichelchen:{subject:"Elteregespréich – {ENFANT}",body:"Individuellt Gespréich mat den Eltere vum {ENFANT} um {TIME} am Klassesall.\nGeplangten Dauer: ongeféier 20 Minutten."}
+    confirmation:{subject:"Confirmatioun vum Elteregespréich – Zwëschebilan fir {ENFANT}",body:"Léif Elteren,\n\nEch confirméieren Iech eist individuellt Elteregespréich am Kader vun der Zwëschebilan vum {TRIMESTRE} fir Äert Kand {ENFANT}, den {DATE} um {TIME}.\n\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Äert Kommen."},
+    reminder:{subject:"Erënnerung un d’Elteregespréich – Zwëschebilan fir {ENFANT}",body:"Léif Elteren,\n\nEch erënneren Iech gär un eist individuellt Elteregespréich {RAPPEL_DELAI}, den {DATE} um {TIME}, am Kader vun der Zwëschebilan fir Äert Kand {ENFANT}.\n\nD’Gespréich dauert ongeféier zwanzeg Minutten a fënnt a mengem Klassesall statt.\n\nEch soen Iech am Viraus Merci fir Äert Kommen."},
+    ebichelchen:{subject:"Elteregespréich – {ENFANT}",body:"Individuellt Elteregespréich am Kader vun der Zwëschebilan fir {ENFANT} um {TIME} am Klassesall.\nGeplangten Dauer: ongeféier 20 Minutten."}
   }
 };
 function normalizeTemplateMode(mode){ return (mode==="reminder"||mode==="ebichelchen") ? mode : "confirmation"; }
@@ -1486,6 +1519,18 @@ function clearWorkSession(){
 function refreshAllViews(){
   renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); renderCalendar(); renderAuth(); if(typeof applyChannelVisibility==="function") applyChannelVisibility(); renderMails();
 }
+function applyStartupTemplateDefaultView(){
+  // v187: beim Start immer neutral mit E-mail + Français beginnen.
+  // Die echte Kontaktsprache der Aperçu-Zeilen bleibt unverändert.
+  try{
+    state.options=state.options||{};
+    window._openPreviewId="";
+    state.options.templateLang="fr";
+    state.options.templateMode = (!emailEnabled() && ebichelchenEnabled()) ? "ebichelchen" : "confirmation";
+    state.options.previewKind = previewKindForTemplateMode(state.options.templateMode);
+    saveState();
+  }catch(e){}
+}
 function showStartupSessionChoice(){
   const ov=document.getElementById("sessionOverlay");
   if(!ov || !sessionHasWorkData()) return;
@@ -1911,8 +1956,11 @@ function setWorkflowMode(mode, opts={}){
   state.options.setupDone=!!mode;
   state.options.emailEnabled=modeNeedsEmail(mode);
   state.options.ebichelchenEnabled=modeNeedsEb(mode);
-  if(modeNeedsEb(mode)) state.options.templateMode="ebichelchen";
+  state.options.templateLang="fr";
+  if(modeNeedsEb(mode) && !modeNeedsEmail(mode)) state.options.templateMode="ebichelchen";
   else if(modeNeedsEmail(mode)) state.options.templateMode="confirmation";
+  syncPreviewKindToTemplateMode(state.options.templateMode);
+  window._openPreviewId="";
   saveState();
   applyChannelVisibility();
   renderSetup();
@@ -4455,6 +4503,9 @@ function emailToggleHandler(on){
   const em=state.options.emailEnabled, eb=state.options.ebichelchenEnabled;
   state.options.workflowMode = em && eb ? "both" : (eb ? "ebichelchen" : (em ? "email" : ""));
   state.options.setupDone = !!state.options.workflowMode;
+  state.options.templateLang = "fr";
+  syncPreviewKindToTemplateMode(state.options.templateMode);
+  window._openPreviewId="";
   saveState();
   applyChannelVisibility();
   if(typeof window._reloadTemplateEditor==="function") window._reloadTemplateEditor(); else renderMails();
@@ -4467,6 +4518,9 @@ function ebToggleHandler(on){
   const em=state.options.emailEnabled, eb=state.options.ebichelchenEnabled;
   state.options.workflowMode = em && eb ? "both" : (eb ? "ebichelchen" : (em ? "email" : ""));
   state.options.setupDone = !!state.options.workflowMode;
+  state.options.templateLang = "fr";
+  syncPreviewKindToTemplateMode(state.options.templateMode);
+  window._openPreviewId="";
   saveState();
   applyChannelVisibility();
   renderEbPanel();
@@ -4820,12 +4874,82 @@ document.getElementById("confirmGo").onclick=async()=>{
   pendingSend=[]; pendingReminderPlan=[]; btn.disabled=false;
 };
 
+
+function resetAllModelsAndSignatureToFactory(){
+  // v187: Gesamt-Reset nur für Modelle/Signatur/Logo, niemals für Schüler/Termine/Logins.
+  state.userDefaults=null;
+  state.template=Object.assign({}, state.template||{}, {
+    v:17,
+    subject:factoryTemplate("fr","confirmation").subject,
+    body:factoryTemplate("fr","confirmation").body,
+    bodyHtml:factoryTemplate("fr","confirmation").bodyHtml,
+    signature:plainDefaultSignature(),
+    signatureHtml:defaultSignatureTemplate(),
+    logo:null
+  });
+  const rf=factoryTemplate("fr","reminder");
+  state.reminderTemplate={v:1, subject:rf.subject, body:rf.body, bodyHtml:rf.bodyHtml};
+  const ef=factoryTemplate("fr","ebichelchen");
+  state.ebichelchenTemplate={v:1, subject:ef.subject, body:ef.body, bodyHtml:ef.bodyHtml};
+  state.localizedTemplates=normalizeLocalizedTemplates({});
+  state.options=state.options||{};
+  state.options.useSig=true;
+  state.options.includeLogo=true;
+  state.options.logoMode="unesco";
+  state.options.templateLang="fr";
+  state.options.templateMode = (!emailEnabled() && ebichelchenEnabled()) ? "ebichelchen" : "confirmation";
+  state.options.previewKind = previewKindForTemplateMode(state.options.templateMode);
+  window._openPreviewId="";
+}
+async function performFactoryModelsReset(){
+  try{
+    resetAllModelsAndSignatureToFactory();
+    await hardSaveState();
+    if(typeof loadUnescoLogo==="function") loadUnescoLogo(true);
+    if(typeof window._reloadTemplateEditor==="function") window._reloadTemplateEditor("");
+    else renderMails("");
+    renderTemplatePreview(); renderLogoPreview(); updateTplResetVisibility();
+    showToast("Modèles et signature réinitialisés ✓");
+  }catch(e){ alert("Réinitialisation impossible : "+(e&&e.message?e.message:e)); }
+}
+function bindMaintenanceMenu(){
+  const v=document.getElementById("appVersionBtn");
+  const menu=document.getElementById("maintenanceMenu");
+  const openBtn=document.getElementById("factoryResetOpen");
+  const modal=document.getElementById("factoryResetModal");
+  const input=document.getElementById("factoryResetConfirmInput");
+  const doBtn=document.getElementById("factoryResetDo");
+  const cancelBtn=document.getElementById("factoryResetCancel");
+  if(!v || !menu || menu.dataset.bound) return;
+  menu.dataset.bound="1";
+  function closeMenu(){ menu.classList.remove("open"); menu.setAttribute("aria-hidden","true"); }
+  function openMenu(){
+    const r=v.getBoundingClientRect();
+    menu.classList.add("open");
+    menu.setAttribute("aria-hidden","false");
+    const w=menu.offsetWidth || 270;
+    menu.style.top=(r.bottom+8)+"px";
+    menu.style.left=Math.min(Math.max(12, r.left), Math.max(12, window.innerWidth-w-12))+"px";
+  }
+  v.addEventListener("click", e=>{ e.preventDefault(); e.stopPropagation(); menu.classList.contains("open") ? closeMenu() : openMenu(); });
+  document.addEventListener("click", e=>{ if(!menu.contains(e.target) && e.target!==v) closeMenu(); });
+  function closeModal(){ if(modal){ modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); } if(input) input.value=""; if(doBtn) doBtn.disabled=true; }
+  function openModal(){ closeMenu(); if(modal){ modal.classList.add("open"); modal.setAttribute("aria-hidden","false"); } setTimeout(()=>{ if(input) input.focus(); },40); }
+  if(openBtn) openBtn.onclick=openModal;
+  if(cancelBtn) cancelBtn.onclick=closeModal;
+  if(modal) modal.addEventListener("click", e=>{ if(e.target===modal) closeModal(); });
+  if(input) input.addEventListener("input", ()=>{ if(doBtn) doBtn.disabled = input.value.trim().toUpperCase()!=="RESET"; });
+  if(input) input.addEventListener("keydown", e=>{ if(e.key==="Enter" && doBtn && !doBtn.disabled) doBtn.click(); if(e.key==="Escape") closeModal(); });
+  if(doBtn) doBtn.onclick=async()=>{ if(!input || input.value.trim().toUpperCase()!=="RESET") return; doBtn.disabled=true; await performFactoryModelsReset(); closeModal(); };
+}
+
 /* Init */
 try{ window.setWorkflowMode=setWorkflowMode; window.workflowMode=workflowMode; window.ecSafeChooseMode=ecSafeChooseMode; }catch(e){}
 async function bootEntretienConnect(){
   try{
     await loadDurableStateAtStartup();
-    startLocalAppHeartbeat(); bindSetup(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); checkAccount(); showStartupSessionChoice();
+    applyStartupTemplateDefaultView();
+    startLocalAppHeartbeat(); bindSetup(); bindMaintenanceMenu(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); checkAccount(); showStartupSessionChoice();
   }catch(e){
     console.error("Erreur init EntretienConnect", e);
     try{ var b=document.getElementById("setupCurrent"); if(b) b.innerHTML='<div class="banner warn compact">Erreur au démarrage : '+esc(String(e&&e.message||e))+'</div>'; }catch(_){}
