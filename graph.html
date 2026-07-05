@@ -276,6 +276,10 @@
   .template-tab{background:#fff;color:var(--muted);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:800}
   .template-tab:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}
   .template-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:none}
+  .template-tab.reminder-off{background:#f7f8fc;color:#98a2b3;border-color:#e6e9f0;box-shadow:none}
+  .template-tab.reminder-off:hover{background:#f1f3f8;color:#6b7280;border-color:#dfe3fc;box-shadow:none}
+  .template-tab.reminder-off .rt-check{background:#fff;border-color:#d6dbe8}
+  .template-tab.reminder-on:not(.active){background:#fff;color:var(--accent);border-color:#dfe3fc}
   .reminder-toggle{display:flex;align-items:center;gap:8px;margin-left:auto;color:var(--muted);font-size:13px;font-weight:750;cursor:pointer}
   .reminder-toggle input{width:16px;height:16px;min-width:16px;margin:0}
   .reminder-note,.template-note{margin:2px 0 12px;font-size:12.5px;color:var(--muted)}
@@ -453,7 +457,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v188</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v189</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -728,7 +732,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 188;
+const APP_VERSION = 189;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1519,13 +1523,16 @@ function refreshAllViews(){
   renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); renderCalendar(); renderAuth(); if(typeof applyChannelVisibility==="function") applyChannelVisibility(); renderMails();
 }
 function applyStartupTemplateDefaultView(){
-  // v188: beim Start immer neutral mit E-mail + Français beginnen.
+  // v189: beim Start immer Français, aber der aktive Kanal folgt dem gewählten Modus.
+  // Nur E-mail -> E-mail. Nur e-Bichelchen oder mode complet -> e-Bichelchen.
   // Die echte Kontaktsprache der Aperçu-Zeilen bleibt unverändert.
   try{
     state.options=state.options||{};
     window._openPreviewId="";
     state.options.templateLang="fr";
-    state.options.templateMode = (!emailEnabled() && ebichelchenEnabled()) ? "ebichelchen" : "confirmation";
+    const em=emailEnabled(), eb=ebichelchenEnabled();
+    state.options.templateMode = eb ? "ebichelchen" : "confirmation";
+    if(!em && !eb) state.options.templateMode="confirmation";
     state.options.previewKind = previewKindForTemplateMode(state.options.templateMode);
     saveState();
   }catch(e){}
@@ -1962,7 +1969,8 @@ function setWorkflowMode(mode, opts={}){
   state.options.emailEnabled=modeNeedsEmail(mode);
   state.options.ebichelchenEnabled=modeNeedsEb(mode);
   state.options.templateLang="fr";
-  if(modeNeedsEb(mode) && !modeNeedsEmail(mode)) state.options.templateMode="ebichelchen";
+  // v189: en mode complet, commencer dans les modèles e-Bichelchen.
+  if(modeNeedsEb(mode)) state.options.templateMode="ebichelchen";
   else if(modeNeedsEmail(mode)) state.options.templateMode="confirmation";
   syncPreviewKindToTemplateMode(state.options.templateMode);
   window._openPreviewId="";
@@ -2105,6 +2113,9 @@ function ecSafeChooseMode(mode){
       state.options.setupDone=true;
       state.options.emailEnabled=(mode==="email"||mode==="both");
       state.options.ebichelchenEnabled=(mode==="ebichelchen"||mode==="both");
+      state.options.templateLang="fr";
+      state.options.templateMode=(state.options.ebichelchenEnabled?"ebichelchen":"confirmation");
+      state.options.previewKind=(state.options.templateMode==="ebichelchen"?"eb":"email");
       if(typeof saveState==="function") saveState();
     }else{
       const raw=localStorage.getItem(LS_KEY);
@@ -2114,6 +2125,9 @@ function ecSafeChooseMode(mode){
       st.options.setupDone=true;
       st.options.emailEnabled=(mode==="email"||mode==="both");
       st.options.ebichelchenEnabled=(mode==="ebichelchen"||mode==="both");
+      st.options.templateLang="fr";
+      st.options.templateMode=(st.options.ebichelchenEnabled?"ebichelchen":"confirmation");
+      st.options.previewKind=(st.options.templateMode==="ebichelchen"?"eb":"email");
       localStorage.setItem(LS_KEY, JSON.stringify(st));
     }
   }catch(e){ console.error(e); }
@@ -3209,6 +3223,11 @@ function bindSettings(){
       else if(tm==="ebichelchen") show=ebOn;
       btn.style.display = show ? "" : "none";
       btn.classList.toggle("active", tm===mode);
+      if(tm==="reminder"){
+        btn.classList.toggle("reminder-off", !reminderOn);
+        btn.classList.toggle("reminder-on", reminderOn);
+        btn.title = reminderOn ? "Rappel actif — cliquer pour afficher ou désactiver" : "Rappel inactif — cliquer pour l’activer";
+      }
     }); }
     // Bei e-Bichelchen-Meldungen: Signatur/Logo/Rappel ausblenden, „Objet“ → „Titre“.
     const card=document.getElementById("templateCard");
@@ -3355,7 +3374,7 @@ function bindSettings(){
     const top=document.getElementById("useSigTop"); if(top) top.checked=true;
   }
   function applyTemplateEditorReset(){
-    // v188: ein Reset für den gesamten Editor.
+    // v188/v189: ein Reset für den gesamten Editor.
     // Der Nachrichtentext wird nur für den aktuellen Modus + die aktuelle Sprache geladen.
     // Signatur und Logo werden global auf den gespeicherten persönlichen Standard
     // oder den Werksstandard zurückgesetzt.
@@ -3390,7 +3409,7 @@ function bindSettings(){
     }, true);
   }
   async function saveTemplateEditorAsDefault(){
-    // v188: ein Haken speichert den aktuellen Editorzustand.
+    // v188/v189: ein Haken speichert den aktuellen Editorzustand.
     // Text/Betreff: aktueller Modus + aktuelle Sprache.
     // Signatur/Logo: global für alle Sprachen.
     commitEditor(body);
