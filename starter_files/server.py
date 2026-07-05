@@ -94,7 +94,7 @@ DIRECTORY = RES_DIR
 LOCAL_CSV_NAME = "eleves_contacts.csv"
 
 def _local_csv_candidate_paths():
-    # Le fichier est prévu à côté de Starten.command / 0_START_HIER_EntretienConnect.vbs.
+    # Le fichier est prévu à côté de EntretienConnect_MAC.command / EntretienConnect_WINDOWS.vbs.
     # On garde aussi quelques emplacements de secours pour les anciens starters.
     paths = []
     try:
@@ -640,7 +640,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         """Liefert die optionale lokale CSV aus dem Starter-Ordner.
 
         Erwarteter Ort:
-        - neben Starten.command / 0_START_HIER_EntretienConnect.vbs
+        - neben EntretienConnect_MAC.command / EntretienConnect_WINDOWS.vbs
         - Fallback: im Helper-Ordner oder im dauerhaften App-Speicher
         """
         candidates = _local_csv_candidate_paths()

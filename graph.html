@@ -282,8 +282,8 @@
   .template-tab.reminder-off .rt-check{background:#fff;border-color:#d6dbe8}
   .template-tab.reminder-on:not(.active){background:#fff;color:var(--muted);border-color:var(--line)}
   .template-tab.reminder-on:not(.active):hover{background:var(--accent-soft);color:var(--ink);border-color:#dfe3fc;box-shadow:none}
-  .template-tab.eb-locked{background:#fff;color:#98a2b3;border-color:#e6e9f0;box-shadow:none}
-  .template-tab.eb-locked:hover{background:#fff;color:#7b8494;border-color:#dfe3fc;box-shadow:none}
+  .template-tab.eb-locked{background:#fff;color:#98a2b3;border-color:#e6e9f0;box-shadow:none;cursor:not-allowed!important}
+  .template-tab.eb-locked:hover{background:#fff;color:#7b8494;border-color:#dfe3fc;box-shadow:none;cursor:not-allowed!important}
   .reminder-toggle{display:flex;align-items:center;gap:8px;margin-left:auto;color:var(--muted);font-size:13px;font-weight:750;cursor:pointer}
   .reminder-toggle input{width:16px;height:16px;min-width:16px;margin:0}
   .reminder-note,.template-note{margin:2px 0 12px;font-size:12.5px;color:var(--muted)}
@@ -461,7 +461,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v196</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v198</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -736,7 +736,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 196;
+const APP_VERSION = 198;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1962,7 +1962,7 @@ function workflowMode(){
 function modeNeedsEmail(mode){ return mode==="email" || mode==="both"; }
 function modeNeedsEb(mode){ return mode==="ebichelchen" || mode==="both"; }
 function ebModelLocked(){
-  // v196: en mode complet, e-Bichelchen reste visible mais verrouillé tant que
+  // v198: en mode complet, e-Bichelchen reste visible mais verrouillé tant que
   // la connexion/classe e-Bichelchen n'est pas prête. On peut préparer les e-mails
   // et charger le CSV sans montrer des actions e-Bichelchen qui ne fonctionneraient pas encore.
   let isBoth=false, ebOn=false;
@@ -1986,7 +1986,7 @@ function setWorkflowMode(mode, opts={}){
   state.options.emailEnabled=modeNeedsEmail(mode);
   state.options.ebichelchenEnabled=modeNeedsEb(mode);
   state.options.templateLang="fr";
-  // v196: en mode complet, commencer sur e-Bichelchen seulement si la connexion
+  // v198: en mode complet, commencer sur e-Bichelchen seulement si la connexion
   // e-Bichelchen est prête ; sinon on démarre sur E-mail + Français.
   if(mode==="both") state.options.templateMode = ebReady() ? "ebichelchen" : "confirmation";
   else if(modeNeedsEb(mode)) state.options.templateMode="ebichelchen";
@@ -3279,8 +3279,8 @@ function bindSettings(){
       btn.classList.toggle("active", tm===mode && !lockedEb);
       btn.classList.toggle("eb-locked", lockedEb);
       if(tm==="ebichelchen"){
-        btn.innerHTML = lockedEb ? "e-Bichelchen 🔒" : "e-Bichelchen";
-        btn.title = lockedEb ? "Connexion e-Bichelchen requise pour utiliser ce modèle en mode complet" : "Modèle e-Bichelchen";
+        btn.innerHTML = "e-Bichelchen";
+        btn.title = lockedEb ? "e-Bichelchen n’est pas connecté. Connectez-vous dans l’onglet Démarrage." : "Modèle e-Bichelchen";
       }
       if(tm==="reminder"){
         btn.classList.toggle("reminder-off", !reminderOn);
@@ -3315,7 +3315,7 @@ function bindSettings(){
   function switchTemplateMode(mode){
     mode=normalizeTemplateMode(mode);
     if(mode==="ebichelchen" && (!ebichelchenEnabled() || ebModelLocked())){
-      if(ebModelLocked()) showToast("Connectez e-Bichelchen dans « Démarrage » pour utiliser ce modèle.");
+      if(ebModelLocked()) showToast("e-Bichelchen n’est pas connecté. Connectez-vous dans l’onglet Démarrage.");
       mode="confirmation";
     }
     if(mode==="reminder" && (!emailEnabled() || state.options.reminderEnabled===false)) mode="confirmation";
@@ -3351,7 +3351,7 @@ function bindSettings(){
   if(templateModeTabs){ templateModeTabs.querySelectorAll(".template-tab").forEach(btn=>{ btn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation();
     const tm=btn.dataset.templateMode;
     if(tm==="ebichelchen" && ebModelLocked()){
-      showToast("Connectez e-Bichelchen dans « Démarrage » pour utiliser ce modèle.");
+      showToast("e-Bichelchen n’est pas connecté. Connectez-vous dans l’onglet Démarrage.");
       return;
     }
     if(tm==="reminder"){
@@ -3872,7 +3872,7 @@ async function startMicrosoftLoginDevice(loginBoxId, buttonId){
   try{
     d=await api("/api/graph/login-start");
   }catch(e){
-    lb.innerHTML='<div class="banner err">Assistant local inaccessible. « Starten.command » est-il lancé ?</div>';
+    lb.innerHTML='<div class="banner err">Assistant local inaccessible. « EntretienConnect_MAC.command » ou « EntretienConnect_WINDOWS.vbs » est-il lancé ?</div>';
     if(inBtn) inBtn.disabled=false;
     return;
   }
@@ -4424,7 +4424,7 @@ function localBackendAvailable(){
   return h==="127.0.0.1" || h==="localhost" || h==="::1";
 }
 function localBackendMissingMessage(){
-  return "Cette fonction e-Bichelchen nécessite le dossier de démarrage local. Ouvrez l’app avec 0_START_HIER_EntretienConnect.vbs ou Starten.command, pas directement depuis GitHub.";
+  return "Cette fonction e-Bichelchen nécessite le dossier de démarrage local. Ouvrez l’app avec EntretienConnect_MAC.command ou EntretienConnect_WINDOWS.vbs, pas directement depuis GitHub.";
 }
 async function readJsonResponse(res){
   const text=await res.text();
@@ -4551,18 +4551,18 @@ function applyChannelVisibility(){
   if(hint){
     const bits=[];
     if(!em && !eb) bits.push('<div class="banner warn compact" style="margin:10px 0 0">Aucun canal d’envoi actif. Choisissez un mode dans « Démarrage ».</div>');
-    if(em && !account) bits.push('<div class="banner warn compact" style="margin:10px 0 0">Microsoft n’est pas connecté. Les e-mails ne pourront pas partir. <button type="button" class="ghost sm" id="sendMsConnect" style="margin-left:8px">Connecter dans « Démarrage »</button></div>');
+    if(em && !account) bits.push('<div class="banner warn compact" style="margin:10px 0 0">Microsoft 365 n’est pas connecté. Connectez-vous dans l’onglet Démarrage. <button type="button" class="ghost sm" id="sendMsSetup" style="margin-left:8px">Aller à Démarrage</button></div>');
     if(eb && !ebReady()){
       if(ebNeedsGroupSelection()){
         bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+ebGroupChoiceHtml()+'</div>');
       }else{
-        bits.push('<div class="banner warn compact" style="margin:10px 0 0">e-Bichelchen n’est pas connecté. En mode complet, la partie e-Bichelchen reste verrouillée ; les e-mails/CSV restent utilisables. <button type="button" class="ghost sm" id="sendEbConnect" style="margin-left:8px">Connecter dans « Démarrage »</button></div>');
+        bits.push('<div class="banner warn compact" style="margin:10px 0 0">e-Bichelchen n’est pas connecté. Connectez-vous dans l’onglet Démarrage. <button type="button" class="ghost sm" id="sendEbSetup" style="margin-left:8px">Aller à Démarrage</button></div>');
       }
     }
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
-    const ms=document.getElementById("sendMsConnect"); if(ms) ms.onclick=()=>{ goTab("setup"); setTimeout(()=>{ const b=document.getElementById("setupMsConnect"); if(b) b.click(); else startMicrosoftLogin("setupLoginBox","setupMsConnect"); },50); };
-    const ebBtn=document.getElementById("sendEbConnect"); if(ebBtn) ebBtn.onclick=()=>{ goTab("setup"); setTimeout(()=>ebConnectFlow(),50); };
+    const ms=document.getElementById("sendMsSetup"); if(ms) ms.onclick=()=>{ goTab("setup"); };
+    const ebBtn=document.getElementById("sendEbSetup"); if(ebBtn) ebBtn.onclick=()=>{ goTab("setup"); };
   }
   renderSetup();
 }
