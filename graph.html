@@ -461,7 +461,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v198</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v200</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -736,7 +736,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 198;
+const APP_VERSION = 200;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1528,15 +1528,16 @@ function refreshAllViews(){
   renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); renderCalendar(); renderAuth(); if(typeof applyChannelVisibility==="function") applyChannelVisibility(); renderMails();
 }
 function applyStartupTemplateDefaultView(){
-  // v189: beim Start immer Français, aber der aktive Kanal folgt dem gewählten Modus.
-  // Nur E-mail -> E-mail. Nur e-Bichelchen oder mode complet -> e-Bichelchen.
-  // Die echte Kontaktsprache der Aperçu-Zeilen bleibt unverändert.
+  // v200: beim Start immer Français. e-Bichelchen bleibt als Vorlage und
+  // Vorschau editierbar, auch wenn die Verbindung noch fehlt; nur Publizieren
+  // braucht e-Bichelchen-Login.
   try{
     state.options=state.options||{};
     window._openPreviewId="";
     state.options.templateLang="fr";
-    const em=emailEnabled(), eb=ebichelchenEnabled();
-    state.options.templateMode = (eb && !ebModelLocked()) ? "ebichelchen" : "confirmation";
+    const em=emailEnabled(), eb=ebichelchenEnabled(), wf=workflowMode();
+    if(eb && (!em || wf==="ebichelchen" || wf==="both")) state.options.templateMode="ebichelchen";
+    else state.options.templateMode="confirmation";
     if(!em && !eb) state.options.templateMode="confirmation";
     state.options.previewKind = previewKindForTemplateMode(state.options.templateMode);
     saveState();
@@ -1614,9 +1615,10 @@ function ebichelchenEnabled(){ return !!(state.options && state.options.ebichelc
 function emailEnabled(){ return !state.options || state.options.emailEnabled!==false; }
 function currentTemplateMode(){
   const m=state.options && state.options.templateMode;
-  // Quand seul e-Bichelchen est actif, l'éditeur montre toujours le modèle e-Bichelchen.
+  // v200: le modèle et les aperçus e-Bichelchen sont éditables même sans connexion.
+  // Seule la publication reste bloquée.
   if(!emailEnabled() && ebichelchenEnabled()) return "ebichelchen";
-  if(m==="ebichelchen" && ebichelchenEnabled() && !ebModelLocked()) return "ebichelchen";
+  if(m==="ebichelchen" && ebichelchenEnabled()) return "ebichelchen";
   if(m==="reminder" && emailEnabled() && state.options && state.options.reminderEnabled!==false) return "reminder";
   return "confirmation";
 }
@@ -1962,16 +1964,14 @@ function workflowMode(){
 function modeNeedsEmail(mode){ return mode==="email" || mode==="both"; }
 function modeNeedsEb(mode){ return mode==="ebichelchen" || mode==="both"; }
 function ebModelLocked(){
-  // v198: en mode complet, e-Bichelchen reste visible mais verrouillé tant que
-  // la connexion/classe e-Bichelchen n'est pas prête. On peut préparer les e-mails
-  // et charger le CSV sans montrer des actions e-Bichelchen qui ne fonctionneraient pas encore.
-  let isBoth=false, ebOn=false;
-  try{ isBoth = workflowMode()==="both"; ebOn = ebichelchenEnabled(); }catch(e){ return false; }
-  if(!isBoth || !ebOn) return false;
-  try{ return !ebReady(); }catch(e){ return true; }
+  // v200: le modèle e-Bichelchen n'est plus verrouillé par le login.
+  // La préparation locale est libre ; seule la publication exige une connexion prête.
+  return false;
 }
 function canUseEbMessages(){
-  try{ return ebichelchenEnabled() && !ebModelLocked(); }catch(e){ return ebichelchenEnabled(); }
+  // v200: e-Bichelchen-Nachrichten dürfen auch ohne Verbindung vorbereitet
+  // und in der Vorschau bearbeitet werden. Nur das Publizieren prüft ebReady().
+  try{ return ebichelchenEnabled(); }catch(e){ return false; }
 }
 function modeLabel(mode){ return mode==="ebichelchen" ? "Uniquement e-Bichelchen" : (mode==="email" ? "Uniquement e-mail" : (mode==="both" ? "e-Bichelchen + e-mail" : "Aucun mode choisi")); }
 function setupDone(){ return !!(state.options && state.options.setupDone && workflowMode()); }
@@ -1986,9 +1986,9 @@ function setWorkflowMode(mode, opts={}){
   state.options.emailEnabled=modeNeedsEmail(mode);
   state.options.ebichelchenEnabled=modeNeedsEb(mode);
   state.options.templateLang="fr";
-  // v198: en mode complet, commencer sur e-Bichelchen seulement si la connexion
-  // e-Bichelchen est prête ; sinon on démarre sur E-mail + Français.
-  if(mode==="both") state.options.templateMode = ebReady() ? "ebichelchen" : "confirmation";
+  // v200: les modèles et aperçus e-Bichelchen restent éditables sans connexion ;
+  // seule la publication exige e-Bichelchen.
+  if(mode==="both") state.options.templateMode = "ebichelchen";
   else if(modeNeedsEb(mode)) state.options.templateMode="ebichelchen";
   else if(modeNeedsEmail(mode)) state.options.templateMode="confirmation";
   syncPreviewKindToTemplateMode(state.options.templateMode);
@@ -3314,10 +3314,7 @@ function bindSettings(){
   window._reloadTemplateEditor=reloadTemplateEditor;
   function switchTemplateMode(mode){
     mode=normalizeTemplateMode(mode);
-    if(mode==="ebichelchen" && (!ebichelchenEnabled() || ebModelLocked())){
-      if(ebModelLocked()) showToast("e-Bichelchen n’est pas connecté. Connectez-vous dans l’onglet Démarrage.");
-      mode="confirmation";
-    }
+    if(mode==="ebichelchen" && !ebichelchenEnabled()) mode="confirmation";
     if(mode==="reminder" && (!emailEnabled() || state.options.reminderEnabled===false)) mode="confirmation";
     const oldMode=currentTemplateMode();
     const oldPreview=state.options.previewKind||"";
@@ -3330,7 +3327,7 @@ function bindSettings(){
   }
   window._switchTemplateModeFromPreview=function(mode, previewKind){
     mode=normalizeTemplateMode(mode);
-    if(mode==="ebichelchen" && (!ebichelchenEnabled() || ebModelLocked())) mode="confirmation";
+    if(mode==="ebichelchen" && !ebichelchenEnabled()) mode="confirmation";
     if(mode==="reminder" && (!emailEnabled() || state.options.reminderEnabled===false)) mode="confirmation";
     commitEditor(body);
     state.options.templateMode=mode;
@@ -3616,7 +3613,10 @@ function buildEbOnlyMessages(){
       // un certain temps, les élèves déjà importés restent « liés » : les cases et le
       // « Tout sélectionner » restent disponibles. La publication réelle reste protégée
       // par ebReady() au moment de l'envoi.
-      const matchedId=ebMatchedIdFor(stu);
+      // v200: sans connexion e-Bichelchen, on ne connaît pas encore la correspondance
+      // réelle. On garde quand même le message sélectionnable/éditable pour permettre
+      // la préparation ; la publication restera bloquée jusqu'à la connexion.
+      const matchedId=ebReady() ? ebMatchedIdFor(stu) : "__pending_eb_login__";
       msgs.push({id:apptKey, kind:"eb", student:full, studentDisplay:displayStudentName(full), date:d, slotStart:s.start, slotEnd:s.end, lang, ebTitle:title, ebDesc:desc, defaultEbTitle:defaultTitle, defaultEbDesc:defaultDesc, matchedId});
     });
   });
@@ -4019,7 +4019,7 @@ function mailBannerHtml(){
   const banners=[];
   if(!em && !eb) return '<div class="banner-group"><div class="banner warn">Aucun canal d’envoi actif. Choisissez un mode dans « Démarrage ».</div></div>';
   if(em && !account && currentMsgs.some(m=>m.kind!=="eb")) banners.push('<div class="banner warn">Veuillez vous connecter avec votre compte Microsoft (bouton ci-dessus) pour envoyer les e-mails.</div>');
-  if(eb && !ebReady()) banners.push('<div class="banner warn">Connectez e-Bichelchen ci-dessus pour pouvoir publier les messages.</div>');
+  if(eb && !ebReady()) banners.push('<div class="banner warn">e-Bichelchen n’est pas connecté. Connectez-vous dans l’onglet Démarrage.</div>');
   if(currentMsgs.length===0) banners.push('<div class="banner warn">Aucun envoi prêt. Attribuez des élèves dans l’onglet « Calendrier »'+(em?' et saisissez les adresses e-mail':'')+'.</div>');
   if(em && missing.length){
     const missingHtml=[...new Set(missing)].map(n=>`<span class="truncated-inline" title="${esc(n)}">${esc(displayStudentName(n))}</span>`).join(", ");
@@ -4585,7 +4585,7 @@ function emailToggleHandler(on){
 function ebToggleHandler(on){
   state.options.ebichelchenEnabled=!!on;
   if(!on && state.options.templateMode==="ebichelchen") state.options.templateMode = emailEnabled() ? "confirmation" : "confirmation";
-  if(on) state.options.templateMode = ebModelLocked() ? "confirmation" : "ebichelchen";
+  if(on) state.options.templateMode = "ebichelchen";
   const em=state.options.emailEnabled, eb=state.options.ebichelchenEnabled;
   state.options.workflowMode = em && eb ? "both" : (eb ? "ebichelchen" : (em ? "email" : ""));
   state.options.setupDone = !!state.options.workflowMode;
