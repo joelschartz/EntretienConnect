@@ -56,6 +56,16 @@ HEARTBEAT_TIMEOUT_SECONDS = 0  # v177: kein automatischer Timeout; Helper bleibt
 STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS = 0
 
 
+def _helper_version():
+    # v185: version du helper lue depuis VERSION.txt (une seule source de vérité,
+    # plus de numéros codés en dur qui dérivent de la version réelle).
+    try:
+        with open(os.path.join(DATA_DIR, "VERSION.txt"), encoding="utf-8") as f:
+            return int(f.read().strip().lstrip("vV") or 0)
+    except Exception:
+        return 0
+
+
 def _port_is_in_use_error(exc):
     return isinstance(exc, OSError) and getattr(exc, "errno", None) in (errno.EADDRINUSE, 48, 98, 10048)
 
@@ -544,7 +554,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": 181, "ebichelchen": EB_AVAILABLE})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "ebichelchen": EB_AVAILABLE})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":

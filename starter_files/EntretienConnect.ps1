@@ -40,6 +40,10 @@ $script:ShutdownRequested = $false
 $script:HeartbeatTimeoutSeconds = 0   # v177: kein automatischer Timeout
 $script:LastWatchdogTickUtc = $null
 $script:StartupNoHeartbeatTimeoutSeconds = 0
+# v185: version du helper lue depuis VERSION.txt — une seule source de vérité,
+# plus de numéros codés en dur qui dérivent de la version réelle.
+$script:HelperVersion = 0
+try { $script:HelperVersion = [int](((Get-Content (Join-Path $ScriptDir "VERSION.txt") -ErrorAction Stop | Select-Object -First 1)).Trim().TrimStart('v','V')) } catch {}
 
 function Log($msg) {
     $line = ((Get-Date -Format "HH:mm:ss") + "  " + $msg)
@@ -566,7 +570,7 @@ function Handle-Request($stream, $req) {
         return
     }
     if ($path -eq "/api/graph/capabilities") {
-        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = 181 }
+        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = $script:HelperVersion }
         return
     }
     if ($path -eq "/api/graph/account") {
@@ -606,7 +610,9 @@ function Handle-Request($stream, $req) {
         Send-Json $stream @{ ok = $true; authUrl = ($Base + "/authorize?" + $q) }
         return
     }
-    $isOAuthRoot = (($path -eq "/" -or $path -eq "") -and ($req.Path -match '(\?|&)(code|state|error)='))
+    # v185: aligné sur le helper Python — il faut state ET code/error, sinon une simple
+    # URL « /?state=x » afficherait la page d'erreur OAuth au lieu de l'app.
+    $isOAuthRoot = (($path -eq "/" -or $path -eq "") -and ($req.Path -match '[?&]state=') -and ($req.Path -match '[?&](code|error)='))
     if ($path -eq "/oauth/redirect" -or $isOAuthRoot) {
         $qs = @{}
         if ($req.Path -match '\?') {
@@ -844,7 +850,7 @@ try {
 
 try { [System.IO.File]::WriteAllText($LogFile, ("=== Start " + (Get-Date) + " ===" + [Environment]::NewLine), [Text.Encoding]::UTF8) } catch {}
 Write-Host "============================================================"
-Write-Host "  EntretienConnect est lancé.   [Version : v177 GitHub Starter - sans Python]"
+Write-Host ("  EntretienConnect est lancé.   [Version : v" + $script:HelperVersion + " GitHub Starter - sans Python]")
 Write-Host "  Dans le navigateur :  $url"
 Write-Host "  Laissez cette fenêtre ouverte. La fermer = quitter."
 Write-Host "============================================================"
