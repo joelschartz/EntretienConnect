@@ -1,5 +1,5 @@
 {
-  "version": "v205",
+  "version": "v207",
   "files": [
     {
       "target": "EntretienConnect-Start-Hidden.bat",
@@ -28,7 +28,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "1baf45ef9b2d790f0004af1e6183fb2332071fb943a8932c11fa2e1c14496845",
+      "sha256": "5fff9c121b6a1f0c5815f82dbf46542624315ccd5219978a444775961910a338",
       "size": 4
     },
     {
@@ -46,8 +46,8 @@
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "7d228ee4959486e7b9cac6e8e4617b3f0a9067b56bcf908154e4a8d7aa64b2a2",
-      "size": 66982
+      "sha256": "3c85a42c7a35c3cbfa487007d7d617af7468cc99127e36c8a0441fee08098339",
+      "size": 67759
     }
   ]
 }

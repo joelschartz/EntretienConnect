@@ -93,6 +93,9 @@ else:
     DATA_DIR = RES_DIR
 LOCAL_CSV_NAME = "eleves_contacts.csv"
 
+# Die CSV wird bewusst nicht in Downloads/Desktop/Dokumente gesucht.
+# Erwartet wird nur: eleves_contacts.csv liegt neben dem Starter / der App
+# oder in einem explizit vom Starter gesetzten Ordner.
 def _local_csv_candidate_paths():
     # Le fichier est prévu à côté du lanceur (EntretienConnect_MAC.app ou EntretienConnect_WINDOWS.vbs).
     # v204: le chemin peut aussi être fourni par le lanceur Mac .app via ENTRETIENCONNECT_CSV_DIR.
@@ -736,8 +739,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         """Liefert die optionale lokale CSV aus dem Starter-Ordner.
 
         Erwarteter Ort:
-        - neben EntretienConnect_MAC.command / EntretienConnect_WINDOWS.vbs
-        - Fallback: im Helper-Ordner oder im dauerhaften App-Speicher
+        - eleves_contacts.csv liegt direkt neben EntretienConnect_MAC.app / EntretienConnect_WINDOWS.vbs
+        - kein Raten in Downloads/Desktop/Dokumente
+        - technischer Fallback: Helper-Ordner oder dauerhafter App-Speicher
         """
         candidates = _local_csv_candidate_paths()
         found_path = None
@@ -1241,11 +1245,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     # ------------------------------------------------------------------ util
     def _json(self, code, obj):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError, OSError) as exc:
+            # Browser/alter Helper wurde gerade geschlossen; Antwort kann dann ins Leere laufen.
+            # Das ist harmlos und soll nicht als dramatischer Traceback im Log erscheinen.
+            if isinstance(exc, (BrokenPipeError, ConnectionResetError)) or getattr(exc, "errno", None) in (errno.EPIPE, errno.ECONNRESET, 54, 10053, 10054):
+                return
+            raise
 
 
 class Server(socketserver.ThreadingTCPServer):
