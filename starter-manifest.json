@@ -1,16 +1,16 @@
 {
-  "version": "v203",
+  "version": "v204",
   "files": [
     {
       "target": "EntretienConnect-Start-Hidden.bat",
       "url": "starter_files/EntretienConnect-Start-Hidden.bat",
-      "sha256": "2e949dcb684b13facb70b9e8226a8ecc0bd812b096301e015c3b400a75470bca",
+      "sha256": "97fd66630d2cf4677d245d561408879b64c545fcb2380d02fed5cb895b64ea16",
       "size": 778
     },
     {
       "target": "EntretienConnect-Start.bat",
       "url": "starter_files/EntretienConnect-Start.bat",
-      "sha256": "3c0b1ae93294eb9cb93c695085940173f89fc7cde570dc7c6fcd6cbbff320741",
+      "sha256": "3a0f2564fc5bc37ae13a3c112c395fb88d662788dd6ea7c24c72618e70ec4125",
       "size": 1566
     },
     {
@@ -28,7 +28,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "502f791e1c861c092a581433ce8cc8eda736f8a5995cf730b2415602338bb868",
+      "sha256": "a726825a05fb7b0ab604c666dbdb252d0889d15d25c37843e2122d515aec3aea",
       "size": 4
     },
     {
@@ -46,8 +46,8 @@
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "ef4febe0ba9fa7ee62891021af8598dbc60c3cc4cb36a8501e256b5d84a6b656",
-      "size": 66706
+      "sha256": "7d228ee4959486e7b9cac6e8e4617b3f0a9067b56bcf908154e4a8d7aa64b2a2",
+      "size": 66982
     }
   ]
 }

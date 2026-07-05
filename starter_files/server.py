@@ -53,7 +53,7 @@ def _initial_port():
 PORT = _initial_port()
 last_heartbeat_time = None
 server_started_time = time.time()
-HEARTBEAT_TIMEOUT_SECONDS = 180  # v203: Browser-Heartbeat; Helper beendet sich ca. 3 Minuten nach geschlossenem Tab
+HEARTBEAT_TIMEOUT_SECONDS = 180  # v204: Browser-Heartbeat; Helper beendet sich ca. 3 Minuten nach geschlossenem Tab
 STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS = 300  # wenn der Browser gar nicht startet: nach ca. 5 Minuten beenden
 
 
@@ -94,9 +94,15 @@ else:
 LOCAL_CSV_NAME = "eleves_contacts.csv"
 
 def _local_csv_candidate_paths():
-    # Le fichier est prévu à côté de EntretienConnect_MAC.command / EntretienConnect_WINDOWS.vbs.
-    # On garde aussi quelques emplacements de secours pour les anciens starters.
+    # Le fichier est prévu à côté du lanceur (EntretienConnect_MAC.app ou EntretienConnect_WINDOWS.vbs).
+    # v204: le chemin peut aussi être fourni par le lanceur Mac .app via ENTRETIENCONNECT_CSV_DIR.
     paths = []
+    try:
+        csv_dir = os.environ.get("ENTRETIENCONNECT_CSV_DIR")
+        if csv_dir:
+            paths.append(os.path.join(csv_dir, LOCAL_CSV_NAME))
+    except Exception:
+        pass
     try:
         paths.append(os.path.join(os.path.dirname(DATA_DIR), LOCAL_CSV_NAME))
     except Exception:
@@ -1317,7 +1323,7 @@ def update_helper_from_github():
     du helper sont remplacés au démarrage; une mise à jour de server.py ou
     ebichelchen.py est donc active au prochain démarrage.
     """
-    if getattr(sys, "frozen", False):
+    if getattr(sys, "frozen", False) or os.environ.get("ENTRETIENCONNECT_HELPER_READONLY") == "1":
         print("Mise à jour du helper ignorée: le Starter signé reste stable; l’interface se met à jour dans le dossier utilisateur.")
         return []
     base = GITHUB_UI_URL.rstrip("/") + "/"
