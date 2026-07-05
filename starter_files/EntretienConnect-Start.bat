@@ -1,10 +1,10 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title EntretienConnect v195 - Start mit Diagnose
+title EntretienConnect v196 - Start mit Diagnose
 
 echo ============================================================
-echo EntretienConnect v195 - sichtbarer Start / Diagnose
+echo EntretienConnect v196 - sichtbarer Start / Diagnose
 echo Ordner: %CD%
 echo ============================================================
 echo.

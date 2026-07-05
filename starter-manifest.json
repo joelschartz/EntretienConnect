@@ -1,16 +1,16 @@
 {
-  "version": "v195",
+  "version": "v196",
   "files": [
     {
       "target": "EntretienConnect-Start-Hidden.bat",
       "url": "starter_files/EntretienConnect-Start-Hidden.bat",
-      "sha256": "87647d70bc2bc668e9c064263046f49163534b182985f5075ecd884e21795511",
+      "sha256": "f09dbde1ba47bfa918c51c5633ad22c7b4389672b5677be06fdd899c019ff9ad",
       "size": 778
     },
     {
       "target": "EntretienConnect-Start.bat",
       "url": "starter_files/EntretienConnect-Start.bat",
-      "sha256": "4a5d3cf2d62fd1d2e1dd50f0244b9c41564e06543d50b7bc4ca53abb4b5db92d",
+      "sha256": "1fd67858cf152e848034b5450f8701ec8295f324311ac71faa11759ff49ef4ab",
       "size": 1566
     },
     {
@@ -28,8 +28,8 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "05e925c4cbae304d7a37d7c06115596897c1d23356a5538ccf60175e4b6941c6",
-      "size": 5
+      "sha256": "ade8a619344234ff4d290e5b2889218348f5f44879ae413b75c66f353deaa134",
+      "size": 4
     },
     {
       "target": "cacert.pem",
