@@ -1,5 +1,5 @@
 {
-  "version": "v207",
+  "version": "v208",
   "files": [
     {
       "target": "EntretienConnect-Start-Hidden.bat",
@@ -28,7 +28,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "5fff9c121b6a1f0c5815f82dbf46542624315ccd5219978a444775961910a338",
+      "sha256": "edb185f6dc448ffe5861c47697eb81143f1a07b833724f0c72e69df2adb99ab5",
       "size": 4
     },
     {
