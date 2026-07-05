@@ -1,5 +1,5 @@
 {
-  "version": "v208",
+  "version": "v209",
   "files": [
     {
       "target": "EntretienConnect-Start-Hidden.bat",
@@ -28,7 +28,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "edb185f6dc448ffe5861c47697eb81143f1a07b833724f0c72e69df2adb99ab5",
+      "sha256": "e3c624d042624c20885a2c1d8ee474aab6fcd3e60f1f6bb99005581e6345db2a",
       "size": 4
     },
     {
@@ -40,14 +40,14 @@
     {
       "target": "ebichelchen.py",
       "url": "starter_files/ebichelchen.py",
-      "sha256": "cd78b04174586c5b474f5e14b90233f4c2a32f5a17dfbcab79c63c27dfbd3be7",
-      "size": 71886
+      "sha256": "303c281e87f66d4ac1342a95260c888fa834f01d9e0e19964709dacbf7ae1aae",
+      "size": 71141
     },
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "3c85a42c7a35c3cbfa487007d7d617af7468cc99127e36c8a0441fee08098339",
-      "size": 67759
+      "sha256": "a70182a4f0cdf9d29de417b9ca4c8b66fd8a378809bc58e05af17d12ec5dc007",
+      "size": 68751
     }
   ]
 }

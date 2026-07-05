@@ -794,37 +794,10 @@ def focus_app_tab() -> dict:
     system = platform.system().lower()
 
     if system == "darwin":
-        script = f"""
-set targetBase to "{app_base}"
-set didFind to false
-
-tell application "Google Chrome"
-    repeat with w in windows
-        set tabIndex to 0
-        repeat with t in tabs of w
-            set tabIndex to tabIndex + 1
-            try
-                set u to URL of t
-                if (u is targetBase) or (u starts with (targetBase & "/")) then
-                    set active tab index of w to tabIndex
-                    set index of w to 1
-                    set didFind to true
-                    exit repeat
-                end if
-            end try
-        end repeat
-        if didFind then exit repeat
-    end repeat
-    if didFind then activate
-end tell
-
-return didFind
-"""
-        proc = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=5)
-        if proc.returncode != 0:
-            raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "AppleScript konnte Chrome nicht fokussieren.")
-        found = "true" in proc.stdout.lower()
-        return {"method": "osascript", "foundExistingTab": found, "message": proc.stdout.strip(), "openedNewTab": False}
+        # Ne pas utiliser AppleScript ici: cela déclenche la demande macOS
+        # « contrôler Google Chrome ». L'app reste utilisable; on ne force
+        # simplement plus le retour automatique au tab EntretienConnect.
+        return {"method": "none", "foundExistingTab": False, "message": "AppleScript deaktiviert, um macOS-Automationsabfrage zu vermeiden.", "openedNewTab": False}
 
     if system == "windows":
         # Ohne Zusatzpakete (kein pywin32): Windows-Fenster mit ctypes suchen.
