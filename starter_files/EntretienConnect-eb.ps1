@@ -1,4 +1,4 @@
-﻿# =====================================================================
+# =====================================================================
 # EntretienConnect-eb.ps1
 # Isolierter e-Bichelchen-Helfer. Wird nur bei e-Bichelchen-Aktionen
 # gestartet, damit die Haupt-App auch bei e-Bichelchen-Fehlern startet.

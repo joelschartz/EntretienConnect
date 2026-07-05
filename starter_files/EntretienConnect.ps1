@@ -1,8 +1,8 @@
-﻿# =====================================================================
+# =====================================================================
 #  EntretienConnect - lokaler Helfer fuer Windows (PowerShell)
 #  Ersetzt server.py: liefert graph.html aus und erledigt Login (Geraetecode)
 #  + Versand ueber Microsoft Graph. Kein Python, keine Installation, kein Admin.
-#  Start ueber: EntretienConnect starten.vbs oder EntretienConnect-Start.bat
+#  Start ueber: EntretienConnect.vbs oder EntretienConnect-Start.bat
 # =====================================================================
 
 param([switch]$NoAutoOpen)
@@ -15,7 +15,8 @@ $ClientId = "14d82eec-204b-4c2f-b7e8-296a70dab67e"   # Microsoft Graph Command L
 $Tenant = "organizations"
 $Scope  = "https://graph.microsoft.com/Mail.Send offline_access"
 $Base   = "https://login.microsoftonline.com/$Tenant/oauth2/v2.0"
-$Port   = 8765
+$PreferredPort = 8765
+$Port   = $PreferredPort
 $UiBase = "https://joelschartz.github.io/EntretienConnect/"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -28,6 +29,7 @@ $StateFile = Join-Path $RuntimeDir "state.json"
 $BackupDir = Join-Path $RuntimeDir "backups"
 try { if (-not (Test-Path $BackupDir -PathType Container)) { New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null } } catch {}
 $LogFile   = Join-Path $RuntimeDir "EntretienConnect-log.txt"
+$PidFile   = Join-Path $RuntimeDir "helper.pid"
 $EbCacheFile = Join-Path $RuntimeDir "ebichelchen_cache.json"
 $script:Pending = $null
 $script:PendingWeb = $null   # v176: état PKCE du login sans code (state/verifier/redirect)
@@ -51,6 +53,126 @@ function Log($msg) {
     $line = ((Get-Date -Format "HH:mm:ss") + "  " + $msg)
     Write-Host $line
     try { [System.IO.File]::AppendAllText($LogFile, $line + [Environment]::NewLine, [Text.Encoding]::UTF8) } catch {}
+}
+
+
+function Test-EntretienConnectPortOpen {
+    try {
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $iar = $tcp.BeginConnect("127.0.0.1", $Port, $null, $null)
+        $ok = $iar.AsyncWaitHandle.WaitOne(350, $false)
+        if ($ok) { $tcp.EndConnect($iar); $tcp.Close(); return $true }
+        try { $tcp.Close() } catch {}
+    } catch {}
+    return $false
+}
+function Wait-EntretienConnectPortClosed($msTotal) {
+    $deadline = (Get-Date).AddMilliseconds($msTotal)
+    while ((Get-Date) -lt $deadline) {
+        if (-not (Test-EntretienConnectPortOpen)) { return $true }
+        Start-Sleep -Milliseconds 150
+    }
+    return (-not (Test-EntretienConnectPortOpen))
+}
+function Stop-OldEntretienConnectHelpers {
+    # v195: robuste Startbereinigung. Nutzer müssen nicht manuell beenden.
+    try {
+        $cap = $null
+        try { $cap = Invoke-WebRequest -Uri ("http://127.0.0.1:$Port/api/graph/capabilities") -UseBasicParsing -TimeoutSec 1 } catch {}
+        if ($cap -and $cap.StatusCode -eq 200 -and (('' + $cap.Content) -match 'deferredSend|appVersion|EntretienConnect')) {
+            Log "Alter EntretienConnect-Helper wird sauber beendet."
+            try { Invoke-WebRequest -Uri ("http://127.0.0.1:$Port/api/app/shutdown") -UseBasicParsing -TimeoutSec 1 | Out-Null } catch {}
+            [void](Wait-EntretienConnectPortClosed 3500)
+        }
+    } catch {}
+    try {
+        if (Test-Path $PidFile -PathType Leaf) {
+            $oldPid = 0
+            try { $oldPid = [int]((Get-Content -LiteralPath $PidFile -ErrorAction Stop | Select-Object -First 1).Trim()) } catch {}
+            if ($oldPid -and $oldPid -ne $PID) {
+                try {
+                    $p = Get-Process -Id $oldPid -ErrorAction SilentlyContinue
+                    if ($p) {
+                        Log ("Alter EntretienConnect-Prozess wird beendet: PID " + $oldPid)
+                        Stop-Process -Id $oldPid -Force -ErrorAction SilentlyContinue
+                        Start-Sleep -Milliseconds 500
+                    }
+                } catch {}
+            }
+            try { Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue } catch {}
+        }
+    } catch {}
+    try {
+        $me = $PID
+        $parentPid = 0
+        try { $parentPid = [int]((Get-CimInstance Win32_Process -Filter ("ProcessId=" + $me) -ErrorAction SilentlyContinue).ParentProcessId) } catch {}
+        $known = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.ProcessId -ne $me -and $_.ProcessId -ne $parentPid -and $_.CommandLine -and (
+                $_.CommandLine -like '*EntretienConnect.ps1*' -or
+                $_.CommandLine -like '*EntretienConnect-Start-Hidden.bat*' -or
+                $_.CommandLine -like '*_EntretienConnect*' -or
+                $_.CommandLine -like '*.EntretienConnect*' -or
+                $_.CommandLine -like '*server.py*'
+            )
+        }
+        foreach ($proc in @($known)) {
+            try { Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue } catch {}
+        }
+        if (@($known).Count -gt 0) { Start-Sleep -Milliseconds 700 }
+    } catch {}
+    try {
+        if (Test-EntretienConnectPortOpen) {
+            $owners = @()
+            try { $owners = Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue } catch {}
+            foreach ($c in @($owners)) {
+                $opid = [int]$c.OwningProcess
+                if ($opid -and $opid -ne $PID) {
+                    try {
+                        $wp = Get-CimInstance Win32_Process -Filter ("ProcessId=" + $opid) -ErrorAction SilentlyContinue
+                        $cmd = "" + $wp.CommandLine
+                        if ($cmd -like '*EntretienConnect*' -or $cmd -like '*server.py*') {
+                            Log ("Port $Port war noch belegt. Prozess wird beendet: PID " + $opid)
+                            Stop-Process -Id $opid -Force -ErrorAction SilentlyContinue
+                        }
+                    } catch {}
+                }
+            }
+            [void](Wait-EntretienConnectPortClosed 2000)
+        }
+    } catch {}
+}
+
+function New-EntretienConnectListener {
+    param([int]$Preferred)
+    # v195: preferred port first, then safe fallback ports.
+    # A foreign process on 8765 must not be killed; in that case we switch ports.
+    $ports = @($Preferred)
+    try { $ports += @(8766..8785) } catch {}
+    $ports += @(0)  # ask Windows for any free local port as final fallback
+    $lastError = $null
+    foreach ($p in $ports) {
+        try {
+            $l = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, [int]$p)
+            $l.Start()
+            $actual = ([System.Net.IPEndPoint]$l.LocalEndpoint).Port
+            return [pscustomobject]@{ Listener = $l; Port = [int]$actual; Fallback = ([int]$actual -ne [int]$Preferred) }
+        } catch {
+            $lastError = $_.Exception.Message
+        }
+    }
+    throw ("Aucun port local libre pour EntretienConnect. Dernière erreur: " + $lastError)
+}
+
+function Write-EntretienConnectPidFile {
+    try { [System.IO.File]::WriteAllText($PidFile, (("" + $PID) + [Environment]::NewLine + ("" + $Port) + [Environment]::NewLine), [Text.Encoding]::UTF8) } catch {}
+}
+function Remove-EntretienConnectPidFile {
+    try {
+        if (Test-Path $PidFile -PathType Leaf) {
+            $first = (Get-Content -LiteralPath $PidFile -ErrorAction SilentlyContinue | Select-Object -First 1)
+            if (("" + $first).Trim() -eq ("" + $PID)) { Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue }
+        }
+    } catch {}
 }
 
 function Get-VersionNumber($value) {
@@ -602,7 +724,7 @@ function Handle-Request($stream, $req) {
         return
     }
     if ($path -eq "/api/graph/capabilities") {
-        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = $script:HelperVersion }
+        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = $script:HelperVersion; port = $Port }
         return
     }
     if ($path -eq "/api/graph/account") {
@@ -864,20 +986,23 @@ function Handle-Request($stream, $req) {
 # Interface chargée depuis GitHub, puis servie localement.
 # v138: arrêt automatique quand l’onglet principal est fermé; une nouvelle ouverture de l’app ne doit pas afficher d’anciennes classes
 # e-Bichelchen comme si l’utilisateur était encore connecté.
+Stop-OldEntretienConnectHelpers
 Clear-EbCache
 Update-UiFromGitHub
-$url = "http://127.0.0.1:$Port/graph.html"
 
 try {
-    $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $Port)
-    $listener.Start()
+    $started = New-EntretienConnectListener -Preferred $PreferredPort
+    $listener = $started.Listener
+    $Port = [int]$started.Port
+    $url = "http://127.0.0.1:$Port/graph.html"
+    Write-EntretienConnectPidFile
+    if ($started.Fallback) {
+        Log ("Port " + $PreferredPort + " était occupé. EntretienConnect utilise automatiquement le port " + $Port + ".")
+    }
 } catch {
-    # Si le serveur tourne déjà (par exemple lancé en arrière-plan par le VBS),
-    # on ouvre simplement la page existante au lieu de bloquer avec une erreur cachée.
     Write-Host ""
-    Write-Host "Le serveur local semble déjà lancé. Ouverture du navigateur..."
-    if (-not $NoAutoOpen) { try { Start-Process $url } catch {} }
-    return
+    Write-Host ("EntretienConnect konnte keinen lokalen Port öffnen: " + $_.Exception.Message)
+    throw
 }
 
 try { [System.IO.File]::WriteAllText($LogFile, ("=== Start " + (Get-Date) + " ===" + [Environment]::NewLine), [Text.Encoding]::UTF8) } catch {}
@@ -925,4 +1050,5 @@ while (-not $script:ShutdownRequested) {
     } catch {}
 }
 try { $listener.Stop() } catch {}
+Remove-EntretienConnectPidFile
 Log "EntretienConnect local helper stopped."

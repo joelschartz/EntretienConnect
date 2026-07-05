@@ -144,6 +144,25 @@ try:
 except Exception:
     STATE_BACKUP_DIR = PERSIST_DIR
 
+PID_FILE = os.path.join(PERSIST_DIR, "helper.pid")
+
+def _write_pid_file(port):
+    try:
+        with open(PID_FILE, "w", encoding="utf-8") as f:
+            f.write(str(os.getpid()) + "\n" + str(port) + "\n")
+    except Exception:
+        pass
+
+def _remove_pid_file():
+    try:
+        if os.path.exists(PID_FILE):
+            with open(PID_FILE, encoding="utf-8") as f:
+                first = (f.readline() or "").strip()
+            if first == str(os.getpid()):
+                os.remove(PID_FILE)
+    except Exception:
+        pass
+
 
 def _as_line(s):
     """Einzeiliger String (z. B. Betreff) fuer ein AppleScript-Literal."""
@@ -583,7 +602,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "ebichelchen": EB_AVAILABLE})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -1358,6 +1377,7 @@ def main():
         print(f"  Ouvrir dans le navigateur :  {url}")
         print("  Pour quitter : fermez cette fenêtre (ou Ctrl+C)")
         print("=" * 56)
+        _write_pid_file(actual_port)
         threading.Timer(1.0, lambda: _open_in_browser(url)).start()
         def _watchdog():
             global last_heartbeat_time
@@ -1393,6 +1413,8 @@ def main():
             httpd.serve_forever()
         except KeyboardInterrupt:
             print("\nTerminé.")
+        finally:
+            _remove_pid_file()
 
 
 if __name__ == "__main__":
