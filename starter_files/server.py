@@ -616,6 +616,55 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as exc:
             return self._json(500, {"ok": False, "error": str(exc)})
 
+
+    def handle_app_local_csv(self):
+        """Liefert die optionale lokale CSV aus dem Starter-Ordner.
+
+        Erwarteter Ort:
+        - neben Starten.command / 0_START_HIER_EntretienConnect.vbs
+        - Fallback: im Helper-Ordner oder im dauerhaften App-Speicher
+        """
+        candidates = _local_csv_candidate_paths()
+        found_path = None
+        for p in candidates:
+            try:
+                if p and os.path.isfile(p):
+                    found_path = p
+                    break
+            except Exception:
+                pass
+        if not found_path:
+            return self._json(200, {"ok": True, "found": False, "filename": LOCAL_CSV_NAME, "checked": candidates})
+        try:
+            with open(found_path, "rb") as f:
+                raw = f.read()
+            text = None
+            encoding = ""
+            for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+                try:
+                    text = raw.decode(enc)
+                    encoding = enc
+                    break
+                except Exception:
+                    continue
+            if text is None:
+                text = raw.decode("utf-8", "replace")
+                encoding = "utf-8-replace"
+            st = os.stat(found_path)
+            return self._json(200, {
+                "ok": True,
+                "found": True,
+                "filename": LOCAL_CSV_NAME,
+                "path": found_path,
+                "size": st.st_size,
+                "mtime": st.st_mtime,
+                "encoding": encoding,
+                "sha256": hashlib.sha256(raw).hexdigest(),
+                "content": text,
+            })
+        except Exception as exc:
+            return self._json(500, {"ok": False, "found": False, "error": str(exc), "filename": LOCAL_CSV_NAME, "checked": candidates})
+
     def handle_app_session_status(self):
         acct = None
         signed = False
