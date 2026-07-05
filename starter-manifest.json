@@ -1,23 +1,17 @@
 {
-  "version": "v189",
+  "version": "v190",
   "files": [
     {
-      "target": "server.py",
-      "url": "starter_files/server.py",
-      "sha256": "4b9fb9fd6df54f202a99e0da89e093d8b4e7a26d95d142921fbb416b9262972b",
-      "size": 55879
+      "target": "EntretienConnect-Start-Hidden.bat",
+      "url": "starter_files/EntretienConnect-Start-Hidden.bat",
+      "sha256": "3427315691350efdf116f299dab2302a81909416421d41674a0b09b00e1df830",
+      "size": 778
     },
     {
-      "target": "ebichelchen.py",
-      "url": "starter_files/ebichelchen.py",
-      "sha256": "cd78b04174586c5b474f5e14b90233f4c2a32f5a17dfbcab79c63c27dfbd3be7",
-      "size": 71886
-    },
-    {
-      "target": "EntretienConnect.ps1",
-      "url": "starter_files/EntretienConnect.ps1",
-      "sha256": "f922ba5dc99812203fa69433969cbb39442584cd2b2c16dd4d86891aa4d1109d",
-      "size": 44363
+      "target": "EntretienConnect-Start.bat",
+      "url": "starter_files/EntretienConnect-Start.bat",
+      "sha256": "700f1023c22baa100f2d1d64f017e6168c5e97191a6b5014d021c32b92aa1a74",
+      "size": 1566
     },
     {
       "target": "EntretienConnect-eb.ps1",
@@ -26,16 +20,16 @@
       "size": 35281
     },
     {
-      "target": "EntretienConnect-Start.bat",
-      "url": "starter_files/EntretienConnect-Start.bat",
-      "sha256": "5f2fb25698945b4ecc2c6d67f68624127f49d7eb8e9b2ae23762a08525934deb",
-      "size": 1566
+      "target": "EntretienConnect.ps1",
+      "url": "starter_files/EntretienConnect.ps1",
+      "sha256": "93a9972104a9ab4b90dac90bdb0e7d45dccf5cfce28d04225052f990354f3ac7",
+      "size": 46133
     },
     {
-      "target": "EntretienConnect-Start-Hidden.bat",
-      "url": "starter_files/EntretienConnect-Start-Hidden.bat",
-      "sha256": "24fd90233901e82ed97469463843e82b6b8b951dca573f065108c0a5233585fa",
-      "size": 778
+      "target": "VERSION.txt",
+      "url": "starter_files/VERSION.txt",
+      "sha256": "6a45f58268c69efaaa0dfb3f1ccc489dfba2f1ac97091cea102e566685eea40a",
+      "size": 5
     },
     {
       "target": "cacert.pem",
@@ -44,10 +38,16 @@
       "size": 236095
     },
     {
-      "target": "VERSION.txt",
-      "url": "starter_files/VERSION.txt",
-      "sha256": "e2f9e4990386a68bb022d878f2a6b8f0ea5cf65b40d9a1bd90a49e1c851aad6d",
-      "size": 5
+      "target": "ebichelchen.py",
+      "url": "starter_files/ebichelchen.py",
+      "sha256": "cd78b04174586c5b474f5e14b90233f4c2a32f5a17dfbcab79c63c27dfbd3be7",
+      "size": 71886
+    },
+    {
+      "target": "server.py",
+      "url": "starter_files/server.py",
+      "sha256": "564fd44f9bfaad2567e126f78438c1d626481e80441ff5a83b71e075c0951be7",
+      "size": 56817
     }
   ]
 }

@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 #  EntretienConnect - lokaler Helfer fuer Windows (PowerShell)
 #  Ersetzt server.py: liefert graph.html aus und erledigt Login (Geraetecode)
 #  + Versand ueber Microsoft Graph. Kein Python, keine Installation, kein Admin.
@@ -19,6 +19,8 @@ $Port   = 8765
 $UiBase = "https://joelschartz.github.io/EntretienConnect/"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$AppRoot = Split-Path -Parent $ScriptDir
+$LocalCsvName = "eleves_contacts.csv"
 $RuntimeDir = Join-Path $env:LOCALAPPDATA "EntretienConnect"
 try { if (-not (Test-Path $RuntimeDir -PathType Container)) { New-Item -ItemType Directory -Path $RuntimeDir -Force | Out-Null } } catch { $RuntimeDir = $ScriptDir }
 $TokenFile = Join-Path $RuntimeDir "graph_token.json"
@@ -524,6 +526,21 @@ function Send-Json($stream, $obj) {
     $json = ($obj | ConvertTo-Json -Depth 12 -Compress)
     Send-Bytes $stream "200 OK" "application/json; charset=utf-8" ([Text.Encoding]::UTF8.GetBytes($json))
 }
+function Get-LocalCsvCandidates {
+    $paths = @()
+    try { if ($AppRoot) { $paths += (Join-Path $AppRoot $LocalCsvName) } } catch {}
+    try { if ($ScriptDir) { $paths += (Join-Path $ScriptDir $LocalCsvName) } } catch {}
+    try { if ($RuntimeDir) { $paths += (Join-Path $RuntimeDir $LocalCsvName) } } catch {}
+    $seen = @{}
+    $out = @()
+    foreach ($p in $paths) {
+        try {
+            $full = [System.IO.Path]::GetFullPath($p)
+            if (-not $seen.ContainsKey($full)) { $seen[$full] = $true; $out += $full }
+        } catch {}
+    }
+    return $out
+}
 
 function Handle-Request($stream, $req) {
     $path = ($req.Path -split '\?')[0]
@@ -567,6 +584,21 @@ function Handle-Request($stream, $req) {
                 Send-Json $stream @{ ok = $true; path = $StateFile }
             } catch { Send-Json $stream @{ ok = $false; error = $_.Exception.Message } }
         }
+        return
+    }
+    if ($path -eq "/api/app/local-csv") {
+        try {
+            foreach ($csvPath in (Get-LocalCsvCandidates)) {
+                if (Test-Path -LiteralPath $csvPath -PathType Leaf) {
+                    $item = Get-Item -LiteralPath $csvPath -ErrorAction Stop
+                    if ($item.Length -gt (2 * 1024 * 1024)) { Send-Json $stream @{ ok = $false; found = $true; filename = $LocalCsvName; path = $csvPath; error = "Le fichier CSV est trop volumineux." }; return }
+                    try { $content = [System.IO.File]::ReadAllText($csvPath, [Text.Encoding]::UTF8) } catch { $content = Get-Content -LiteralPath $csvPath -Raw -ErrorAction Stop }
+                    Send-Json $stream @{ ok = $true; found = $true; filename = $LocalCsvName; path = $csvPath; content = $content }
+                    return
+                }
+            }
+            Send-Json $stream @{ ok = $true; found = $false; filename = $LocalCsvName; paths = (Get-LocalCsvCandidates) }
+        } catch { Send-Json $stream @{ ok = $false; found = $false; filename = $LocalCsvName; error = $_.Exception.Message } }
         return
     }
     if ($path -eq "/api/graph/capabilities") {

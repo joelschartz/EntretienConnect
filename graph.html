@@ -276,10 +276,12 @@
   .template-tab{background:#fff;color:var(--muted);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:800}
   .template-tab:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}
   .template-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:none}
+  .template-tab.active:hover{background:var(--accent-d);border-color:var(--accent-d);box-shadow:none}
   .template-tab.reminder-off{background:#f7f8fc;color:#98a2b3;border-color:#e6e9f0;box-shadow:none}
   .template-tab.reminder-off:hover{background:#f1f3f8;color:#6b7280;border-color:#dfe3fc;box-shadow:none}
   .template-tab.reminder-off .rt-check{background:#fff;border-color:#d6dbe8}
-  .template-tab.reminder-on:not(.active){background:#fff;color:var(--accent);border-color:#dfe3fc}
+  .template-tab.reminder-on:not(.active){background:#fff;color:var(--muted);border-color:var(--line)}
+  .template-tab.reminder-on:not(.active):hover{background:var(--accent-soft);color:var(--ink);border-color:#dfe3fc;box-shadow:none}
   .reminder-toggle{display:flex;align-items:center;gap:8px;margin-left:auto;color:var(--muted);font-size:13px;font-weight:750;cursor:pointer}
   .reminder-toggle input{width:16px;height:16px;min-width:16px;margin:0}
   .reminder-note,.template-note{margin:2px 0 12px;font-size:12.5px;color:var(--muted)}
@@ -457,7 +459,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v189</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v190</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -732,7 +734,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 189;
+const APP_VERSION = 190;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1508,6 +1510,7 @@ function clearWorkSession(){
   try{ fetch("/api/eb/cleanup?closeEb=1",{cache:"no-store"}).catch(function(){}); }catch(e){}
   try{ fetch("/api/eb/clear",{cache:"no-store"}).catch(function(){}); }catch(e){}
   state.options.workflowMode="";
+  state.options.localCsvAutoHash="";
   state.options.setupDone=false;
   state.options.emailEnabled=false;
   state.options.ebichelchenEnabled=false;
@@ -1979,6 +1982,7 @@ function setWorkflowMode(mode, opts={}){
   renderSetup();
   renderStudents();
   renderEbPanel();
+  if(modeNeedsEmail(mode)) setTimeout(()=>maybeAutoLoadLocalCsv("workflow"), 250);
   if(typeof window._reloadTemplateEditor==="function") window._reloadTemplateEditor(); else renderMails();
   if(opts.openEb && modeNeedsEb(mode)) ebConnectFlow();
   if(opts.openEmail && modeNeedsEmail(mode)){ const b=document.getElementById("signIn"); if(b) b.click(); }
@@ -2392,46 +2396,78 @@ const _importEbStudentsBtn=document.getElementById("importEbStudentsBtn"); if(_i
 }; }
 const _resetStudents=document.getElementById("resetStudents");
 if(_resetStudents){ _resetStudents.onclick=(e)=>{ if(e) e.preventDefault(); if(!state.students.length){ return; } if(!confirm("Voulez-vous vraiment supprimer tous les élèves de la liste ?\n\nLes rendez-vous attribués à ces élèves seront aussi retirés. Le modèle et la signature sont conservés.")) return; state.students=[]; state.ebichelchenMap={}; state.assignments={}; saveState(); renderStudents(); renderSetup(); renderMails(); }; }
+function csvTextFingerprint(txt){
+  txt=String(txt||"").replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  let h=2166136261;
+  for(let i=0;i<txt.length;i++){ h^=txt.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0).toString(16)+":"+txt.length;
+}
+function importCsvText(csvText, opts={}){
+  let added=0, merged=0, ignored=0;
+  const ebMode=ebichelchenEnabled();
+  const auto=!!opts.auto;
+  String(csvText||"").split(/\r?\n/).filter(l=>l.trim()).forEach((line,i)=>{
+    const c=line.split(/[,;\t]/).map(x=>x.trim());
+    if(i===0 && /^(name|nom|prénom[ _-]et[ _-]nom[ _-]de[ _-]l[’']?élève|prenom[ _-]et[ _-]nom[ _-]de[ _-]l[’']?eleve|nom[_ -]de[_ -]l[’']?élève|nom[_ -]de[_ -]l[’']?eleve|schüler|schueler|eleve|élève)$/i.test(c[0]||"")) return;
+    if(!c[0]) return;
+    const dl=normalizeLang(state.options.defaultLang||"fr");
+    const looksLikeLang2=c.length>=5 || ["fr","de","en","lb","lu","deutsch","english","lëtzebuergesch","letzebuergesch"].includes(String(c[2]||"").trim().toLowerCase());
+    const email1=c[1]||"";
+    const lang1=looksLikeLang2 ? normalizeLang(c[2]||dl) : dl;
+    const email2=looksLikeLang2 ? (c[3]||"") : (c[2]||"");
+    const lang2=looksLikeLang2 ? normalizeLang(c[4]||dl) : dl;
+    // Mode complet : la langue du contact 1 définit la langue du message e-Bichelchen.
+    const langEb=(emailEnabled()&&ebichelchenEnabled()) ? lang1 : normalizeLang(c[5]||lang1);
+    const matchByName=(state.students||[]).find(st=>ebNormName(st.name)===ebNormName(c[0]));
+    if(ebMode || auto){
+      if(matchByName){
+        matchByName.email1=email1; matchByName.email2=email2; matchByName.lang1=lang1; matchByName.lang2=lang2; matchByName.langEb=langEb;
+        merged++;
+      } else {
+        state.students.push({id:uid(),name:c[0],email1,email2,lang1,lang2,langEb});
+        added++;
+      }
+    } else {
+      state.students.push({id:uid(),name:c[0],email1,email2,lang1,lang2,langEb});
+      added++;
+    }
+  });
+  if(added||merged){
+    sortStudentsAlphabetically();
+    saveState(); renderStudents(); renderMails();
+  }
+  return {added, merged, ignored};
+}
+async function maybeAutoLoadLocalCsv(reason){
+  try{
+    if(!emailEnabled() || !localBackendAvailableEarly()) return;
+    const res=await fetch("/api/app/local-csv", {method:"GET", cache:"no-store"});
+    const d=await res.json();
+    if(!d || !d.ok || !d.found || !d.content) return;
+    state.options=state.options||{};
+    const fp=csvTextFingerprint(d.content);
+    if(state.options.localCsvAutoHash===fp) return;
+    const r=importCsvText(d.content,{auto:true});
+    state.options.localCsvAutoHash=fp;
+    saveState();
+    if(r.added||r.merged){
+      const parts=[];
+      if(r.added) parts.push(r.added+" élève(s) importé(s)");
+      if(r.merged) parts.push(r.merged+" complété(s)");
+      showToast(parts.join(", ")+" depuis eleves_contacts.csv.");
+    }
+  }catch(e){}
+}
 document.getElementById("importCsvBtn").onclick=()=>document.getElementById("csvFile").click();
 document.getElementById("csvFile").onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
   r.onload=()=>{
-    let added=0, merged=0, ignored=0;
-    const ebMode=ebichelchenEnabled();
-    String(r.result).split(/\r?\n/).filter(l=>l.trim()).forEach((line,i)=>{
-      const c=line.split(/[,;\t]/).map(x=>x.trim());
-      if(i===0 && /^(name|nom|prénom[ _-]et[ _-]nom[ _-]de[ _-]l[’']?élève|prenom[ _-]et[ _-]nom[ _-]de[ _-]l[’']?eleve|nom[_ -]de[_ -]l[’']?élève|nom[_ -]de[_ -]l[’']?eleve|schüler|eleve|élève)$/i.test(c[0]||"")) return;
-      if(!c[0]) return;
-      const dl=normalizeLang(state.options.defaultLang||"fr");
-      const looksLikeLang2=c.length>=5 || ["fr","de","en","lb","lu","deutsch","english","lëtzebuergesch","letzebuergesch"].includes(String(c[2]||"").trim().toLowerCase());
-      const email1=c[1]||"";
-      const lang1=looksLikeLang2 ? normalizeLang(c[2]||dl) : dl;
-      const email2=looksLikeLang2 ? (c[3]||"") : (c[2]||"");
-      const lang2=looksLikeLang2 ? normalizeLang(c[4]||dl) : dl;
-      // Mode complet : la langue du contact 1 définit la langue du message e-Bichelchen (v154).
-      const langEb=(emailEnabled()&&ebichelchenEnabled()) ? lang1 : normalizeLang(c[5]||lang1);
-      if(ebMode){
-        const match=state.students.find(st=>ebNormName(st.name)===ebNormName(c[0]));
-        if(match){
-          match.email1=email1; match.email2=email2; match.lang1=lang1; match.lang2=lang2; match.langEb=langEb;
-          merged++;
-        } else {
-          // v154 : les lignes CSV sans correspondance e-Bichelchen sont quand même ajoutées.
-          state.students.push({id:uid(),name:c[0],email1,email2,lang1,lang2,langEb});
-          added++;
-        }
-      } else {
-        state.students.push({id:uid(),name:c[0],email1,email2,lang1,lang2,langEb});
-        added++;
-      }
-    });
-    sortStudentsAlphabetically();
-    saveState(); renderStudents(); renderMails();
-    if(merged||added){
+    const res=importCsvText(r.result,{auto:false});
+    if(res.merged||res.added){
       const parts=[];
-      if(added) parts.push(added+" élève(s) importé(s)");
-      if(merged) parts.push(merged+" complété(s)");
+      if(res.added) parts.push(res.added+" élève(s) importé(s)");
+      if(res.merged) parts.push(res.merged+" complété(s)");
       showToast(parts.join(", ")+" par CSV.");
     }
   };
@@ -4512,6 +4548,7 @@ function emailToggleHandler(on){
   window._openPreviewId="";
   saveState();
   applyChannelVisibility();
+  if(on) setTimeout(()=>maybeAutoLoadLocalCsv("email-toggle"), 250);
   if(typeof window._reloadTemplateEditor==="function") window._reloadTemplateEditor(); else renderMails();
   renderStudents();
 }
@@ -4953,7 +4990,7 @@ async function bootEntretienConnect(){
   try{
     await loadDurableStateAtStartup();
     applyStartupTemplateDefaultView();
-    startLocalAppHeartbeat(); bindSetup(); bindMaintenanceMenu(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); checkAccount(); showStartupSessionChoice();
+    startLocalAppHeartbeat(); bindSetup(); bindMaintenanceMenu(); renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); bindSettings(); renderAuth(); applyChannelVisibility(); renderMails(); setTimeout(()=>maybeAutoLoadLocalCsv("startup"), 500); checkAccount(); showStartupSessionChoice();
   }catch(e){
     console.error("Erreur init EntretienConnect", e);
     try{ var b=document.getElementById("setupCurrent"); if(b) b.innerHTML='<div class="banner warn compact">Erreur au démarrage : '+esc(String(e&&e.message||e))+'</div>'; }catch(_){}

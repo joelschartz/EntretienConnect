@@ -91,6 +91,33 @@ else:
     RES_DIR = os.path.dirname(os.path.abspath(__file__))
     DATA_DIR = RES_DIR
 DIRECTORY = RES_DIR
+LOCAL_CSV_NAME = "eleves_contacts.csv"
+
+def _local_csv_candidate_paths():
+    # Le fichier est prévu à côté de Starten.command / 0_START_HIER_EntretienConnect.vbs.
+    # On garde aussi quelques emplacements de secours pour les anciens starters.
+    paths = []
+    try:
+        paths.append(os.path.join(os.path.dirname(DATA_DIR), LOCAL_CSV_NAME))
+    except Exception:
+        pass
+    try:
+        paths.append(os.path.join(DATA_DIR, LOCAL_CSV_NAME))
+    except Exception:
+        pass
+    try:
+        paths.append(os.path.join(PERSIST_DIR, LOCAL_CSV_NAME))
+    except Exception:
+        pass
+    seen = set(); out = []
+    for x in paths:
+        try:
+            ax = os.path.abspath(x)
+            if ax not in seen:
+                seen.add(ax); out.append(ax)
+        except Exception:
+            pass
+    return out
 
 
 def _user_app_data_dir():
@@ -533,6 +560,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(200, {"ok": True, "shuttingDown": True})
         if self.path.split("?",1)[0] == "/api/app/storage":
             return self.handle_app_storage_get()
+        if self.path.split("?",1)[0] == "/api/app/local-csv":
+            return self.handle_app_local_csv()
         if self.path.split("?",1)[0] == "/api/app/session-status":
             return self.handle_app_session_status()
         parsed0 = urllib.parse.urlparse(self.path)
