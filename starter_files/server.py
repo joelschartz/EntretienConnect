@@ -53,8 +53,8 @@ def _initial_port():
 PORT = _initial_port()
 last_heartbeat_time = None
 server_started_time = time.time()
-HEARTBEAT_TIMEOUT_SECONDS = 0  # v177: kein automatischer Timeout; Helper bleibt offen, bis man ihn beendet
-STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS = 0
+HEARTBEAT_TIMEOUT_SECONDS = 180  # v203: Browser-Heartbeat; Helper beendet sich ca. 3 Minuten nach geschlossenem Tab
+STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS = 300  # wenn der Browser gar nicht startet: nach ca. 5 Minuten beenden
 
 
 def _helper_version():
@@ -1563,7 +1563,7 @@ def main():
             print(f"  Remarque : le port {PORT} était déjà utilisé.")
             print(f"  Le port {actual_port} a donc été utilisé automatiquement.")
         print(f"  Ouvrir dans le navigateur :  {url}")
-        print("  Pour quitter : fermez cette fenêtre (ou Ctrl+C)")
+        print("  Pour quitter : fermez le navigateur. Le helper local s’arrête ensuite automatiquement.")
         print("=" * 56)
         _write_pid_file(actual_port)
         threading.Timer(1.0, lambda: _open_in_browser(url)).start()

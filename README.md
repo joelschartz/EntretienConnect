@@ -1,1 +1,3 @@
-# EntretienConnect v202
+# EntretienConnect
+
+Interface GitHub pour EntretienConnect.
