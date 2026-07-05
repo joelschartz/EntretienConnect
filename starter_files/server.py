@@ -1546,26 +1546,15 @@ def update_ui_from_github():
     DIRECTORY = _restore_previous_web_if_needed()
 
 def _open_in_browser(url):
-    """Ouvre l'app sans demander à macOS de contrôler Google Chrome.
+    """Ouvre l'app via le navigateur par défaut, sans automation macOS.
 
-    Sur macOS, éviter /usr/bin/open pour Chrome: selon les réglages de confidentialité,
-    macOS peut alors afficher « bash veut contrôler Google Chrome ». On lance donc
-    directement Chrome/Edge si présent. Safari reste le fallback système.
+    v210: ne plus lancer directement le binaire Chrome. Quand Chrome est déjà ouvert,
+    cet appel pouvait parfois ne pas ouvrir le nouvel onglet. LaunchServices (`open URL`)
+    est plus robuste et ne demande pas le contrôle de Google Chrome comme AppleScript.
     """
     try:
         if sys.platform == "darwin":
-            candidates = [
-                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-                "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-                os.path.expanduser("~/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"),
-            ]
-            for exe in candidates:
-                if os.path.exists(exe):
-                    subprocess.Popen([exe, url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-                    return
-            # Fallback: LaunchServices. Normalement utile surtout pour Safari/autres navigateurs.
-            subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            subprocess.Popen(["/usr/bin/open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
             return
         if sys.platform.startswith("win"):
             os.startfile(url)  # type: ignore[attr-defined]
