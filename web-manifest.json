@@ -1,0 +1,23 @@
+{
+  "version": "v202",
+  "files": [
+    {
+      "target": "index.html",
+      "url": "index.html",
+      "sha256": "c396ed36e4e143c9a79099f960d2ac0081a2b2ae670c35ff464da0832dabeb6f",
+      "size": 940
+    },
+    {
+      "target": "graph.html",
+      "url": "graph.html",
+      "sha256": "af22b4efecd719f194c98011acb5df8630412acbc358812e662193c6ed79d047",
+      "size": 338432
+    },
+    {
+      "target": "schullogo.png",
+      "url": "schullogo.png",
+      "sha256": "07b4859e2fdf125eb4b352238f6e699a539eab71f1c4a0320c1d3f6e2fc3cfb5",
+      "size": 118485
+    }
+  ]
+}

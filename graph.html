@@ -461,7 +461,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v201</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v202</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -736,7 +736,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 201;
+const APP_VERSION = 202;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1528,7 +1528,7 @@ function refreshAllViews(){
   renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); renderCalendar(); renderAuth(); if(typeof applyChannelVisibility==="function") applyChannelVisibility(); renderMails();
 }
 function applyStartupTemplateDefaultView(){
-  // v201: beim Start immer Français. e-Bichelchen bleibt als Vorlage und
+  // v202: beim Start immer Français. e-Bichelchen bleibt als Vorlage und
   // Vorschau editierbar, auch wenn die Verbindung noch fehlt; nur Publizieren
   // braucht e-Bichelchen-Login.
   try{
@@ -1615,7 +1615,7 @@ function ebichelchenEnabled(){ return !!(state.options && state.options.ebichelc
 function emailEnabled(){ return !state.options || state.options.emailEnabled!==false; }
 function currentTemplateMode(){
   const m=state.options && state.options.templateMode;
-  // v201: le modèle et les aperçus e-Bichelchen sont éditables même sans connexion.
+  // v202: le modèle et les aperçus e-Bichelchen sont éditables même sans connexion.
   // Seule la publication reste bloquée.
   if(!emailEnabled() && ebichelchenEnabled()) return "ebichelchen";
   if(m==="ebichelchen" && ebichelchenEnabled()) return "ebichelchen";
@@ -1964,12 +1964,12 @@ function workflowMode(){
 function modeNeedsEmail(mode){ return mode==="email" || mode==="both"; }
 function modeNeedsEb(mode){ return mode==="ebichelchen" || mode==="both"; }
 function ebModelLocked(){
-  // v201: le modèle e-Bichelchen n'est plus verrouillé par le login.
+  // v202: le modèle e-Bichelchen n'est plus verrouillé par le login.
   // La préparation locale est libre ; seule la publication exige une connexion prête.
   return false;
 }
 function canUseEbMessages(){
-  // v201: e-Bichelchen-Nachrichten dürfen auch ohne Verbindung vorbereitet
+  // v202: e-Bichelchen-Nachrichten dürfen auch ohne Verbindung vorbereitet
   // und in der Vorschau bearbeitet werden. Nur das Publizieren prüft ebReady().
   try{ return ebichelchenEnabled(); }catch(e){ return false; }
 }
@@ -1986,7 +1986,7 @@ function setWorkflowMode(mode, opts={}){
   state.options.emailEnabled=modeNeedsEmail(mode);
   state.options.ebichelchenEnabled=modeNeedsEb(mode);
   state.options.templateLang="fr";
-  // v201: les modèles et aperçus e-Bichelchen restent éditables sans connexion ;
+  // v202: les modèles et aperçus e-Bichelchen restent éditables sans connexion ;
   // seule la publication exige e-Bichelchen.
   if(mode==="both") state.options.templateMode = "ebichelchen";
   else if(modeNeedsEb(mode)) state.options.templateMode="ebichelchen";
@@ -3613,7 +3613,7 @@ function buildEbOnlyMessages(){
       // un certain temps, les élèves déjà importés restent « liés » : les cases et le
       // « Tout sélectionner » restent disponibles. La publication réelle reste protégée
       // par ebReady() au moment de l'envoi.
-      // v201: sans connexion e-Bichelchen, on ne connaît pas encore la correspondance
+      // v202: sans connexion e-Bichelchen, on ne connaît pas encore la correspondance
       // réelle. On garde quand même le message sélectionnable/éditable pour permettre
       // la préparation ; la publication restera bloquée jusqu'à la connexion.
       const matchedId=ebReady() ? ebMatchedIdFor(stu) : "__pending_eb_login__";

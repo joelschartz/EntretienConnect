@@ -23,6 +23,7 @@ import threading
 import os
 import time
 import subprocess
+import shutil
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -90,7 +91,6 @@ if getattr(sys, "frozen", False):
 else:
     RES_DIR = os.path.dirname(os.path.abspath(__file__))
     DATA_DIR = RES_DIR
-DIRECTORY = RES_DIR
 LOCAL_CSV_NAME = "eleves_contacts.csv"
 
 def _local_csv_candidate_paths():
@@ -145,6 +145,96 @@ except Exception:
     STATE_BACKUP_DIR = PERSIST_DIR
 
 PID_FILE = os.path.join(PERSIST_DIR, "helper.pid")
+
+
+# v202: Web-/UI-Updates werden nicht mehr in den Starter-/App-Ordner geschrieben,
+# sondern in den benutzerspezifischen App-Speicher. Das ist wichtig für spätere
+# signierte Mac-Apps und funktioniert ohne Admin-Rechte.
+WEB_MANIFEST_NAME = "web-manifest.json"
+WEB_FILES = ("index.html", "graph.html", "schullogo.png")
+WEB_CACHE_DIR = os.path.join(PERSIST_DIR, "web")
+WEB_CURRENT_DIR = os.path.join(WEB_CACHE_DIR, "current")
+WEB_PREVIOUS_DIR = os.path.join(WEB_CACHE_DIR, "previous")
+WEB_STAGING_DIR = os.path.join(WEB_CACHE_DIR, "staging")
+
+
+def _safe_makedirs(path):
+    try:
+        os.makedirs(path, exist_ok=True)
+        return True
+    except Exception:
+        return False
+
+
+def _copy_file_atomic(src, dst):
+    _safe_makedirs(os.path.dirname(dst))
+    tmp = dst + ".tmp"
+    with open(src, "rb") as fsrc, open(tmp, "wb") as fdst:
+        fdst.write(fsrc.read())
+    os.replace(tmp, dst)
+
+
+def _web_dir_version(path):
+    try:
+        gp = os.path.join(path, "graph.html")
+        if os.path.exists(gp):
+            with open(gp, "rb") as f:
+                return _html_app_version(f.read())
+    except Exception:
+        pass
+    return 0
+
+
+def _valid_web_dir(path):
+    try:
+        gp = os.path.join(path, "graph.html")
+        ip = os.path.join(path, "index.html")
+        return os.path.isfile(gp) and os.path.getsize(gp) > 1000 and os.path.isfile(ip) and os.path.getsize(ip) > 100
+    except Exception:
+        return False
+
+
+def _seed_runtime_web_from_bundle(force=False):
+    """Copie les fichiers web livrés avec le starter vers le cache utilisateur.
+    N'écrase pas une version GitHub plus récente déjà installée.
+    """
+    try:
+        _safe_makedirs(WEB_CURRENT_DIR)
+        bundled_v = _web_dir_version(RES_DIR)
+        current_v = _web_dir_version(WEB_CURRENT_DIR)
+        if (not force) and _valid_web_dir(WEB_CURRENT_DIR) and (not bundled_v or current_v >= bundled_v):
+            return WEB_CURRENT_DIR
+        for name in WEB_FILES:
+            src = os.path.join(RES_DIR, name)
+            if os.path.exists(src):
+                _copy_file_atomic(src, os.path.join(WEB_CURRENT_DIR, name))
+        if _valid_web_dir(WEB_CURRENT_DIR):
+            return WEB_CURRENT_DIR
+    except Exception as exc:
+        print("Initialisation du cache web ignorée:", exc)
+    return RES_DIR
+
+
+def _restore_previous_web_if_needed():
+    global DIRECTORY
+    if _valid_web_dir(WEB_CURRENT_DIR):
+        DIRECTORY = WEB_CURRENT_DIR
+        return DIRECTORY
+    if _valid_web_dir(WEB_PREVIOUS_DIR):
+        try:
+            if os.path.exists(WEB_CURRENT_DIR):
+                shutil.rmtree(WEB_CURRENT_DIR, ignore_errors=True)
+            shutil.copytree(WEB_PREVIOUS_DIR, WEB_CURRENT_DIR)
+            DIRECTORY = WEB_CURRENT_DIR
+            print("Interface restaurée depuis la dernière version fonctionnelle.")
+            return DIRECTORY
+        except Exception:
+            pass
+    DIRECTORY = _seed_runtime_web_from_bundle(force=True)
+    return DIRECTORY
+
+# Répertoire effectivement servi par le mini-serveur local.
+DIRECTORY = _seed_runtime_web_from_bundle()
 
 def _write_pid_file(port):
     try:
@@ -602,7 +692,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -1227,6 +1317,9 @@ def update_helper_from_github():
     du helper sont remplacés au démarrage; une mise à jour de server.py ou
     ebichelchen.py est donc active au prochain démarrage.
     """
+    if getattr(sys, "frozen", False):
+        print("Mise à jour du helper ignorée: le Starter signé reste stable; l’interface se met à jour dans le dossier utilisateur.")
+        return []
     base = GITHUB_UI_URL.rstrip("/") + "/"
     manifest_url = base + HELPER_MANIFEST_NAME + "?t=" + str(int(time.time()))
     try:
@@ -1294,15 +1387,113 @@ def restart_after_helper_update_if_needed(updated):
         print("Redémarrage automatique impossible. La mise à jour sera active au prochain démarrage:", e)
 
 
+def _promote_web_staging(remote_version=0):
+    global DIRECTORY
+    if not _valid_web_dir(WEB_STAGING_DIR):
+        return False
+    try:
+        if os.path.exists(WEB_PREVIOUS_DIR):
+            shutil.rmtree(WEB_PREVIOUS_DIR, ignore_errors=True)
+        if _valid_web_dir(WEB_CURRENT_DIR):
+            shutil.copytree(WEB_CURRENT_DIR, WEB_PREVIOUS_DIR)
+        if os.path.exists(WEB_CURRENT_DIR):
+            shutil.rmtree(WEB_CURRENT_DIR, ignore_errors=True)
+        os.replace(WEB_STAGING_DIR, WEB_CURRENT_DIR)
+        if not _valid_web_dir(WEB_CURRENT_DIR):
+            raise RuntimeError("cache web incomplet après mise à jour")
+        DIRECTORY = WEB_CURRENT_DIR
+        return True
+    except Exception as exc:
+        print("Activation de la mise à jour GitHub impossible:", exc)
+        try:
+            if os.path.exists(WEB_STAGING_DIR):
+                shutil.rmtree(WEB_STAGING_DIR, ignore_errors=True)
+        except Exception:
+            pass
+        _restore_previous_web_if_needed()
+        return False
+
+
+def _update_ui_from_web_manifest(base):
+    """Mise à jour robuste via web-manifest.json: téléchargement en staging,
+    vérification SHA-256, puis activation atomique avec sauvegarde de secours.
+    """
+    manifest_url = base + WEB_MANIFEST_NAME + "?t=" + str(int(time.time()))
+    try:
+        raw = _download_bytes(manifest_url, timeout=12)
+        if not raw or len(raw) > 512 * 1024:
+            return False
+        manifest = json.loads(raw.decode("utf-8"))
+    except Exception:
+        return False
+
+    remote_version = _version_number(manifest.get("version"))
+    local_version = max(_web_dir_version(WEB_CURRENT_DIR), _web_dir_version(RES_DIR))
+    if remote_version and local_version and remote_version < local_version:
+        print(f"Mise à jour GitHub ignorée: GitHub v{remote_version} est plus ancien que local v{local_version}.")
+        _restore_previous_web_if_needed()
+        return True
+
+    files = manifest.get("files", []) or []
+    wanted = {name: None for name in WEB_FILES}
+    for item in files:
+        target = str(item.get("target", "")).replace("\\", "/").strip("/")
+        if target in wanted:
+            wanted[target] = item
+    if not all(wanted.values()):
+        return False
+
+    try:
+        if os.path.exists(WEB_STAGING_DIR):
+            shutil.rmtree(WEB_STAGING_DIR, ignore_errors=True)
+        os.makedirs(WEB_STAGING_DIR, exist_ok=True)
+        updated_names = []
+        for name, item in wanted.items():
+            rel_url = str(item.get("url", name)).strip()
+            expected = str(item.get("sha256", "")).lower().strip()
+            src_url = rel_url if rel_url.startswith(("http://", "https://")) else base + rel_url.lstrip("/")
+            data = _download_bytes(src_url + ("&" if "?" in src_url else "?") + "t=" + str(int(time.time())), timeout=20)
+            if not data or len(data) < 50:
+                raise RuntimeError(name + ": fichier vide")
+            if expected and _sha256_bytes(data).lower() != expected:
+                raise RuntimeError(name + ": checksum différent")
+            with open(os.path.join(WEB_STAGING_DIR, name), "wb") as f:
+                f.write(data)
+            updated_names.append(name)
+        if _promote_web_staging(remote_version):
+            print("Interface actualisée depuis GitHub :", ", ".join(updated_names))
+            return True
+    except Exception as exc:
+        print("Mise à jour GitHub ignorée:", exc)
+        try:
+            if os.path.exists(WEB_STAGING_DIR):
+                shutil.rmtree(WEB_STAGING_DIR, ignore_errors=True)
+        except Exception:
+            pass
+        _restore_previous_web_if_needed()
+        return True
+    return False
+
+
 def update_ui_from_github():
     """Télécharge au démarrage la dernière interface depuis GitHub Pages.
-    Si GitHub n'est pas accessible, la copie locale reste utilisée comme secours.
+    v202: les fichiers web sont installés dans le dossier utilisateur
+    (Application Support/AppData), avec checksum et retour à la dernière version
+    fonctionnelle si un téléchargement est incomplet.
     """
+    global DIRECTORY
     base = GITHUB_UI_URL.rstrip("/") + "/"
-    for name in ("index.html", "graph.html", "schullogo.png"):
+    _seed_runtime_web_from_bundle()
+    if _update_ui_from_web_manifest(base):
+        _restore_previous_web_if_needed()
+        return
+
+    # Fallback ancien, si web-manifest.json n'est pas encore publié.
+    _safe_makedirs(WEB_CURRENT_DIR)
+    for name in WEB_FILES:
         url = base + name + "?t=" + str(int(time.time()))
-        tmp = os.path.join(DATA_DIR, "." + name + ".download")
-        dst = os.path.join(DATA_DIR, name)
+        tmp = os.path.join(WEB_CURRENT_DIR, "." + name + ".download")
+        dst = os.path.join(WEB_CURRENT_DIR, name)
         try:
             req = urllib.request.Request(url, headers={"User-Agent":"EntretienConnect"})
             try:
@@ -1310,16 +1501,13 @@ def update_ui_from_github():
                 with urllib.request.urlopen(req, context=ctx, timeout=20) as r, open(tmp, "wb") as f:
                     f.write(r.read())
             except ssl.SSLError:
-                # Mac-Fallback: Nur fuer die statische GitHub-Oberflaeche.
-                # Ohne diesen Fallback koennen manche python.org-Installationen
-                # trotz mitgelieferter App-Dateien keine Updates laden.
                 ctx = ssl._create_unverified_context()
                 with urllib.request.urlopen(req, context=ctx, timeout=20) as r, open(tmp, "wb") as f:
                     f.write(r.read())
             if os.path.exists(tmp) and os.path.getsize(tmp) > 100:
                 if name == "graph.html":
                     try:
-                        local_v = _html_app_version(open(dst, "rb").read()) if os.path.exists(dst) else _local_version_number()
+                        local_v = _html_app_version(open(dst, "rb").read()) if os.path.exists(dst) else _web_dir_version(RES_DIR)
                         remote_v = _html_app_version(open(tmp, "rb").read())
                         if remote_v and local_v and remote_v < local_v:
                             os.remove(tmp)
@@ -1338,7 +1526,7 @@ def update_ui_from_github():
             except Exception:
                 pass
             print("Mise à jour GitHub ignorée pour", name + ":", e)
-
+    DIRECTORY = _restore_previous_web_if_needed()
 
 def _open_in_browser(url):
     """Ouvre l'app dans le navigateur par défaut.
