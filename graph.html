@@ -453,7 +453,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v187</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v188</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -669,9 +669,8 @@ Langues : FR, DE, EN, LU">?</span>
       <!-- v163: le PDF de rappel se joint individuellement par élève dans l’aperçu (📎 dans la barre de l’éditeur). -->
       <input type="file" id="reminderPdfInput" accept="application/pdf,.pdf" style="display:none">
       <input type="file" id="logoFile" accept="image/*" style="display:none">
-      <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Définir le texte actuel comme standard personnel">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Recharger le standard actuel">↺</a></div>
+      <div class="editor-actions" id="resetTplBodyRow" style="display:none"><a href="#" id="saveTplBody" class="icon-btn save" title="Définir le modèle actuel, la signature et le logo comme standards personnels">✓</a><a href="#" id="resetTplBody" class="icon-btn" title="Recharger les standards actuels du modèle, de la signature et du logo">↺</a></div>
       <div id="sigMissing" style="margin-top:12px"></div>
-      <div class="editor-actions" id="resetSigRow" style="display:none"><a href="#" id="saveSig" class="icon-btn save" title="Définir la signature actuelle comme standard personnel">✓</a><a href="#" id="defaultSigBtn" class="icon-btn" title="Recharger la signature standard">↺</a></div>
       </div>
     </div>
 
@@ -729,7 +728,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 187;
+const APP_VERSION = 188;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1520,7 +1519,7 @@ function refreshAllViews(){
   renderSetup(); renderStudents(); initCfgInputs(); renderDateList(); renderCalendar(); renderAuth(); if(typeof applyChannelVisibility==="function") applyChannelVisibility(); renderMails();
 }
 function applyStartupTemplateDefaultView(){
-  // v187: beim Start immer neutral mit E-mail + Français beginnen.
+  // v188: beim Start immer neutral mit E-mail + Français beginnen.
   // Die echte Kontaktsprache der Aperçu-Zeilen bleibt unverändert.
   try{
     state.options=state.options||{};
@@ -1852,11 +1851,17 @@ function templateSignatureIsDefault(){
   if(sig===null || sig===undefined) sig=state.template.signatureHtml||"";
   return htmlEqualsNormalized(sig, effDefaultSignatureHtml());
 }
+function templateEditorIsDefault(){
+  if(currentTemplateMode()==="ebichelchen") return templateBodyIsDefault();
+  return templateBodyIsDefault() && templateSignatureIsDefault();
+}
 function updateTplResetVisibility(){
+  // v188: ein einziges ✓/↺-Paar für den gesamten Editor.
+  // Text/Betreff bleiben pro Modus+Sprache gespeichert; Signatur und Logo gelten global.
   const row=document.getElementById("resetTplBodyRow");
-  if(row) row.style.display = templateBodyIsDefault() ? "none" : "";
+  if(row) row.style.display = templateEditorIsDefault() ? "none" : "";
   const sigRow=document.getElementById("resetSigRow");
-  if(sigRow) sigRow.style.display = templateSignatureIsDefault() ? "none" : "";
+  if(sigRow) sigRow.style.display = "none";
 }
 function showToast(msg){
   let t=document.getElementById("appToast");
@@ -3115,6 +3120,8 @@ function updateTemplateSignatureView(body, renderTemplateCollapseState){
   renderTemplatePreview();
   renderLogoPreview();
   scheduleRenderMails();
+  updateTplResetVisibility();
+  requestAnimationFrame(updateTplResetVisibility);
 }
 // v163: sélecteur de PDF partagé — la cible (élève + carte ouverte) est mémorisée avant l'ouverture.
 let pendingAttachStudentId=null, pendingAttachOpenId=null;
@@ -3333,92 +3340,73 @@ function bindSettings(){
   }
   renderTemplateCollapseState();
 
-  function applyHardSignatureReset(){
-    // Harte Variante: Signatur und Logo werden aus dem gespeicherten Zustand neu aufgebaut,
-    // der sichtbare Editor wird anschließend aus diesem sauberen Zustand neu gezeichnet.
-    // So kann eine alte Markierung aus dem contenteditable-Feld nicht direkt wieder zurückgespeichert werden.
+  function restoreSignatureAndLogoDefaults(){
+    state.template.signatureHtml=effDefaultSignatureHtml();
+    state.template.signature=effDefaultSignatureText();
+    state.options.useSig=true;
+    state.options.logoMode=effDefaultLogoMode();
+    state.options.includeLogo=effDefaultIncludeLogo();
+    const defLogoObj=effDefaultLogo();
+    if(defLogoObj && defLogoObj.dataUrl){
+      state.template.logo=defLogoObj;
+    } else if((state.options.logoMode||"unesco")==="none" || (state.options.logoMode||"unesco")==="unesco"){
+      state.template.logo=null;
+    }
+    const top=document.getElementById("useSigTop"); if(top) top.checked=true;
+  }
+  function applyTemplateEditorReset(){
+    // v188: ein Reset für den gesamten Editor.
+    // Der Nachrichtentext wird nur für den aktuellen Modus + die aktuelle Sprache geladen.
+    // Signatur und Logo werden global auf den gespeicherten persönlichen Standard
+    // oder den Werksstandard zurückgesetzt.
     suppressTemplateCommit=true;
     try{
       document.querySelectorAll(".color-picker.open,.ot-more.open").forEach(n=>n.classList.remove("open"));
-      const editor=document.getElementById("tplBodyEditor");
-      const parts=splitComposeEditorHtml(editor ? editor.innerHTML : "");
-      const activeTpl=templateDataForMode(currentTemplateMode(), currentTemplateLang());
-      const def=factoryTemplate(currentTemplateLang(), currentTemplateMode());
-      const keptBody=cleanBodyHtmlAfterSignatureRemoval(removeSignatureTailFromBodyHtml(parts.bodyHtml || activeTpl.bodyHtml || def.bodyHtml));
-      activeTpl.bodyHtml=keptBody || def.bodyHtml;
-      activeTpl.body=textFromHtml(activeTpl.bodyHtml);
-      resetBodyFormattingIfStillDefault();
-      state.template.signatureHtml=effDefaultSignatureHtml();
-      state.template.signature=effDefaultSignatureText();
-      state.options.useSig=true;
-      state.options.logoMode=effDefaultLogoMode();
-      state.options.includeLogo=effDefaultIncludeLogo();
-      const defLogoObj=effDefaultLogo();
-      if(defLogoObj && defLogoObj.dataUrl) state.template.logo=defLogoObj;
-      const top=document.getElementById("useSigTop"); if(top) top.checked=true;
+      const mode=currentTemplateMode();
+      const lang=currentTemplateLang();
+      const activeTpl=templateDataForMode(mode, lang);
+      activeTpl.subject=effDefaultSubject(mode, lang);
+      activeTpl.bodyHtml=effDefaultBodyHtml(mode, lang);
+      activeTpl.body=effDefaultBodyText(mode, lang);
+      const su=document.getElementById("tplSubject"); if(su) su.value=activeTpl.subject;
+      if(mode!=="ebichelchen") restoreSignatureAndLogoDefaults();
       saveState();
       renderTemplateCollapseState();
       forceTemplateEditorHtml(composeEditorHtml());
       renderTemplatePreview();
       renderLogoPreview();
       renderMails();
-      if(state.options.logoMode==="unesco") loadUnescoLogo(true);
+      updateTplResetVisibility();
+      if(mode!=="ebichelchen" && state.options.logoMode==="unesco") loadUnescoLogo(true);
     } finally {
       setTimeout(()=>{ suppressTemplateCommit=false; forceTemplateEditorHtml(composeEditorHtml()); renderTemplatePreview(); renderLogoPreview(); renderMails(); updateTplResetVisibility(); },80);
-    }
-  }
-  const defaultSigBtn=document.getElementById("defaultSigBtn");
-  if(defaultSigBtn){
-    defaultSigBtn.addEventListener("click", (e)=>{
-      if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      applyHardSignatureReset();
-    }, true);
-  }
-  function applyTemplateBodyReset(){
-    // Setzt nur den E-Mail-Text (die Fassung) und den Betreff auf den wirksamen Standard
-    // zurück (eigener gespeicherter, sonst Werks-Standard). Signatur/Logo bleiben unverändert.
-    suppressTemplateCommit=true;
-    try{
-      document.querySelectorAll(".color-picker.open,.ot-more.open").forEach(n=>n.classList.remove("open"));
-      const activeTpl=templateDataForMode(currentTemplateMode(), currentTemplateLang());
-      activeTpl.subject=effDefaultSubject();
-      activeTpl.bodyHtml=effDefaultBodyHtml();
-      activeTpl.body=effDefaultBodyText();
-      const su=document.getElementById("tplSubject"); if(su) su.value=activeTpl.subject;
-      saveState();
-      forceTemplateEditorHtml(composeEditorHtml());
-      renderTemplatePreview();
-      renderMails();
-      updateTplResetVisibility();
-    } finally {
-      setTimeout(()=>{ suppressTemplateCommit=false; forceTemplateEditorHtml(composeEditorHtml()); renderTemplatePreview(); renderMails(); updateTplResetVisibility(); },80);
     }
   }
   const resetTplBody=document.getElementById("resetTplBody");
   if(resetTplBody){
     resetTplBody.addEventListener("click", (e)=>{
       if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      applyTemplateBodyReset();
+      applyTemplateEditorReset();
     }, true);
   }
-  async function saveTemplateBodyAsDefault(){
+  async function saveTemplateEditorAsDefault(){
+    // v188: ein Haken speichert den aktuellen Editorzustand.
+    // Text/Betreff: aktueller Modus + aktuelle Sprache.
+    // Signatur/Logo: global für alle Sprachen.
     commitEditor(body);
     const mode=currentTemplateMode();
     const lang=currentTemplateLang();
     const activeTpl=templateDataForMode(mode, lang);
     const su=document.getElementById("tplSubject"); if(su) activeTpl.subject=su.value;
     setUserDefaultTemplate(mode, lang, activeTpl.subject, activeTpl.bodyHtml);
-    await hardSaveState();
-    updateTplResetVisibility();
-  }
-  async function saveSignatureAsDefault(){
-    commitEditor(body);
-    state.userDefaults=Object.assign({}, state.userDefaults, {
-      signatureHtml: state.template.signatureHtml,
-      logoMode: state.options.logoMode,
-      includeLogo: state.options.includeLogo!==false,
-      logo: cloneJsonSafe(state.template.logo||null)
-    });
+    if(mode!=="ebichelchen"){
+      state.userDefaults=Object.assign({}, state.userDefaults, {
+        signatureHtml: state.template.signatureHtml,
+        logoMode: state.options.logoMode,
+        includeLogo: state.options.includeLogo!==false,
+        logo: cloneJsonSafe(state.template.logo||null)
+      });
+    }
     await hardSaveState();
     updateTplResetVisibility();
   }
@@ -3426,14 +3414,7 @@ function bindSettings(){
   if(saveTplBody){
     saveTplBody.addEventListener("click", async (e)=>{
       if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      await saveTemplateBodyAsDefault();
-    }, true);
-  }
-  const saveSig=document.getElementById("saveSig");
-  if(saveSig){
-    saveSig.addEventListener("click", async (e)=>{
-      if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-      await saveSignatureAsDefault();
+      await saveTemplateEditorAsDefault();
     }, true);
   }
   const useSigTop=document.getElementById("useSigTop");
@@ -3473,6 +3454,8 @@ function bindSettings(){
       state.options.includeLogo=true;
       saveState(); loadUnescoLogo(true);
       renderLogoPreview();
+      updateTplResetVisibility();
+      requestAnimationFrame(updateTplResetVisibility);
       return;
     }
     if(mode==="none"){
@@ -3480,6 +3463,8 @@ function bindSettings(){
       state.options.logoMode="none";
       state.options.includeLogo=false;
       saveState(); renderTemplatePreview(); refreshComposeEditor(true); renderLogoPreview(); renderMails();
+      updateTplResetVisibility();
+      requestAnimationFrame(updateTplResetVisibility);
       return;
     }
     openCustomLogoPickerFromSignature();
@@ -4876,7 +4861,7 @@ document.getElementById("confirmGo").onclick=async()=>{
 
 
 function resetAllModelsAndSignatureToFactory(){
-  // v187: Gesamt-Reset nur für Modelle/Signatur/Logo, niemals für Schüler/Termine/Logins.
+  // v188: Gesamt-Reset nur für Modelle/Signatur/Logo, niemals für Schüler/Termine/Logins.
   state.userDefaults=null;
   state.template=Object.assign({}, state.template||{}, {
     v:17,
