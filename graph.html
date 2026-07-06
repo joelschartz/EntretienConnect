@@ -229,7 +229,8 @@
   /* v164: les lignes décochées sont légèrement estompées — la case à cocher reste bien visible pour les réactiver */
   .mailitem.unselected .mail-main,.mailitem.unselected .status .pill{opacity:.45}
   /* v165: alignement vertical centré + largeur fixe du libellé — plus de saut entre « Tout sélectionner » et « Tout désélectionner » */
-  .mail-select-bar{display:flex;align-items:center;gap:28px;padding:8px 22px 14px 22px;flex-wrap:wrap}.mail-select-bar .check{margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:28px;line-height:1}.mail-select-bar .check b{display:inline-flex;align-items:center;min-width:150px;line-height:1}.mail-select-bar #selectCount{font-size:12.5px;line-height:1;min-height:28px;display:inline-flex;align-items:center}
+  /* v212: un peu plus d'air au-dessus de « Tout sélectionner/désélectionner » */
+  .mail-select-bar{display:flex;align-items:center;gap:28px;padding:16px 22px 14px 22px;flex-wrap:wrap}.mail-select-bar .check{margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:28px;line-height:1}.mail-select-bar .check b{display:inline-flex;align-items:center;min-width:150px;line-height:1}.mail-select-bar #selectCount{font-size:12.5px;line-height:1;min-height:28px;display:inline-flex;align-items:center}
   .combine-option{margin-top:12px;color:var(--muted);font-weight:600;cursor:pointer}
   .mail-avatar{display:none}
   .mail-main{min-width:0;display:grid;grid-template-columns:minmax(150px,230px) 78px 26px 140px minmax(0,1fr);align-items:center;column-gap:12px;overflow:hidden}
@@ -420,7 +421,8 @@
   /* "?" info tooltip */
   .tip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--accent-soft);color:#4a55a2;font-size:12.5px;font-weight:750;cursor:help;user-select:none;outline:none}
   .tip:hover,.tip:focus{background:#e0e5fd}
-  .tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);background:#26262b;color:#fff;padding:10px 13px;border-radius:11px;font-size:12.5px;font-weight:450;line-height:1.5;width:max-content;max-width:min(320px,78vw);white-space:pre-line;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s;z-index:120;box-shadow:0 10px 30px rgba(16,24,40,.22)}
+  /* v212: text-transform/letter-spacing neutralisés — sinon l'info-bulle hérite du label en majuscules (Élèves) */
+  .tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);background:#26262b;color:#fff;padding:10px 13px;border-radius:11px;font-size:12.5px;font-weight:450;line-height:1.5;text-transform:none;letter-spacing:normal;width:max-content;max-width:min(320px,78vw);white-space:pre-line;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s;z-index:120;box-shadow:0 10px 30px rgba(16,24,40,.22)}
   .tip.tip-left::after{left:auto;right:-6px;transform:none}
   .tip:hover::after,.tip:focus::after{opacity:1;visibility:visible}
 
@@ -461,7 +463,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v211</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v212</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -527,8 +529,7 @@
       <div class="card-head"><h2 id="studentsTitle">Liste des élèves</h2><span id="resetStudentsRow" style="display:none"><a href="#" id="resetStudents" class="icon-btn" title="Réinitialiser la liste d’élèves">↺</a></span></div>
       <div id="studentModeNote" class="student-mode-note"></div>
       <div class="student-lang-default">
-        <label for="defaultLangStudents">Langue standard pour nouveaux contacts <span class="tip" tabindex="0" data-tip="La langue standard est utilisée quand un contact n’a pas de langue.
-En mode complet, la langue du contact 1 définit aussi la langue du message e-Bichelchen.">?</span></label>
+        <label for="defaultLangStudents">Langue standard pour nouveaux contacts <span class="tip" tabindex="0" data-tip="La langue du contact 1 définit la langue du message e-Bichelchen.">?</span></label>
         <select id="defaultLangStudents">
           <option value="fr">Français</option>
           <option value="de">Deutsch</option>
@@ -736,7 +737,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 211;
+const APP_VERSION = 212;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2283,12 +2284,14 @@ function renderStudents(){
     const txt=langLabel.firstChild;
     if(txt && txt.nodeType===3) txt.nodeValue = (eb && !em) ? "Langue standard pour nouveaux élèves " : "Langue standard pour nouveaux contacts ";
     const tip=langLabel.querySelector(".tip");
-    // v168: en mode e-mail seul, plus aucune mention d'e-Bichelchen dans l'info-bulle.
-    if(tip) tip.dataset.tip = (eb && !em)
-      ? "La langue standard définit la langue du message e-Bichelchen pour les élèves ajoutés ou importés."
-      : (eb && em)
-        ? "La langue standard est utilisée quand un contact n’a pas de langue.\nEn mode complet, la langue du contact 1 définit aussi la langue du message e-Bichelchen."
-        : "La langue standard est utilisée quand un contact n’a pas de langue.";
+    // v212: en mode e-mail seul, le « ? » disparaît (le libellé se suffit). Sinon, seule la
+    // règle e-Bichelchen mérite une explication — la phrase « la langue standard est utilisée… » sort.
+    if(tip){
+      tip.style.display = eb ? "" : "none";
+      tip.dataset.tip = (eb && !em)
+        ? "La langue standard définit la langue du message e-Bichelchen pour les élèves ajoutés ou importés."
+        : "La langue du contact 1 définit la langue du message e-Bichelchen.";
+    }
   }
   if(note){
     // Le titre + l’introduction suffisent. On garde seulement un rappel tant qu’aucun mode n’a été choisi.
@@ -4123,15 +4126,26 @@ function renderPreviewTabs(kinds, active){
   box.innerHTML=kinds.map(k=>`<button type="button" class="preview-tab ${k.kind===active?'active':''}" data-preview-kind="${k.kind}">${esc(k.label)} · ${k.count}</button>`).join("");
   box.querySelectorAll("[data-preview-kind]").forEach(btn=>btn.onclick=()=>{
     const kind=btn.dataset.previewKind;
+    // v212: la carte des modèles change de hauteur au changement d'onglet — on ancre le
+    // défilement sur la barre d'onglets pour que la liste reste visible là où on était.
+    const beforeTop=box.getBoundingClientRect().top;
+    const keepListInPlace=()=>{
+      const bar=document.getElementById("previewTabs");
+      if(!bar) return;
+      const delta=bar.getBoundingClientRect().top-beforeTop;
+      if(delta) window.scrollBy(0, delta);
+    };
     const mode=templateModeForPreviewKind(kind);
     if(mode && typeof window._switchTemplateModeFromPreview==="function"){
       window._switchTemplateModeFromPreview(mode, kind);
+      keepListInPlace();
       return;
     }
     state.options.previewKind=kind;
     if(mode) state.options.templateMode=mode;
     saveState();
     renderMails();
+    keepListInPlace();
   });
 }
 function reminderRowHtml(m, openId){
