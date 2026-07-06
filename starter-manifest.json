@@ -1,41 +1,11 @@
 {
-  "version": "v210",
+  "version": "v211",
   "files": [
     {
-      "target": "EntretienConnect-Start-Hidden.bat",
-      "url": "starter_files/EntretienConnect-Start-Hidden.bat",
-      "sha256": "97fd66630d2cf4677d245d561408879b64c545fcb2380d02fed5cb895b64ea16",
-      "size": 778
-    },
-    {
-      "target": "EntretienConnect-Start.bat",
-      "url": "starter_files/EntretienConnect-Start.bat",
-      "sha256": "3a0f2564fc5bc37ae13a3c112c395fb88d662788dd6ea7c24c72618e70ec4125",
-      "size": 1566
-    },
-    {
-      "target": "EntretienConnect-eb.ps1",
-      "url": "starter_files/EntretienConnect-eb.ps1",
-      "sha256": "f739645ccc4f8c62899a65e5fed30b08445a272dfd2a37d0ae975f44e288f4e8",
-      "size": 35278
-    },
-    {
-      "target": "EntretienConnect.ps1",
-      "url": "starter_files/EntretienConnect.ps1",
-      "sha256": "389f7ca388934d7b30728473762d828ed1eb80351f51e89d127b3e99991c5223",
-      "size": 51937
-    },
-    {
-      "target": "VERSION.txt",
-      "url": "starter_files/VERSION.txt",
-      "sha256": "8cafac37b98107169530b68d7751d667eaad216336420414ff9a7acc266e7894",
-      "size": 4
-    },
-    {
-      "target": "cacert.pem",
-      "url": "starter_files/cacert.pem",
-      "sha256": "2a4c752b97319381f0f932b4923583f2431f048c3becb300b7f3d4c8e1c03aeb",
-      "size": 236095
+      "target": "server.py",
+      "url": "starter_files/server.py",
+      "sha256": "ace3e2d07250973c05d7814a6c39fbf17860101f87156ca0300448059d768bf3",
+      "size": 68041
     },
     {
       "target": "ebichelchen.py",
@@ -44,10 +14,40 @@
       "size": 71141
     },
     {
-      "target": "server.py",
-      "url": "starter_files/server.py",
-      "sha256": "41a1f6b1b0f7b603736edaa3eb8772aa2ed0eeac595dd926cb8b4e98109a5f9b",
-      "size": 68041
+      "target": "EntretienConnect.ps1",
+      "url": "starter_files/EntretienConnect.ps1",
+      "sha256": "389f7ca388934d7b30728473762d828ed1eb80351f51e89d127b3e99991c5223",
+      "size": 51937
+    },
+    {
+      "target": "EntretienConnect-eb.ps1",
+      "url": "starter_files/EntretienConnect-eb.ps1",
+      "sha256": "f739645ccc4f8c62899a65e5fed30b08445a272dfd2a37d0ae975f44e288f4e8",
+      "size": 35278
+    },
+    {
+      "target": "EntretienConnect-Start.bat",
+      "url": "starter_files/EntretienConnect-Start.bat",
+      "sha256": "9cabec15a3ed6f8475baac31d5b134125a516a72b76aa1f06ef1abde03f98156",
+      "size": 1566
+    },
+    {
+      "target": "EntretienConnect-Start-Hidden.bat",
+      "url": "starter_files/EntretienConnect-Start-Hidden.bat",
+      "sha256": "70698d7d619b94bf6a7adf7562cb8bce3e3bab1b74a46d56130bb48c419d58cd",
+      "size": 778
+    },
+    {
+      "target": "VERSION.txt",
+      "url": "starter_files/VERSION.txt",
+      "sha256": "a3ab83a11b061d025ceb516c6f54910a1115b659f1517bcae5ea7ac5fd709f37",
+      "size": 5
+    },
+    {
+      "target": "cacert.pem",
+      "url": "starter_files/cacert.pem",
+      "sha256": "2a4c752b97319381f0f932b4923583f2431f048c3becb300b7f3d4c8e1c03aeb",
+      "size": 236095
     }
   ]
 }

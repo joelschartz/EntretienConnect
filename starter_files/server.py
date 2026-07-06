@@ -1548,7 +1548,7 @@ def update_ui_from_github():
 def _open_in_browser(url):
     """Ouvre l'app via le navigateur par défaut, sans automation macOS.
 
-    v210: ne plus lancer directement le binaire Chrome. Quand Chrome est déjà ouvert,
+    v211: ne plus lancer directement le binaire Chrome. Quand Chrome est déjà ouvert,
     cet appel pouvait parfois ne pas ouvrir le nouvel onglet. LaunchServices (`open URL`)
     est plus robuste et ne demande pas le contrôle de Google Chrome comme AppleScript.
     """
