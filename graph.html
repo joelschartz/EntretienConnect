@@ -469,7 +469,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v215</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v216</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -743,7 +743,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 215;
+const APP_VERSION = 216;
 
 window.addEventListener("error", function(ev){
   try{
@@ -4431,7 +4431,7 @@ function refreshSelectionUI(){
 /* ============================ e-Bichelchen-Kanal ============================
    Optionaler zweiter Versandkanal. Solange der Schalter aus ist, wird nichts
    geladen und kein Login verlangt. */
-let ebData=null, ebAutoTimer=null, ebAutoStart=0; // v138: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
+let ebData=null, ebAutoTimer=null, ebAutoStart=0, ebReadBusy=false; // v138: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
@@ -4487,9 +4487,10 @@ function setEbStatus(msg, cls){
 // (urlopen Errno 61, tentatives JSON, …) sont des états transitoires normaux du sondage
 // et n'apparaissent plus que repliées sous « Détails techniques ».
 function ebWaitingStatusHtml(detail){
+  // v216: plus de bouton « Relire maintenant » pendant l'attente — la lecture tourne déjà
+  // toute seule ; le bouton déclenchait des lectures parallèles qui se freinaient mutuellement.
   const d=String(detail||"").trim();
   return 'En attente de la connexion e-Bichelchen … La lecture des élèves démarre automatiquement dès que vous êtes connecté.'
-    +' <button type="button" class="ghost sm" data-eb-read-now style="margin-left:8px">Relire maintenant</button>'
     +(d?'<details class="eb-status-details"><summary>Détails techniques</summary><div>'+esc(d.slice(0,400))+'</div></details>':'');
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
@@ -4735,7 +4736,7 @@ async function ebConnectFlow(){
   try{
     const j=await ebGet("/api/eb/open-browser?browser="+encodeURIComponent(ebBrowserPref()));
     if(!j.ok) throw new Error(j.error||"Erreur");
-    setEbStatus("Connectez-vous dans la fenêtre e-Bichelchen ouverte. La lecture des élèves démarre automatiquement … <button type=\"button\" class=\"ghost sm\" data-eb-read-now style=\"margin-left:8px\">Relire maintenant</button>","info");
+    setEbStatus("Connectez-vous dans la fenêtre e-Bichelchen ouverte. La lecture des élèves démarre automatiquement …","info");
     ebAutoStart=Date.now();
     ebAutoTimer=setInterval(ebAutoAttempt, 2600);
     ebAutoAttempt();
@@ -4747,10 +4748,16 @@ async function ebConnectFlow(){
   }
 }
 async function ebAutoAttempt(){
-  if(Date.now()-ebAutoStart>600000){ ebStopAuto(); setEbStatus("Connexion non terminée (10 min). Cliquez de nouveau sur « Connecter e-Bichelchen » après vous être connecté.","warn"); return; }
+  // v216: une seule lecture à la fois. Les lectures parallèles (sondage toutes les 2,6 s
+  // pendant qu'une lecture de 15–20 s tournait encore) se freinaient mutuellement et
+  // produisaient les erreurs « timed out ».
+  if(ebReadBusy) return;
+  if(Date.now()-ebAutoStart>600000){ ebStopAuto(); setEbStatus("Connexion non terminée (10 min). Cliquez de nouveau sur « Connecter e-Bichelchen » après vous être connecté. <button type=\"button\" class=\"ghost sm\" data-eb-read-now style=\"margin-left:8px\">Relire maintenant</button>","warn"); return; }
+  ebReadBusy=true;
   let j=null;
   try{ j=await ebGet("/api/eb/read-browser?quiet=1"); }
   catch(e){ setEbStatus(ebWaitingStatusHtml(String(e.message||e)),"info"); return; }
+  finally{ ebReadBusy=false; }
   if(j && j.ok && j.data){
     ebStopAuto();
     ebApplyRead(j.data);
@@ -4759,6 +4766,8 @@ async function ebAutoAttempt(){
   else { setEbStatus(ebWaitingStatusHtml(j&&j.error?String(j.error):""),"info"); }
 }
 async function ebRead(quiet, groupId){
+  if(ebReadBusy){ setEbStatus("Lecture déjà en cours … merci de patienter.","info"); return; }
+  ebReadBusy=true;
   setEbStatus("Lecture des données e-Bichelchen …","info");
   try{
     const p=new URLSearchParams(); if(groupId) p.set("groupId",groupId); if(quiet) p.set("quiet","1");
@@ -4767,6 +4776,7 @@ async function ebRead(quiet, groupId){
     ebApplyRead(j.data);
     if(!j.data || !j.data.needsGroupSelection){ fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
   }catch(e){ setEbStatus("Lecture impossible : "+esc(e.message||e),"err"); }
+  finally{ ebReadBusy=false; }
 }
 function ebApplyRead(data){
   const previousGroups=ebKnownGroups();

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.17 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.18 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -1631,11 +1631,21 @@ def delete_created_test_entry(body: dict) -> dict:
 # HTTP-Server mehr). Die harten Sicherheitschecks oben bleiben unverändert.
 # ===================================================================
 
+READ_BROWSER_LOCK = threading.Lock()
+
+
 def read_browser_and_store(selected_group_id=None) -> dict:
     """Liest Klassen/Schüler/Message-subjectId aus dem e-Bichelchen-Tab und
-    merkt sie als LATEST_DATA (Grundlage der serverseitigen Sicherheitsprüfung)."""
+    merkt sie als LATEST_DATA (Grundlage der serverseitigen Sicherheitsprüfung).
+    v1.10.18: nur EINE Lesung gleichzeitig — der Server ist multithreaded, und parallele
+    Automations-Läufe im selben Tab bremsten sich gegenseitig aus (« timed out »)."""
     global LATEST_DATA, LATEST_AT
-    payload = read_from_chrome(selected_group_id)
+    if not READ_BROWSER_LOCK.acquire(blocking=False):
+        raise RuntimeError("Lecture déjà en cours – merci de patienter.")
+    try:
+        payload = read_from_chrome(selected_group_id)
+    finally:
+        READ_BROWSER_LOCK.release()
     with LOCK:
         LATEST_DATA = payload
         LATEST_AT = time.strftime("%Y-%m-%d %H:%M:%S")
