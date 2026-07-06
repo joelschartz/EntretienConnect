@@ -400,6 +400,10 @@
   .setup-status-stack{display:grid;gap:10px}
   .setup-status-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border:1px solid var(--line);border-radius:16px;background:#fff;flex-wrap:wrap}
   .status-dot{width:9px;height:9px;min-width:9px;border-radius:50%;background:#cfcfd8}
+  /* v214: détails techniques repliés dans le statut e-Bichelchen */
+  .eb-status-details{margin-top:8px;font-size:12px;color:var(--muted)}
+  .eb-status-details summary{cursor:pointer;font-weight:650;user-select:none}
+  .eb-status-details div{margin-top:5px;word-break:break-word;white-space:pre-wrap}
   .status-dot.on{background:var(--ok)}
   .status-main{display:flex;flex-direction:column;min-width:0;flex:1}
   .status-main b{font-size:14px;color:var(--ink)}
@@ -465,7 +469,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v213</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v214</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -739,7 +743,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 213;
+const APP_VERSION = 214;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2059,7 +2063,9 @@ function renderSetup(){
       if(ebHasMultipleKnownGroups()){
         ebParts.push('<div class="setup-status-panel">'+ebGroupChoiceHtml()+'</div>');
       }else if(!ebReady()){
-        ebParts.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><b>e-Bichelchen</b><span class="status-detail">Non connecté — nécessaire pour les messages e-Bichelchen</span><div id="setupEbLiveStatus" class="hint" style="margin:4px 0 0"></div></div><button type="button" class="ghost sm" id="setupEbConnect">Connecter</button></div>');
+        // v214: le statut en direct est SOUS la ligne (pleine largeur) — le point et « Connecter »
+        // restent alignés sur le titre même quand le message grandit.
+        ebParts.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><b>e-Bichelchen</b><span class="status-detail">Non connecté — nécessaire pour les messages e-Bichelchen</span></div><button type="button" class="ghost sm" id="setupEbConnect">Connecter</button></div><div id="setupEbLiveStatus" style="display:none"></div>');
       }
       if(ebParts.length) cards.push('<div class="setup-status-stack">'+ebParts.join("")+'</div>');
     }
@@ -4466,7 +4472,25 @@ function setEbStatus(msg, cls){
   const el=document.getElementById("ebStatus");
   if(el){ el.className="banner compact "+c; el.innerHTML=msg; }
   const live=document.getElementById("setupEbLiveStatus");
-  if(live){ live.className="banner compact "+c; live.style.marginTop="10px"; live.innerHTML=msg; }
+  if(live){
+    // v214: les « Détails techniques » ouverts le restent quand le sondage rafraîchit le message.
+    const wasOpen=!!(live.querySelector("details") && live.querySelector("details").open);
+    live.className="banner compact "+c;
+    live.style.margin="10px 0 0";
+    live.style.display = msg ? "" : "none";
+    live.innerHTML=msg;
+    const det=live.querySelector("details");
+    if(det && wasOpen) det.open=true;
+  }
+}
+// v214: pendant l'attente de connexion, message rassurant — les erreurs brutes du backend
+// (urlopen Errno 61, tentatives JSON, …) sont des états transitoires normaux du sondage
+// et n'apparaissent plus que repliées sous « Détails techniques ».
+function ebWaitingStatusHtml(detail){
+  const d=String(detail||"").trim();
+  return 'En attente de la connexion e-Bichelchen … La lecture des élèves démarre automatiquement dès que vous êtes connecté.'
+    +' <button type="button" class="ghost sm" data-eb-read-now style="margin-left:8px">Relire maintenant</button>'
+    +(d?'<details class="eb-status-details"><summary>Détails techniques</summary><div>'+esc(d.slice(0,400))+'</div></details>':'');
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
@@ -4726,13 +4750,13 @@ async function ebAutoAttempt(){
   if(Date.now()-ebAutoStart>600000){ ebStopAuto(); setEbStatus("Connexion non terminée (10 min). Cliquez de nouveau sur « Connecter e-Bichelchen » après vous être connecté.","warn"); return; }
   let j=null;
   try{ j=await ebGet("/api/eb/read-browser?quiet=1"); }
-  catch(e){ setEbStatus("En attente de la connexion e-Bichelchen … <span class=\"hint\">"+esc(String(e.message||e).slice(0,140))+"</span>","info"); return; }
+  catch(e){ setEbStatus(ebWaitingStatusHtml(String(e.message||e)),"info"); return; }
   if(j && j.ok && j.data){
     ebStopAuto();
     ebApplyRead(j.data);
     if(!j.data.needsGroupSelection){ fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
   }
-  else { setEbStatus("En attente de la connexion e-Bichelchen … "+(j&&j.error?('<span class="hint">'+esc(String(j.error).slice(0,220))+'</span>'):'')+' <button type="button" class="ghost sm" data-eb-read-now style="margin-left:8px">Relire maintenant</button>',"info"); }
+  else { setEbStatus(ebWaitingStatusHtml(j&&j.error?String(j.error):""),"info"); }
 }
 async function ebRead(quiet, groupId){
   setEbStatus("Lecture des données e-Bichelchen …","info");
