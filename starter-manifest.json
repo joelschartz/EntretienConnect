@@ -1,5 +1,5 @@
 {
-  "version": "v211",
+  "version": "v212",
   "files": [
     {
       "target": "server.py",
@@ -40,14 +40,26 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "a3ab83a11b061d025ceb516c6f54910a1115b659f1517bcae5ea7ac5fd709f37",
-      "size": 5
+      "sha256": "afcccadf157a1a6302aa6a8794258282f00016e1121f17e3fb594aabef87a1be",
+      "size": 4
     },
     {
       "target": "cacert.pem",
       "url": "starter_files/cacert.pem",
       "sha256": "2a4c752b97319381f0f932b4923583f2431f048c3becb300b7f3d4c8e1c03aeb",
       "size": 236095
+    },
+    {
+      "target": "EntretienConnect.icns",
+      "url": "starter_files/EntretienConnect.icns",
+      "sha256": "3433b30847fed199b29038f0e73e069f66f39c0a785104d582a61fe15b1a2734",
+      "size": 1641117
+    },
+    {
+      "target": "EntretienConnect_WINDOWS.ico",
+      "url": "starter_files/EntretienConnect_WINDOWS.ico",
+      "sha256": "6455839c05aea312d2cd414318d3fffb3f085a27c9a720fd40a84dc6a02a8388",
+      "size": 99984
     }
   ]
 }

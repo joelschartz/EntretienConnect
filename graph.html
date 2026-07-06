@@ -229,7 +229,7 @@
   /* v164: les lignes décochées sont légèrement estompées — la case à cocher reste bien visible pour les réactiver */
   .mailitem.unselected .mail-main,.mailitem.unselected .status .pill{opacity:.45}
   /* v165: alignement vertical centré + largeur fixe du libellé — plus de saut entre « Tout sélectionner » et « Tout désélectionner » */
-  .mail-select-bar{display:flex;align-items:center;gap:28px;padding:8px 22px 14px 22px;flex-wrap:wrap}.mail-select-bar .check{margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:28px;line-height:1}.mail-select-bar .check b{display:inline-flex;align-items:center;min-width:150px;line-height:1}.mail-select-bar #selectCount{font-size:12.5px;line-height:1;min-height:28px;display:inline-flex;align-items:center}
+  .mail-select-bar{display:flex;align-items:center;gap:28px;padding:14px 22px 12px 22px;flex-wrap:wrap}.mail-select-bar .check{margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:28px;line-height:1}.mail-select-bar .check b{display:inline-flex;align-items:center;min-width:150px;line-height:1}.mail-select-bar #selectCount{font-size:12.5px;line-height:1;min-height:28px;display:inline-flex;align-items:center}
   .combine-option{margin-top:12px;color:var(--muted);font-weight:600;cursor:pointer}
   .mail-avatar{display:none}
   .mail-main{min-width:0;display:grid;grid-template-columns:minmax(150px,230px) 78px 26px 140px minmax(0,1fr);align-items:center;column-gap:12px;overflow:hidden}
@@ -418,9 +418,9 @@
   .template-personal-box p{margin:0;max-width:620px}.template-personal-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.template-personal-actions button{white-space:nowrap}
 
   /* "?" info tooltip */
-  .tip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--accent-soft);color:#4a55a2;font-size:12.5px;font-weight:750;cursor:help;user-select:none;outline:none}
+  .tip{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--accent-soft);color:#4a55a2;font-size:12.5px;font-weight:750;cursor:help;user-select:none;outline:none;text-transform:none;letter-spacing:0}
   .tip:hover,.tip:focus{background:#e0e5fd}
-  .tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);background:#26262b;color:#fff;padding:10px 13px;border-radius:11px;font-size:12.5px;font-weight:450;line-height:1.5;width:max-content;max-width:min(320px,78vw);white-space:pre-line;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s;z-index:120;box-shadow:0 10px 30px rgba(16,24,40,.22)}
+  .tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);background:#26262b;color:#fff;padding:10px 13px;border-radius:11px;font-size:12.5px;font-weight:450;line-height:1.5;width:max-content;max-width:min(320px,78vw);white-space:pre-line;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s;z-index:120;box-shadow:0 10px 30px rgba(16,24,40,.22);text-transform:none;letter-spacing:0}
   .tip.tip-left::after{left:auto;right:-6px;transform:none}
   .tip:hover::after,.tip:focus::after{opacity:1;visibility:visible}
 
@@ -3326,6 +3326,7 @@ function bindSettings(){
     reloadTemplateEditor();
   }
   window._switchTemplateModeFromPreview=function(mode, previewKind){
+    const keepX=window.scrollX, keepY=window.scrollY;
     mode=normalizeTemplateMode(mode);
     if(mode==="ebichelchen" && !ebichelchenEnabled()) mode="confirmation";
     if(mode==="reminder" && (!emailEnabled() || state.options.reminderEnabled===false)) mode="confirmation";
@@ -3334,6 +3335,7 @@ function bindSettings(){
     state.options.previewKind=previewKind || previewKindForTemplateMode(mode);
     saveState();
     reloadTemplateEditor();
+    requestAnimationFrame(()=>window.scrollTo(keepX, keepY));
   };
   function switchTemplateLang(lang, openId){
     lang=normalizeLang(lang);
@@ -3344,7 +3346,7 @@ function bindSettings(){
     saveState();
     reloadTemplateEditor(keepOpen);
   }
-  window._switchTemplateLangFromPreview=function(lang, openId){ switchTemplateLang(lang, openId); };
+  window._switchTemplateLangFromPreview=function(lang, openId){ const keepX=window.scrollX, keepY=window.scrollY; switchTemplateLang(lang, openId); requestAnimationFrame(()=>window.scrollTo(keepX, keepY)); };
   if(templateModeTabs){ templateModeTabs.querySelectorAll(".template-tab").forEach(btn=>{ btn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation();
     const tm=btn.dataset.templateMode;
     if(tm==="ebichelchen" && ebModelLocked()){
