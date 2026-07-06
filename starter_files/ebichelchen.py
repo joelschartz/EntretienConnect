@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.16 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.17 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
+# v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
+# Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
 
 from __future__ import annotations
 
@@ -851,11 +853,39 @@ def focus_app_tab() -> dict:
     # Linux/Fallback: nicht automatisch öffnen, um Duplikate zu vermeiden.
     return {"method": "none", "foundExistingTab": False, "message": "Automatisches Fokussieren ist für dieses Betriebssystem noch nicht umgesetzt.", "openedNewTab": False}
 
+def _list_cdp_targets() -> list:
+    try:
+        targets = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json", timeout=2)
+        return targets if isinstance(targets, list) else []
+    except Exception:
+        return []
+
+
+def _is_app_target(t: dict) -> bool:
+    """App-Tab der EntretienConnect-Oberfläche (läuft auf 127.0.0.1/localhost).
+    v1.10.17: LaunchServices kann die App-URL in den Debug-Browser geöffnet haben —
+    dieser Tab darf beim Aufräumen niemals mit geschlossen werden."""
+    url = str((t or {}).get("url") or "")
+    return (t or {}).get("type") == "page" and ("//127.0.0.1" in url or "//localhost" in url)
+
+
+def _cdp_close_tab(target_id: str) -> bool:
+    close_url = f"http://127.0.0.1:{CDP_PORT}/json/close/{urllib.parse.quote(str(target_id), safe='')}"
+    try:
+        req = urllib.request.Request(close_url, method="GET")
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            resp.read()
+        return True
+    except Exception:
+        return False
+
+
 def close_ebichelchen_target() -> dict:
     """Schließt das von der App gestartete e-Bichelchen-Chrome vollständig.
     In v1.7.3 wurde nur ein einzelner Tab geschlossen und danach versehentlich die App-URL
     im e-Bichelchen-Fenster geöffnet. v1.10.16 schließt deshalb bevorzugt den ganzen
     DevTools-Browser über Browser.close. Das betrifft nur den Chrome mit unserem lokalen Testprofil.
+    v1.10.17: läuft im selben Browser auch der App-Tab, wird nur der e-Bichelchen-Tab geschlossen.
     """
     target = find_ebichelchen_target()
     target_id = target.get("id")
@@ -867,6 +897,12 @@ def close_ebichelchen_target() -> dict:
 
     if "/ebichelchen/app/" not in url:
         raise RuntimeError("Sicherheitsstopp: Target ist kein e-Bichelchen-Tab: " + url)
+
+    if any(_is_app_target(t) for t in _list_cdp_targets()):
+        if _cdp_close_tab(target_id):
+            return {"closed": True, "method": "json-close", "targetId": target_id, "url": url, "title": title, "appTabProtected": True}
+        cdp_call(ws_url, "Page.close", {}, msg_id=700)
+        return {"closed": True, "method": "Page.close", "targetId": target_id, "url": url, "title": title, "appTabProtected": True}
 
     # Bevorzugt: kompletten von der App gestarteten Chrome schließen.
     try:
@@ -892,19 +928,28 @@ def force_close_launched_browser() -> dict:
     gerade offen ist (auch IAM-/EduKey-Login). Betrifft ausschließlich den Browser am
     lokalen CDP-Port mit App-Profil; der normale Browser des Benutzers bleibt unberührt."""
     result = {"closed": False, "method": None}
+    targets = _list_cdp_targets()
+    if any(_is_app_target(t) for t in targets):
+        # v1.10.17: der App-Tab läuft in diesem Browser — Browser niemals komplett beenden,
+        # sonst verschwindet die App mitsamt Fenster. Nur die übrigen Tabs schließen.
+        closed_tabs = 0
+        for t in targets:
+            if t.get("type") == "page" and not _is_app_target(t) and t.get("id"):
+                if _cdp_close_tab(t.get("id")):
+                    closed_tabs += 1
+        BROWSER_PROCESSES.clear()
+        return {"closed": closed_tabs > 0, "method": "tabs-only", "appTabProtected": True, "closedTabs": closed_tabs}
     try:
-        targets = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json", timeout=2)
-        if isinstance(targets, list):
-            for t in targets:
-                ws = t.get("webSocketDebuggerUrl")
-                if not ws:
-                    continue
-                try:
-                    cdp_call(ws, "Browser.close", {}, msg_id=702)
-                    result = {"closed": True, "method": "Browser.close"}
-                    break
-                except Exception:
-                    continue
+        for t in targets:
+            ws = t.get("webSocketDebuggerUrl")
+            if not ws:
+                continue
+            try:
+                cdp_call(ws, "Browser.close", {}, msg_id=702)
+                result = {"closed": True, "method": "Browser.close"}
+                break
+            except Exception:
+                continue
     except Exception:
         pass
     for key, proc in list(BROWSER_PROCESSES.items()):
@@ -935,22 +980,38 @@ def reset_login_session(profile: str = "default") -> dict:
     geschlossen) die nächste EduKey-Sicherheitsanfrage."""
     closed = force_close_launched_browser()
     removed = []
-    prof_root = PROFILE_ROOT
-    try:
-        if prof_root.exists():
-            for sub in prof_root.iterdir():
-                try:
-                    shutil.rmtree(sub, ignore_errors=True)
-                    removed.append(sub.name)
-                except Exception:
-                    pass
-    except Exception:
-        pass
+    cookies_cleared = False
+    if closed.get("appTabProtected"):
+        # v1.10.17: Browser läuft weiter (App-Tab drin) — das Profil eines laufenden
+        # Browsers nicht löschen. Stattdessen die Cookies (IAM-/EduKey-Sitzung) über
+        # DevTools leeren; das hat denselben Effekt für einen sauberen Neu-Login.
+        for t in _list_cdp_targets():
+            ws = t.get("webSocketDebuggerUrl")
+            if not ws:
+                continue
+            try:
+                cdp_call(ws, "Network.clearBrowserCookies", {}, msg_id=703)
+                cookies_cleared = True
+                break
+            except Exception:
+                continue
+    else:
+        prof_root = PROFILE_ROOT
+        try:
+            if prof_root.exists():
+                for sub in prof_root.iterdir():
+                    try:
+                        shutil.rmtree(sub, ignore_errors=True)
+                        removed.append(sub.name)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
     try:
         clear_current()
     except Exception:
         pass
-    return {"closed": closed, "profilesRemoved": removed}
+    return {"closed": closed, "profilesRemoved": removed, "cookiesCleared": cookies_cleared}
 
 
 def cleanup_after_read(close_eb: bool = True, focus_app: bool = True) -> dict:
