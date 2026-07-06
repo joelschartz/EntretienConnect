@@ -213,11 +213,13 @@
   .preview-tab{background:#fff;color:var(--muted);border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:850}
   .preview-tab:hover{background:var(--accent-soft);border-color:#dfe3fc;box-shadow:none}
   .preview-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:none}
-  .preview-empty{margin:10px 22px 22px}
+  /* v213: aligné sur les autres bannières (12px après le groupe jaune, même retrait horizontal) */
+  .preview-empty{margin:0}
   .mail-actionbar{margin:0;justify-content:flex-end;align-items:center}
   .mail-actionbar #sendAll{min-width:160px}
   #mailBanner{padding:14px 22px 0}
-  #mailList{display:flex;flex-direction:column;gap:6px;padding:10px 22px 22px}
+  /* v213: l'espacement vertical vient de la barre de sélection / des bannières — plus de padding haut supplémentaire */
+  #mailList{display:flex;flex-direction:column;gap:6px;padding:0 22px 22px}
   .mailitem{border:1px solid var(--line);border-radius:13px;margin:0;overflow:hidden;background:#fff;box-shadow:none;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
   .mailitem:hover{border-color:var(--line-strong);box-shadow:0 6px 18px rgba(20,30,60,.05)}
   .mailitem.done{border-color:#d9e1ee;background:#fbfcfe;opacity:.58}
@@ -229,8 +231,8 @@
   /* v164: les lignes décochées sont légèrement estompées — la case à cocher reste bien visible pour les réactiver */
   .mailitem.unselected .mail-main,.mailitem.unselected .status .pill{opacity:.45}
   /* v165: alignement vertical centré + largeur fixe du libellé — plus de saut entre « Tout sélectionner » et « Tout désélectionner » */
-  /* v212: un peu plus d'air au-dessus de « Tout sélectionner/désélectionner » */
-  .mail-select-bar{display:flex;align-items:center;gap:28px;padding:16px 22px 14px 22px;flex-wrap:wrap}.mail-select-bar .check{margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:28px;line-height:1}.mail-select-bar .check b{display:inline-flex;align-items:center;min-width:150px;line-height:1}.mail-select-bar #selectCount{font-size:12.5px;line-height:1;min-height:28px;display:inline-flex;align-items:center}
+  /* v213: la barre appartient visuellement à la liste — plus d'air au-dessus, moins en dessous */
+  .mail-select-bar{display:flex;align-items:center;gap:28px;padding:16px 22px 8px 22px;flex-wrap:wrap}.mail-select-bar .check{margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:28px;line-height:1}.mail-select-bar .check b{display:inline-flex;align-items:center;min-width:150px;line-height:1}.mail-select-bar #selectCount{font-size:12.5px;line-height:1;min-height:28px;display:inline-flex;align-items:center}
   .combine-option{margin-top:12px;color:var(--muted);font-weight:600;cursor:pointer}
   .mail-avatar{display:none}
   .mail-main{min-width:0;display:grid;grid-template-columns:minmax(150px,230px) 78px 26px 140px minmax(0,1fr);align-items:center;column-gap:12px;overflow:hidden}
@@ -463,7 +465,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v212</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v213</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -529,7 +531,7 @@
       <div class="card-head"><h2 id="studentsTitle">Liste des élèves</h2><span id="resetStudentsRow" style="display:none"><a href="#" id="resetStudents" class="icon-btn" title="Réinitialiser la liste d’élèves">↺</a></span></div>
       <div id="studentModeNote" class="student-mode-note"></div>
       <div class="student-lang-default">
-        <label for="defaultLangStudents">Langue standard pour nouveaux contacts <span class="tip" tabindex="0" data-tip="La langue du contact 1 définit la langue du message e-Bichelchen.">?</span></label>
+        <label for="defaultLangStudents">Langue standard pour nouveaux contacts <span class="tip" tabindex="0" data-tip="La langue du CONTACT 1 définit la langue du message e-Bichelchen.">?</span></label>
         <select id="defaultLangStudents">
           <option value="fr">Français</option>
           <option value="de">Deutsch</option>
@@ -737,7 +739,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 212;
+const APP_VERSION = 213;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2290,7 +2292,7 @@ function renderStudents(){
       tip.style.display = eb ? "" : "none";
       tip.dataset.tip = (eb && !em)
         ? "La langue standard définit la langue du message e-Bichelchen pour les élèves ajoutés ou importés."
-        : "La langue du contact 1 définit la langue du message e-Bichelchen.";
+        : "La langue du CONTACT 1 définit la langue du message e-Bichelchen.";
     }
   }
   if(note){
