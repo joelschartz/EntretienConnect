@@ -142,7 +142,7 @@
   .schedule select{min-width:145px;padding:7px 8px;border-radius:9px}
   .schedule td.appt-cell{padding:5px 7px}.cell-time{font-size:11.5px;font-weight:800;color:#667085;font-variant-numeric:tabular-nums;margin:0 0 4px;white-space:nowrap}.schedule td.assigned{background:var(--accent-soft)}.schedule td.assigned .cell-time{color:#4a55a2}.schedule td.assigned select{border-color:var(--accent);font-weight:700;color:var(--ink);background:#fff}.schedule td.past{background:#fff;color:#98a2b3}.schedule td.past .cell-time{color:#98a2b3}.schedule td.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important;box-shadow:none!important}.schedule td.past.assigned{background:#fff}.schedule td.td-time.past-time{background:#fbfbfe;color:#98a2b3}
   .schedule tr.pause-row td{padding:0 7px;background:#fff;border-right:1px solid var(--line);height:4px;line-height:1;vertical-align:middle}.schedule tr.pause-row td:last-child{border-right:none}.schedule tr.pause-row .pause-time{background:#fbfbfe;position:sticky;left:0;z-index:1;width:92px;min-width:92px;max-width:92px;text-align:center}.pause-slot{position:relative;display:flex;align-items:center;justify-content:center;min-height:4px;color:#98a2b3;font-size:11.5px;white-space:nowrap}.pause-insert,.pause-remove{appearance:none;-webkit-appearance:none;border:1px solid #e4e7ec;background:#fff;color:#667085;border-radius:999px;min-width:26px;height:18px;padding:0 8px;font-weight:850;font-size:12px;line-height:16px;cursor:pointer;box-shadow:none}.pause-slot.idle .pause-insert{position:absolute;top:-9px;opacity:.45;z-index:2}.pause-slot.idle .pause-insert:hover,.pause-slot.idle .pause-insert:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.schedule tr.pause-row.has-active td{height:28px}.pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}.pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}.pause-remove:hover{background:#fff3df;border-color:#dcae65}.pause-note{margin-top:8px}
-  .schedule-scroll{overflow-x:auto;border-radius:0 0 14px 14px;background:#fff}
+  .schedule-scroll{overflow-x:auto;overflow-y:visible;border-radius:0 0 14px 14px;background:#fff;padding-bottom:8px}
   .schedule-grid{--day-count:1;min-width:calc(66px + (var(--day-count) * 205px));font-size:13px;background:#fff}
   .schedule-head,.appt-grid-row,.pause-grid-row{display:grid;grid-template-columns:56px minmax(0,1fr)}
   .rdv-head,.rdv-num,.pause-gutter{background:#fbfbfe;border-right:1px solid var(--line);position:sticky;left:0;z-index:3;text-align:center;color:#667085}
@@ -178,15 +178,16 @@
   .schedule-grid .pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}
   .schedule-grid .pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}
   .schedule-grid .pause-remove:hover{background:#fff3df;border-color:#dcae65}
-  .block-calendar{--slot-unit:9px;min-width:calc(52px + (var(--day-count) * 188px));background:#fff;color:var(--ink)}
-  .block-head{display:grid;grid-template-columns:52px repeat(var(--day-count), minmax(176px,1fr));background:#f8f8fb;border-bottom:1px solid var(--line)}
-  .block-corner,.block-day-head{padding:7px 9px;font-size:12px;font-weight:850;color:var(--ink);border-right:1px solid var(--line);white-space:nowrap}.block-corner{position:sticky;left:0;z-index:7;text-align:center;color:#667085;background:#f8f8fb}.block-day-head:last-child{border-right:none}
-  .block-body{display:grid;grid-template-columns:52px repeat(var(--day-count), minmax(176px,1fr));align-items:stretch;background:#fff}
-  .block-axis,.block-day-col{display:grid;grid-template-rows:repeat(var(--rows), var(--slot-unit));position:relative;min-height:calc(var(--rows) * var(--slot-unit));box-sizing:border-box}.block-axis{position:sticky;left:0;z-index:5;background:#fbfbfe;border-right:1px solid var(--line)}.block-day-col{grid-template-columns:minmax(0,1fr);border-right:1px solid #edf0f5;background:#fff;overflow:visible}.block-day-col:last-child{border-right:none}
-  .block-hour-label{grid-column:1;display:flex;align-items:flex-start;justify-content:center;border-top:1px solid #e8ebf2;color:#667085;font-size:11px;font-weight:850;font-variant-numeric:tabular-nums;padding-top:2px;line-height:1;background:#fbfbfe}.block-hour-label:first-child{border-top:none}.block-hour-line{grid-column:1;border-top:1px solid #eef1f6;pointer-events:none;z-index:0}
-  .block-appt{grid-column:1;position:relative;z-index:2;display:grid;grid-template-columns:58px minmax(0,1fr);align-items:center;gap:6px;margin:2px 8px;padding:3px 5px;border:1px solid #e4e7ec;border-radius:10px;background:#fff;box-sizing:border-box;box-shadow:none;overflow:visible;min-height:30px}.block-appt.assigned{background:var(--accent-soft);border-color:#dfe4ff}.block-appt.past{opacity:.62;background:#fff}.block-appt select{width:100%;min-width:0;height:28px;border-color:#e7eaf1;border-radius:8px;padding:3px 7px;font-size:13px;box-shadow:none;background:#fff}.block-appt.assigned select[data-key]{border-color:var(--accent);font-weight:700}.block-appt.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important}.block-time-btn{height:28px;border:0;background:transparent;border-radius:8px;padding:0 2px;color:#667085;font-size:12.5px;font-weight:850;font-variant-numeric:tabular-nums;cursor:pointer;text-align:center;line-height:1.05}.block-time-btn small{display:block;margin-top:1px;font-size:9.5px;font-weight:750;color:#98a2b3;line-height:1}.block-time-btn:hover,.block-time-btn:focus{background:#fbfbfe;outline:1px solid #e4e7ec}.block-time-btn.manual{color:#7a4800;background:#fff7e8;outline:1px solid #efd7aa}.block-time-btn.manual small{color:#a4691a}.block-appt.past .block-time-btn{color:#98a2b3;cursor:not-allowed}.block-appt.past .block-time-btn small{color:#c3c8d0}
-  .block-insert-pause{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);z-index:5;appearance:none;-webkit-appearance:none;border:1px solid #e7eaf1;background:#fff;color:#98a2b3;border-radius:999px;min-width:22px;height:15px;padding:0 6px;font-weight:850;font-size:10.5px;line-height:13px;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.04);opacity:.38}.block-insert-pause:hover,.block-insert-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.block-pause{grid-column:1;position:relative;z-index:4;justify-self:center;align-self:center;display:inline-flex;align-items:center;justify-content:center;gap:4px;max-width:112px;height:16px;padding:0 9px;border:1px solid #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-size:11px;font-weight:850;line-height:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}.block-pause-remove{border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0;margin:0 0 0 1px;line-height:1}.block-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px;color:#667085;font-size:12.5px}.block-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}.tl-time-popover{position:absolute;z-index:9999;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 26px rgba(15,23,42,.16);padding:6px}.tl-time-popover select{font-size:13px;border-radius:8px;padding:5px 8px}
-  .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
+  .block-calendar{--slot-unit:9px;min-width:calc(48px + (var(--day-count) * 188px));background:#fff;color:var(--ink);padding-bottom:10px;overflow:visible}
+  .block-head{display:grid;grid-template-columns:48px repeat(var(--day-count), minmax(176px,1fr));background:#fafbfe;border-bottom:1px solid #e8ebf2}
+  .block-corner,.block-day-head{padding:8px 9px;font-size:12px;font-weight:850;color:var(--ink);border-right:1px solid #edf0f5;white-space:nowrap}.block-corner{position:sticky;left:0;z-index:7;text-align:center;color:#667085;background:#fafbfe}.block-day-head:last-child{border-right:none}
+  .block-body{display:grid;grid-template-columns:48px repeat(var(--day-count), minmax(176px,1fr));align-items:stretch;background:#fff;overflow:visible;padding-bottom:12px}
+  .block-axis,.block-day-col{display:grid;grid-template-rows:repeat(var(--rows), var(--slot-unit));position:relative;min-height:calc(var(--rows) * var(--slot-unit));box-sizing:border-box;overflow:visible}.block-axis{position:sticky;left:0;z-index:5;background:#fbfbfe;border-right:1px solid #edf0f5}.block-day-col{grid-template-columns:minmax(0,1fr);border-right:1px solid #f0f2f7;background:#fff;overflow:visible}.block-day-col:last-child{border-right:none}
+  .block-hour-label{grid-column:1;display:flex;align-items:flex-start;justify-content:center;border-top:1px solid #e8ebf2;color:#667085;font-size:11px;font-weight:850;font-variant-numeric:tabular-nums;padding-top:2px;line-height:1;background:#fbfbfe}.block-hour-label:first-child{border-top:none}.block-hour-line{grid-column:1;border-top:1px solid #f1f3f8;pointer-events:none;z-index:0}
+  .block-appt{grid-column:1;position:relative;z-index:2;display:grid;grid-template-columns:70px minmax(0,1fr);align-items:center;gap:6px;margin:2px 10px;padding:2px 4px;border:0;border-radius:11px;background:#fff;box-sizing:border-box;box-shadow:none;overflow:visible;min-height:31px}.block-appt:hover{background:#fbfbff}.block-appt.assigned{background:var(--accent-soft)}.block-appt.past{opacity:.62;background:#fff}.block-appt select[data-key]{width:100%;min-width:0;height:28px;border:0;border-radius:8px;padding:3px 8px;font-size:13px;box-shadow:none;background:transparent;color:var(--ink)}.block-appt select[data-key]:hover,.block-appt select[data-key]:focus{background:#fff;box-shadow:inset 0 0 0 1px #d9deea;outline:none}.block-appt.assigned select[data-key]{background:#fff;box-shadow:inset 0 0 0 1px var(--accent);font-weight:700}.block-appt.past select[data-key]{background:transparent!important;color:#98a2b3!important;box-shadow:none!important;cursor:not-allowed;font-weight:500!important}
+  .block-time-select{width:66px;min-width:66px;height:28px;border:0;border-radius:8px;background:transparent;color:#667085;font-size:12.5px;font-weight:850;font-variant-numeric:tabular-nums;cursor:pointer;text-align:center;padding:2px 18px 2px 4px;box-shadow:none;appearance:auto}.block-time-select:hover,.block-time-select:focus{background:#fff;box-shadow:inset 0 0 0 1px #d9deea;outline:none}.block-time-select.manual{color:#7a4800;background:#fff7e8;box-shadow:inset 0 0 0 1px #efd7aa}.block-appt.past .block-time-select{color:#98a2b3;cursor:not-allowed;background:transparent;box-shadow:none}
+  .block-insert-pause{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);z-index:20;appearance:none;-webkit-appearance:none;border:1px solid #e7eaf1;background:rgba(255,255,255,.96);color:#98a2b3;border-radius:999px;min-width:22px;height:17px;padding:0 6px;font-weight:850;font-size:10.5px;line-height:15px;cursor:pointer;box-shadow:0 1px 3px rgba(15,23,42,.05);opacity:.46}.block-insert-pause:hover,.block-insert-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.block-pause{grid-column:1;position:relative;z-index:18;justify-self:center;align-self:center;display:inline-flex;align-items:center;justify-content:center;gap:4px;max-width:122px;height:18px;padding:0 9px;border:1px solid #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-size:11px;font-weight:850;line-height:16px;box-shadow:0 1px 2px rgba(15,23,42,.04);cursor:pointer}.block-pause:hover{background:#fff3df;border-color:#e7bf7d}.block-pause-remove{border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0;margin:0 0 0 2px;line-height:1}.block-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0;padding:6px 12px;color:#667085;font-size:12.5px;border-bottom:1px solid #f1f3f8;background:#fff}.block-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}
+  .weekblock{margin-bottom:18px;border-radius:14px;overflow:visible;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
   .weekblock .weekhead{font-weight:750;font-size:13px;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid var(--line);padding:9px 12px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
   #mailTemplatePreview{display:none}
@@ -539,7 +540,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v244</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v245</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -818,7 +819,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 244;
+const APP_VERSION = 245;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1656,6 +1657,7 @@ function updateNewSessionButton(){
 function timeToMin(t){ const [h,m]=String(t||"00:00").split(":").map(Number); return (Number(h)||0)*60+(Number(m)||0); }
 function minToTime(x){ x=Number(x)||0; return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0"); }
 function normalizePauseMin(v){ v=Number(v)||5; return [5,10,15].includes(v) ? v : 5; }
+function normalizePauseValue(v){ v=Number(v)||0; v=Math.round(v/5)*5; return (v>=5 && v<=60) ? v : 0; }
 const LEGACY_GLOBAL_PAUSE_KEY="__global";
 function normalizePauseAfter(raw){
   const out={};
@@ -1663,7 +1665,7 @@ function normalizePauseAfter(raw){
     Object.keys(raw).forEach(k=>{
       const v=raw[k];
       if(/^\d+$/.test(String(k))){
-        const min=normalizePauseMin(v);
+        const min=normalizePauseValue(v);
         if(min){ (out[LEGACY_GLOBAL_PAUSE_KEY]=out[LEGACY_GLOBAL_PAUSE_KEY]||{})[String(parseInt(k,10))]=min; }
         return;
       }
@@ -1671,7 +1673,7 @@ function normalizePauseAfter(raw){
       const dayMap={};
       if(v && typeof v==="object"){
         Object.keys(v).forEach(idxKey=>{
-          const idx=parseInt(idxKey,10), min=normalizePauseMin(v[idxKey]);
+          const idx=parseInt(idxKey,10), min=normalizePauseValue(v[idxKey]);
           if(Number.isFinite(idx) && idx>=0) dayMap[String(idx)]=min;
         });
       }
@@ -1707,15 +1709,21 @@ function dayPauseMap(day){
   const map=normalizePauseAfter(state.config.pauseAfter);
   return (day && map[day]) ? map[day] : (map[LEGACY_GLOBAL_PAUSE_KEY] || {});
 }
-function pauseAfterMinForDay(day,i){ const v=dayPauseMap(day)[String(i)]; return v ? normalizePauseMin(v) : 0; }
+function pauseAfterMinForDay(day,i){ const v=dayPauseMap(day)[String(i)]; return v ? normalizePauseValue(v) : 0; }
 function pauseAfterMin(i){ return pauseAfterMinForDay(null,i); }
 function setPauseAfterForDay(day,i,min){
   if(!day) return;
   const map=normalizePauseAfter(state.config.pauseAfter);
   if(map[LEGACY_GLOBAL_PAUSE_KEY] && !map[day]) delete map[LEGACY_GLOBAL_PAUSE_KEY];
   const dayMap=map[day]=map[day]||{};
-  dayMap[String(i)]=normalizePauseMin(min);
+  dayMap[String(i)]=normalizePauseValue(min) || 5;
   state.config.pauseAfter=map;
+}
+function incrementPauseAfterForDay(day,i){
+  if(!day) return;
+  const current=pauseAfterMinForDay(day,i);
+  const next=current ? Math.min(60,current+5) : normalizePauseMin(state.config.pauseMin);
+  setPauseAfterForDay(day,i,next);
 }
 function removePauseAfterForDay(day,i){
   if(!day) return;
@@ -1760,7 +1768,7 @@ function slotsForDate(day){
     out.push({start:minToTime(startMin), end:minToTime(endMin), startMin, endMin, idx:i});
     if(i<count-1){
       const pause=pauseAfterMinForDay(day,i);
-      // v244: pause = vraie coupure APRÈS le bloc de rendez-vous.
+      // v245: pause = vraie coupure APRÈS le bloc de rendez-vous.
       // Exemple avec durée 20 : 14:40–15:00, pause 5, puis 15:05.
       t = endMin + pause;
     }
@@ -2898,16 +2906,16 @@ function renderCalendar(){
         const cls=["block-appt"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
         const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
         const manual=hasTimeOverrideForDay(d,i);
-        const timeCls='block-time-btn'+(manual?' manual':'');
+        const timeCls='block-time-select'+(manual?' manual':'');
         const startRow=blockGridRow(slot.startMin,bounds);
         const span=blockSpan(slot.startMin,slot.endMin);
         const style='grid-row:'+startRow+' / span '+span;
         let insert='';
-        if(i<count-1 && !isPast && !pauseAfterMinForDay(d,i)){
-          insert='<button type="button" class="block-insert-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Insérer une pause de '+normalizePauseMin(state.config.pauseMin)+' min après ce rendez-vous">Ⅱ</button>';
+        if(i<count-1 && !isPast){
+          insert='<button type="button" class="block-insert-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Pause : clic = +5 min après ce rendez-vous">Ⅱ</button>';
         }
         return '<div class="'+cls.join(' ')+'" style="'+style+'">'
-          +'<button type="button" class="'+timeCls+'" data-time-day="'+d+'" data-time-index="'+i+'" data-time-current="'+slot.startMin+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous"><span>'+esc(minToTime(slot.startMin))+'</span><small>'+esc(minToTime(slot.endMin))+'</small></button>'
+          +'<select class="'+timeCls+'" data-time-select-day="'+d+'" data-time-select-index="'+i+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous">'+timeSelectOptions(d,i,slot.startMin)+'</select>'
           +'<select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key,assignList,assignEntries)+'</select>'
           +insert
           +'</div>';
@@ -2918,15 +2926,24 @@ function renderCalendar(){
         if(!pause) return '';
         const row=blockGridRow(slot.endMin,bounds);
         const span=Math.max(1, Math.round(pause/5));
-        return '<div class="block-pause" style="grid-row:'+row+' / span '+span+'" title="Pause après '+esc(minToTime(slot.startMin))+'">Pause '+pause+' min <button type="button" class="block-pause-remove" data-pause-remove-day="'+d+'" data-pause-remove-index="'+slot.idx+'" aria-label="Supprimer la pause">×</button></div>';
+        return '<div class="block-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+slot.idx+'" style="grid-row:'+row+' / span '+span+'" title="Pause après '+esc(minToTime(slot.startMin))+' — cliquer pour ajouter 5 min">Pause '+pause+' min <button type="button" class="block-pause-remove" data-pause-remove-day="'+d+'" data-pause-remove-index="'+slot.idx+'" aria-label="Supprimer la pause">×</button></div>';
       }).join("");
       return '<div class="block-day-col" style="--rows:'+bounds.rows+'">'+hourLines+items+pauses+'</div>';
     }).join("");
-    const legend='<div class="block-legend"><span class="mini-ii">Ⅱ</span><span>Chaque jour = une seule colonne</span><span>·</span><span>Blocs de rendez-vous complets</span><span>·</span><span>Pauses jaunes entre deux blocs</span></div>';
+    const legend='<div class="block-legend"><span class="mini-ii">Ⅱ</span><span>Pause : clic = +5 min</span><span>·</span><span>× = supprimer</span><span>·</span><span>Chaque jour = une colonne</span></div>';
     return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="block-calendar" style="--day-count:'+days.length+'"><div class="block-head"><div class="block-corner">h</div>'+dayHeaders+'</div><div class="block-body"><div class="block-axis" style="--rows:'+bounds.rows+'">'+axis+'</div>'+dayCols+'</div></div></div></div>';
   }).join("");
   grid.innerHTML=html;
   grid.onchange=(e)=>{
+    const timeSel=e.target.closest && e.target.closest('select[data-time-select-day]');
+    if(timeSel){
+      const day=timeSel.dataset.timeSelectDay;
+      const idx=parseInt(timeSel.dataset.timeSelectIndex,10);
+      if(timeSel.value==="auto") removeTimeOverrideForDay(day,idx);
+      else setTimeOverrideForDay(day,idx,Number(timeSel.value));
+      scheduleChanged();
+      return;
+    }
     const keySel=e.target.closest && e.target.closest('select[data-key]');
     if(keySel){
       const k=keySel.dataset.key;
@@ -2946,12 +2963,10 @@ function renderCalendar(){
       scheduleChanged();
       return;
     }
-    const timeBtn=e.target.closest && e.target.closest('button[data-time-day]');
-    if(timeBtn){ openTimelineTimePicker(timeBtn); return; }
     const add=e.target.closest && e.target.closest('button[data-pause-add-day]');
     if(add){
       const i=parseInt(add.dataset.pauseAddIndex,10);
-      setPauseAfterForDay(add.dataset.pauseAddDay, i, state.config.pauseMin);
+      incrementPauseAfterForDay(add.dataset.pauseAddDay, i);
       scheduleChanged();
       return;
     }
