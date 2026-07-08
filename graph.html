@@ -465,7 +465,7 @@
   .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
   .maintenance-modal input{width:100%;height:42px;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
 
-  /* v223: la couleur du mode (vert = e-Bichelchen, bleu = e-mail, ambre = complet) suit
+  /* v224: la couleur du mode (vert = e-Bichelchen, bleu = e-mail, ambre = complet) suit
      l'utilisateur — badge nommé dans la barre d'onglets + onglets Envoi assortis. */
   .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid transparent;flex:0 0 auto;align-self:center;user-select:none}
   @media (max-width:900px){.mode-badge{font-size:11px;padding:5px 9px;gap:5px}}
@@ -475,38 +475,39 @@
   body.wf-email .mode-badge{background:var(--accent-soft);color:#4a55a2;border-color:#dfe3fc}
   body.wf-both .mode-badge{background:#faefda;color:#a4691a;border-color:#ecd5a8}
 
-  /* v223: Envoi übernimmt die Modus-Farben aus Démarrage.
-     Wichtig: nur die äußeren Fenster/Flächen werden eingefärbt;
-     Editor- und Vorschau-Inhalte bleiben weiß. */
+
+  /* v224: Envoi übernimmt die dezente, helle Modus-Farbe aus Démarrage.
+     Die Karten bleiben ohne kräftige Außenumrandung; nur der Hintergrund
+     wird sanft eingefärbt. Editor- und Vorschau-Inhalte bleiben weiß. */
   body.wf-eb{
-    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f6fcf9 42%,#eef8f3 100%);
-    --mode-panel-border:#2e8b64;
-    --mode-panel-border-soft:#bfe5d1;
-    --mode-panel-accent:#2e8b64;
-    --mode-panel-accent-d:#27795a;
-    --mode-panel-soft:#e3f5ec;
-    --mode-panel-glow:rgba(46,139,100,.12);
-    --mode-panel-line:rgba(46,139,100,.18);
+    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f7fcf9 28%,#f2faf6 100%);
+    --mode-panel-border:rgba(28,28,45,.06);
+    --mode-panel-border-soft:#d8e9df;
+    --mode-panel-accent:#4f9c79;
+    --mode-panel-accent-d:#3e8866;
+    --mode-panel-soft:#edf7f1;
+    --mode-panel-glow:rgba(46,139,100,.07);
+    --mode-panel-line:rgba(79,156,121,.12);
   }
   body.wf-email{
-    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f8f9ff 42%,#f2f4fe 100%);
-    --mode-panel-border:#6c7cf0;
-    --mode-panel-border-soft:#dfe3fc;
-    --mode-panel-accent:#6c7cf0;
-    --mode-panel-accent-d:#5563d8;
-    --mode-panel-soft:#eef0fe;
-    --mode-panel-glow:rgba(108,124,240,.12);
-    --mode-panel-line:rgba(108,124,240,.18);
+    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#fbfbff 28%,#f2f4fe 100%);
+    --mode-panel-border:rgba(28,28,45,.06);
+    --mode-panel-border-soft:#e3e6fb;
+    --mode-panel-accent:#7f8deb;
+    --mode-panel-accent-d:#6d7bdd;
+    --mode-panel-soft:#f1f3fe;
+    --mode-panel-glow:rgba(108,124,240,.07);
+    --mode-panel-line:rgba(127,141,235,.14);
   }
   body.wf-both{
-    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#fffaf2 42%,#fdf6ee 100%);
-    --mode-panel-border:#c98a2e;
-    --mode-panel-border-soft:#ecd5a8;
-    --mode-panel-accent:#c98a2e;
-    --mode-panel-accent-d:#b57a24;
-    --mode-panel-soft:#fcf2df;
-    --mode-panel-glow:rgba(201,138,46,.13);
-    --mode-panel-line:rgba(201,138,46,.20);
+    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#fffcf8 28%,#fdf6ee 100%);
+    --mode-panel-border:rgba(28,28,45,.06);
+    --mode-panel-border-soft:#efe2c6;
+    --mode-panel-accent:#d0a157;
+    --mode-panel-accent-d:#bc8e44;
+    --mode-panel-soft:#fcf5e8;
+    --mode-panel-glow:rgba(201,138,46,.08);
+    --mode-panel-line:rgba(208,161,87,.15);
   }
   body.wf-eb #panel-mails .template-card,
   body.wf-email #panel-mails .template-card,
@@ -515,8 +516,8 @@
   body.wf-email #panel-mails .preview-card,
   body.wf-both #panel-mails .preview-card{
     background:var(--mode-panel-bg);
-    border:2px solid var(--mode-panel-border);
-    box-shadow:0 8px 26px var(--mode-panel-glow),var(--shadow-sm);
+    border:1px solid var(--mode-panel-border);
+    box-shadow:0 6px 18px var(--mode-panel-glow),var(--shadow-sm);
   }
   body.wf-eb #panel-mails .mail-template-head,
   body.wf-email #panel-mails .mail-template-head,
@@ -531,7 +532,7 @@
   body.wf-email #panel-mails .template-chevron,
   body.wf-both #panel-mails .template-chevron{
     color:var(--mode-panel-accent);
-    border-color:var(--mode-panel-border-soft);
+    border-color:rgba(28,28,45,.06);
   }
   body.wf-eb #panel-mails .template-chevron:hover,
   body.wf-email #panel-mails .template-chevron:hover,
@@ -579,7 +580,7 @@
   body.wf-eb #panel-mails #tplBodyEditor.plain-template-editor:focus,
   body.wf-email #panel-mails #tplBodyEditor.plain-template-editor:focus,
   body.wf-both #panel-mails #tplBodyEditor.plain-template-editor:focus{
-    border-color:var(--mode-panel-accent);
+    border-color:var(--mode-panel-border-soft);
     box-shadow:0 0 0 3px var(--mode-panel-soft);
   }
   body.wf-eb #panel-mails .mailhead .toggle,
@@ -615,7 +616,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v223</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v224</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -4784,7 +4785,7 @@ function applyChannelVisibility(){
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
   }
-  // v223: refléter le mode partout — classe sur <body> (couleurs des fenêtres Envoi)
+  // v224: refléter le mode partout — classe sur <body> (couleurs claires des fenêtres Envoi)
   // + badge de mode nommé dans la barre d'onglets collante.
   try{
     const mode=workflowMode();
