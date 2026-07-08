@@ -142,6 +142,42 @@
   .schedule select{min-width:145px;padding:7px 8px;border-radius:9px}
   .schedule td.appt-cell{padding:5px 7px}.cell-time{font-size:11.5px;font-weight:800;color:#667085;font-variant-numeric:tabular-nums;margin:0 0 4px;white-space:nowrap}.schedule td.assigned{background:var(--accent-soft)}.schedule td.assigned .cell-time{color:#4a55a2}.schedule td.assigned select{border-color:var(--accent);font-weight:700;color:var(--ink);background:#fff}.schedule td.past{background:#fff;color:#98a2b3}.schedule td.past .cell-time{color:#98a2b3}.schedule td.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important;box-shadow:none!important}.schedule td.past.assigned{background:#fff}.schedule td.td-time.past-time{background:#fbfbfe;color:#98a2b3}
   .schedule tr.pause-row td{padding:0 7px;background:#fff;border-right:1px solid var(--line);height:4px;line-height:1;vertical-align:middle}.schedule tr.pause-row td:last-child{border-right:none}.schedule tr.pause-row .pause-time{background:#fbfbfe;position:sticky;left:0;z-index:1;width:92px;min-width:92px;max-width:92px;text-align:center}.pause-slot{position:relative;display:flex;align-items:center;justify-content:center;min-height:4px;color:#98a2b3;font-size:11.5px;white-space:nowrap}.pause-insert,.pause-remove{appearance:none;-webkit-appearance:none;border:1px solid #e4e7ec;background:#fff;color:#667085;border-radius:999px;min-width:26px;height:18px;padding:0 8px;font-weight:850;font-size:12px;line-height:16px;cursor:pointer;box-shadow:none}.pause-slot.idle .pause-insert{position:absolute;top:-9px;opacity:.45;z-index:2}.pause-slot.idle .pause-insert:hover,.pause-slot.idle .pause-insert:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.schedule tr.pause-row.has-active td{height:28px}.pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}.pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}.pause-remove:hover{background:#fff3df;border-color:#dcae65}.pause-note{margin-top:8px}
+  .schedule-scroll{overflow-x:auto;border-radius:0 0 14px 14px;background:#fff}
+  .schedule-grid{--day-count:1;min-width:calc(66px + (var(--day-count) * 205px));font-size:13px;background:#fff}
+  .schedule-head,.appt-grid-row,.pause-grid-row{display:grid;grid-template-columns:56px minmax(0,1fr)}
+  .rdv-head,.rdv-num,.pause-gutter{background:#fbfbfe;border-right:1px solid var(--line);position:sticky;left:0;z-index:3;text-align:center;color:#667085}
+  .rdv-head{padding:7px 6px;font-size:12px;font-weight:800;border-bottom:1px solid var(--line)}
+  .rdv-num{display:flex;align-items:center;justify-content:center;font-weight:800;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--line);min-height:42px}
+  .rdv-num.past-time{color:#98a2b3}
+  .days-head,.appt-blocks,.pause-days{display:grid;grid-template-columns:repeat(var(--day-count), minmax(170px, 1fr));min-width:0}
+  .day-head{background:#f8f8fb;font-size:12px;white-space:nowrap;color:var(--ink);font-weight:800;padding:7px 8px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .day-head:last-child{border-right:none}
+  .appt-blocks{align-items:stretch}
+  .timegroup{display:grid;grid-template-columns:92px minmax(0,1fr);min-width:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff}
+  .timegroup:last-child{border-right:none}
+  .block-time{display:flex;align-items:center;justify-content:center;padding:5px 6px;background:#fbfbfe;border-right:1px solid var(--line);font-weight:800;font-size:12px;color:#667085;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .timegroup.past-timegroup .block-time{color:#98a2b3}
+  .block-cells{display:grid;min-width:0}
+  .appt-cell{padding:5px 7px;border-right:1px solid var(--line);min-width:0;background:#fff}
+  .block-cells .appt-cell:last-child{border-right:none}
+  .appt-cell select{width:100%;min-width:0;padding:7px 8px;border-radius:9px}
+  .appt-cell.assigned{background:var(--accent-soft)}
+  .appt-cell.assigned select{border-color:var(--accent);font-weight:700;color:var(--ink);background:#fff}
+  .appt-cell.past{background:#fff;color:#98a2b3}
+  .appt-cell.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important;box-shadow:none!important}
+  .pause-grid-row{min-height:4px}
+  .pause-gutter{min-height:4px;line-height:1;background:#fbfbfe}
+  .pause-days{min-height:4px;background:#fff}
+  .schedule-grid .pause-day{position:relative;min-height:4px;border-right:1px solid var(--line);padding:0 7px;background:#fff}
+  .schedule-grid .pause-day:last-child{border-right:none}
+  .schedule-grid .pause-slot{position:relative;display:flex;align-items:center;justify-content:center;min-height:4px;color:#98a2b3;font-size:11.5px;white-space:nowrap}
+  .schedule-grid .pause-insert,.schedule-grid .pause-remove{appearance:none;-webkit-appearance:none;border:1px solid #e4e7ec;background:#fff;color:#667085;border-radius:999px;min-width:26px;height:18px;padding:0 8px;font-weight:850;font-size:12px;line-height:16px;cursor:pointer;box-shadow:none}
+  .schedule-grid .pause-slot.idle .pause-insert{position:absolute;top:-9px;opacity:.48;z-index:2}
+  .schedule-grid .pause-slot.idle .pause-insert:hover,.schedule-grid .pause-slot.idle .pause-insert:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+  .pause-grid-row.has-active .pause-gutter,.pause-grid-row.has-active .pause-day{min-height:30px}
+  .schedule-grid .pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}
+  .schedule-grid .pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}
+  .schedule-grid .pause-remove:hover{background:#fff3df;border-color:#dcae65}
   .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
   .weekblock .weekhead{font-weight:750;font-size:13px;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid var(--line);padding:9px 12px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
@@ -495,7 +531,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v238</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v239</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -594,7 +630,7 @@ Langues : FR, DE, EN, LU">?</span>
         <div><label>Durée par rendez-vous (min)</label><input type="number" id="cfgDur" min="5" max="120" step="5"></div>
         <div><label>Pause à insérer</label><select id="cfgPause"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
       </div>
-      <p class="hint pause-note">Cliquez sur « Ⅱ » entre deux rendez-vous, dans le jour concerné, pour insérer une pause. Chaque jour peut avoir ses propres pauses ; les rendez-vous restent alignés par numéro.</p>
+      <p class="hint pause-note">Cliquez sur « Ⅱ » entre deux rendez-vous, dans le jour concerné, pour insérer une pause. Les horaires restent à gauche : tant que plusieurs jours ont les mêmes heures, ils partagent le même bloc horaire.</p>
     </div>
     <div class="card">
       <div class="card-head"><h2>Jours d’entretien</h2><span id="resetCalRow" style="display:none"><a href="#" id="resetCal" class="icon-btn" title="Réinitialiser le calendrier &amp; les rendez-vous">↺</a></span></div>
@@ -774,7 +810,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 238;
+const APP_VERSION = 239;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2682,38 +2718,53 @@ function renderCalendar(){
   const groups={};
   state.config.dates.slice().sort().forEach(ds=>{ const wk=weekKeyOf(ds); (groups[wk]=groups[wk]||[]).push(ds); });
   const weekKeys=Object.keys(groups).sort();
+  const labelForSlot=slot=>slot ? (slot.start+"–"+slot.end) : "—";
+  const makeDayGridStyle=days=>'--day-count:'+days.length+';grid-template-columns:repeat('+days.length+', minmax(170px, 1fr))';
   grid.innerHTML=weekKeys.map(wk=>{
     const days=groups[wk];
     const monLbl=new Date(wk+"T00:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
     const daySlots={}; days.forEach(d=>daySlots[d]=slotsForDate(d));
-    const head='<tr><th class="th-time">Rdv</th>'+days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<th>'+lbl+'</th>'; }).join("")+'</tr>';
+    const dayGridStyle=makeDayGridStyle(days);
+    const head='<div class="schedule-head"><div class="rdv-head">Rdv</div><div class="days-head" style="'+dayGridStyle+'">'+days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<div class="day-head">'+esc(lbl)+'</div>'; }).join("")+'</div></div>';
     const now=new Date();
     let bodyRows="";
     for(let i=0;i<count;i++){
       const rowPastAll=days.every(d=>appointmentDateTime(d, (daySlots[d][i]||{}).end) <= now);
-      const cells=days.map(d=>{
-        const slot=daySlots[d][i];
-        if(!slot) return '<td class="appt-cell past"><div class="cell-time">—</div></td>';
-        const key=d+"__"+i, sel=state.assignments[key]||"";
-        const isPast=appointmentDateTime(d, slot.end) <= now;
-        const cls=["appt-cell"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
-        const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
-        return '<td class="'+cls.join(' ')+'"><div class="cell-time">'+slot.start+'–'+slot.end+'</div><select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key)+'</select></td>';
-      }).join("");
-      bodyRows += '<tr><td class="td-time rdv-index'+(rowPastAll?' past-time':'')+'">'+(i+1)+'</td>'+cells+'</tr>';
+      let blocks="";
+      for(let j=0;j<days.length;){
+        const firstDay=days[j];
+        const firstLabel=labelForSlot(daySlots[firstDay][i]);
+        let k=j+1;
+        while(k<days.length && labelForSlot(daySlots[days[k]][i])===firstLabel) k++;
+        const span=k-j;
+        const blockDays=days.slice(j,k);
+        const blockPastAll=blockDays.every(d=>appointmentDateTime(d, (daySlots[d][i]||{}).end) <= now);
+        const cells=blockDays.map(d=>{
+          const slot=daySlots[d][i];
+          if(!slot) return '<div class="appt-cell past"><select disabled><option>—</option></select></div>';
+          const key=d+"__"+i, sel=state.assignments[key]||"";
+          const isPast=appointmentDateTime(d, slot.end) <= now;
+          const cls=["appt-cell"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
+          const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
+          return '<div class="'+cls.join(' ')+'"><select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key)+'</select></div>';
+        }).join("");
+        blocks += '<div class="timegroup '+(blockPastAll?'past-timegroup':'')+'" style="grid-column:span '+span+';--span:'+span+'"><div class="block-time">'+esc(firstLabel)+'</div><div class="block-cells" style="grid-template-columns:repeat('+span+', minmax(145px, 1fr))">'+cells+'</div></div>';
+        j=k;
+      }
+      bodyRows += '<div class="appt-grid-row"><div class="rdv-num '+(rowPastAll?'past-time':'')+'">'+(i+1)+'</div><div class="appt-blocks" style="'+dayGridStyle+'">'+blocks+'</div></div>';
       if(i<count-1){
         const hasActive=days.some(d=>pauseAfterMinForDay(d,i));
         const pauseCells=days.map(d=>{
           const pause=pauseAfterMinForDay(d,i);
           if(pause){
-            return '<td class="pause-day active"><div class="pause-slot active">Pause '+pause+' min <button type="button" class="pause-remove" data-pause-remove-day="'+d+'" data-pause-remove-index="'+i+'" title="Supprimer la pause">×</button></div></td>';
+            return '<div class="pause-day active"><div class="pause-slot active">Pause '+pause+' min <button type="button" class="pause-remove" data-pause-remove-day="'+d+'" data-pause-remove-index="'+i+'" title="Supprimer la pause">×</button></div></div>';
           }
-          return '<td class="pause-day idle"><div class="pause-slot idle"><button type="button" class="pause-insert" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Insérer une pause de '+normalizePauseMin(state.config.pauseMin)+' min ce jour-là">Ⅱ</button></div></td>';
+          return '<div class="pause-day idle"><div class="pause-slot idle"><button type="button" class="pause-insert" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Insérer une pause de '+normalizePauseMin(state.config.pauseMin)+' min ce jour-là">Ⅱ</button></div></div>';
         }).join("");
-        bodyRows += '<tr class="pause-row '+(hasActive?'has-active':'idle-all')+'"><td class="pause-time"></td>'+pauseCells+'</tr>';
+        bodyRows += '<div class="pause-grid-row '+(hasActive?'has-active':'idle-all')+'"><div class="pause-gutter"></div><div class="pause-days" style="'+dayGridStyle+'">'+pauseCells+'</div></div>';
       }
     }
-    return '<div class="weekblock"><div class="weekhead">Semaine du '+monLbl+'</div><div style="overflow-x:auto"><table class="schedule"><thead>'+head+'</thead><tbody>'+bodyRows+'</tbody></table></div></div>';
+    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div><div class="schedule-scroll"><div class="schedule-grid" style="--day-count:'+days.length+'">'+head+bodyRows+'</div></div></div>';
   }).join("");
   grid.querySelectorAll("select[data-key]").forEach(sel=>{
     sel.onchange=()=>{
