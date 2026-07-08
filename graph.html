@@ -178,6 +178,15 @@
   .schedule-grid .pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}
   .schedule-grid .pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}
   .schedule-grid .pause-remove:hover{background:#fff3df;border-color:#dcae65}
+  .timeline-calendar{display:grid;grid-template-columns:76px repeat(var(--day-count), minmax(172px,1fr));min-width:calc(76px + (var(--day-count) * 190px));background:#fff}
+  .timeline-head{display:contents}.timeline-corner,.timeline-day-head{background:#f8f8fb;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px 8px;font-size:12px;font-weight:800;color:var(--ink);white-space:nowrap}.timeline-corner{position:sticky;left:0;z-index:5;text-align:center;color:#667085}.timeline-day-head:last-child{border-right:none}
+  .timeline-axis,.timeline-day{position:relative;min-height:80px;background:#fff}.timeline-axis{position:sticky;left:0;z-index:4;background:#fbfbfe;border-right:1px solid var(--line)}.timeline-day{border-right:1px solid var(--line)}.timeline-day:last-child{border-right:none}
+  .axis-label{position:absolute;left:7px;right:7px;transform:translateY(-50%);font-size:12px;font-weight:850;font-variant-numeric:tabular-nums;color:#667085;text-align:center;line-height:1;background:#fbfbfe;border-radius:999px;padding:2px 0}.axis-label.muted{color:#98a2b3}
+  .timeline-guide{position:absolute;left:0;right:0;height:1px;background:#eef0f4;pointer-events:none}.timeline-guide.major{background:#e4e7ec}
+  .tl-appt{position:absolute;left:7px;right:7px;min-height:34px;display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:6px;padding:4px 6px;border:1px solid var(--line);border-radius:11px;background:#fff;box-sizing:border-box;box-shadow:none;z-index:2}.tl-appt.assigned{background:var(--accent-soft);border-color:#dfe3fc}.tl-appt.past{opacity:.62;background:#fff}
+  .tl-appt select{width:100%;min-width:0;padding:6px 7px;border-radius:9px;font-size:13px}.tl-appt.assigned select[data-key]{border-color:var(--accent);font-weight:700}.tl-time-select{font-variant-numeric:tabular-nums;font-weight:850;color:#667085;background:#fbfbfe;border-color:#e4e7ec!important;padding-left:4px!important;padding-right:4px!important}.tl-time-select.manual{color:#7a4800;background:#fff7e8;border-color:#efd7aa!important}.tl-appt.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important}
+  .tl-pause{position:absolute;left:50%;transform:translate(-50%,-50%);z-index:3;appearance:none;-webkit-appearance:none;border:1px solid #e4e7ec;background:#fff;color:#667085;border-radius:999px;min-width:26px;height:18px;padding:0 8px;font-weight:850;font-size:12px;line-height:16px;cursor:pointer;box-shadow:none;opacity:.48}.tl-pause:hover,.tl-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+  .tl-pause.active{opacity:1;min-width:82px;height:22px;border-color:#efd7aa;background:#fff7e8;color:#8a5a18;font-size:11.5px}.tl-pause-remove{margin-left:5px;border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0}.tl-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px;color:#667085;font-size:12.5px}.tl-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}
   .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
   .weekblock .weekhead{font-weight:750;font-size:13px;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid var(--line);padding:9px 12px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
@@ -531,7 +540,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v239</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v240</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -630,7 +639,7 @@ Langues : FR, DE, EN, LU">?</span>
         <div><label>Durée par rendez-vous (min)</label><input type="number" id="cfgDur" min="5" max="120" step="5"></div>
         <div><label>Pause à insérer</label><select id="cfgPause"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
       </div>
-      <p class="hint pause-note">Cliquez sur « Ⅱ » entre deux rendez-vous, dans le jour concerné, pour insérer une pause. Les horaires restent à gauche : tant que plusieurs jours ont les mêmes heures, ils partagent le même bloc horaire.</p>
+      <p class="hint pause-note">Cliquez sur « Ⅱ » dans le jour concerné pour insérer une pause courte. Les rendez-vous sont placés sur une vraie ligne du temps : même heure = même hauteur. Cliquez sur une heure pour forcer un nouveau départ en pas de 5 minutes.</p>
     </div>
     <div class="card">
       <div class="card-head"><h2>Jours d’entretien</h2><span id="resetCalRow" style="display:none"><a href="#" id="resetCal" class="icon-btn" title="Réinitialiser le calendrier &amp; les rendez-vous">↺</a></span></div>
@@ -810,7 +819,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 239;
+const APP_VERSION = 240;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1267,7 +1276,7 @@ function defaultState(){
   return {
     appVersion: APP_VERSION,
     students: [],
-    config: { dates: [], start:"14:00", end:"18:00", durationMin:20, pauseMin:5, pauseAfter:{} },
+    config: { dates: [], start:"14:00", end:"18:00", durationMin:20, pauseMin:5, pauseAfter:{}, timeOverrides:{} },
     assignments: {}, sent: [], reminderSent: [], subjectOverrides: {},
     reminderAttachments: {},
     ebOverrides: {},
@@ -1429,6 +1438,7 @@ function normalizeStateObject(s){
     const config = Object.assign({}, d.config, s.config||{});
     config.pauseMin = normalizePauseMin(config.pauseMin);
     config.pauseAfter = normalizePauseAfter(config.pauseAfter);
+    config.timeOverrides = normalizeTimeOverrides(config.timeOverrides);
     if((s.appVersion||0) < 82 && config.start==="14:00" && config.end==="16:00" && Number(config.durationMin||20)===20){
       config.end="18:00";
     }
@@ -1566,7 +1576,7 @@ function setCalendarViewToToday(){
 }
 function clearWorkSession(){
   state.students=[];
-  state.config=Object.assign({}, state.config||{}, {dates:[], start:"14:00", end:"18:00", durationMin:20, pauseMin:5, pauseAfter:{}});
+  state.config=Object.assign({}, state.config||{}, {dates:[], start:"14:00", end:"18:00", durationMin:20, pauseMin:5, pauseAfter:{}, timeOverrides:{}});
   setCalendarViewToToday();
   state.assignments={};
   state.overrides={};
@@ -1671,6 +1681,28 @@ function normalizePauseAfter(raw){
   }
   return out;
 }
+function normalizeTimeOverrides(raw){
+  const out={};
+  if(raw && typeof raw==="object"){
+    Object.keys(raw).forEach(day=>{
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(String(day))) return;
+      const src=raw[day], dayMap={};
+      if(src && typeof src==="object"){
+        Object.keys(src).forEach(idxKey=>{
+          const idx=parseInt(idxKey,10);
+          let min=Number(src[idxKey]);
+          if(typeof src[idxKey]==="string" && /^\d{1,2}:\d{2}$/.test(src[idxKey])) min=timeToMin(src[idxKey]);
+          if(Number.isFinite(idx) && idx>=0 && Number.isFinite(min)){
+            min=Math.max(0,Math.min(23*60+55,Math.round(min/5)*5));
+            dayMap[String(idx)]=min;
+          }
+        });
+      }
+      if(Object.keys(dayMap).length) out[String(day)]=dayMap;
+    });
+  }
+  return out;
+}
 function baseSlotCount(){ const a=timeToMin(state.config.start), b=timeToMin(state.config.end), d=Number(state.config.durationMin)||0; if(d<=0 || b<=a) return 0; return Math.floor((b-a)/d); }
 function dayPauseMap(day){
   const map=normalizePauseAfter(state.config.pauseAfter);
@@ -1693,18 +1725,79 @@ function removePauseAfterForDay(day,i){
   if(map[LEGACY_GLOBAL_PAUSE_KEY]){ delete map[LEGACY_GLOBAL_PAUSE_KEY][String(i)]; if(!Object.keys(map[LEGACY_GLOBAL_PAUSE_KEY]).length) delete map[LEGACY_GLOBAL_PAUSE_KEY]; }
   state.config.pauseAfter=map;
 }
+function dayTimeOverrideMap(day){
+  const map=normalizeTimeOverrides(state.config.timeOverrides);
+  return (day && map[day]) ? map[day] : {};
+}
+function timeOverrideForDay(day,i){
+  const v=dayTimeOverrideMap(day)[String(i)];
+  return Number.isFinite(Number(v)) ? Number(v) : null;
+}
+function setTimeOverrideForDay(day,i,min){
+  if(!day) return;
+  const map=normalizeTimeOverrides(state.config.timeOverrides);
+  const dayMap=map[day]=map[day]||{};
+  dayMap[String(i)]=Math.max(0,Math.min(23*60+55,Math.round(Number(min)/5)*5));
+  state.config.timeOverrides=map;
+}
+function removeTimeOverrideForDay(day,i){
+  if(!day) return;
+  const map=normalizeTimeOverrides(state.config.timeOverrides);
+  if(map[day]){ delete map[day][String(i)]; if(!Object.keys(map[day]).length) delete map[day]; }
+  state.config.timeOverrides=map;
+}
+function hasTimeOverrideForDay(day,i){ return timeOverrideForDay(day,i)!==null; }
 function slotsForDate(day){
   const a=timeToMin(state.config.start), d=Number(state.config.durationMin)||0, count=baseSlotCount(), out=[];
   if(d<=0 || count<=0) return out;
   let t=a;
   for(let i=0;i<count;i++){
-    out.push({start:minToTime(t), end:minToTime(t+d), idx:i});
-    t += d;
-    if(i<count-1) t += pauseAfterMinForDay(day,i);
+    const ov=timeOverrideForDay(day,i);
+    if(ov!==null) t=ov;
+    out.push({start:minToTime(t), end:minToTime(t+d), startMin:t, endMin:t+d, idx:i});
+    if(i<count-1){
+      const pause=pauseAfterMinForDay(day,i);
+      // Intention utilisateur : une pause de 5 min sous 12:40 donne 12:45, puis 13:05...
+      // Donc la pause remplace l'écart suivant, elle ne s'ajoute pas à la durée standard.
+      t += pause ? pause : d;
+    }
   }
   return out;
 }
 function slots(){ return slotsForDate(null); }
+function timeSelectOptions(day, idx, currentMin){
+  const a=timeToMin(state.config.start), b=timeToMin(state.config.end), d=Number(state.config.durationMin)||20;
+  const current=Math.max(0,Math.min(23*60+55,Math.round(Number(currentMin)/5)*5));
+  const lo=Math.max(0, Math.min(a,current)-Math.max(60,d*2));
+  const hi=Math.min(23*60+55, Math.max(b,current)+Math.max(120,d*3));
+  const manual=hasTimeOverrideForDay(day,idx);
+  const opts=[];
+  if(manual) opts.push('<option value="auto">↺ auto</option>');
+  let hasCurrent=false;
+  for(let m=Math.floor(lo/5)*5; m<=Math.ceil(hi/5)*5; m+=5){
+    if(m<0 || m>23*60+55) continue;
+    const sel=current===m ? ' selected' : '';
+    if(current===m) hasCurrent=true;
+    opts.push('<option value="'+m+'"'+sel+'>'+minToTime(m)+'</option>');
+  }
+  if(!hasCurrent){ opts.push('<option value="'+current+'" selected>'+minToTime(current)+'</option>'); }
+  return opts.join("");
+}
+function makeTimelineLayout(days, daySlots){
+  const starts=[];
+  days.forEach(d=>(daySlots[d]||[]).forEach(s=>starts.push(s.startMin)));
+  const uniq=[...new Set(starts.filter(Number.isFinite))].sort((a,b)=>a-b);
+  const pos={}; let y=22;
+  if(!uniq.length) return {pos, times:[], height:80, cardH:36};
+  pos[uniq[0]]=y;
+  for(let i=1;i<uniq.length;i++){
+    const gap=Math.max(0, uniq[i]-uniq[i-1]);
+    const step=Math.round(Math.min(76, Math.max(11, gap*2.05)));
+    y += step;
+    pos[uniq[i]]=y;
+  }
+  return {pos, times:uniq, height:y+58, cardH:36};
+}
 function fillPlain(tpl,map){ return Object.keys(map).reduce((s,k)=>s.split("{"+k+"}").join(map[k]), tpl||""); }
 function fillHtml(tpl,map){ const safe={}; Object.keys(map).forEach(k=>safe[k]=escHtml(map[k])); return fillPlain(tpl||"", safe); }
 function sanitizeHtml(html){
@@ -2660,9 +2753,9 @@ document.getElementById("csvFile").onchange=e=>{
 /* Calendar */
 const $start=document.getElementById("cfgStart"), $end=document.getElementById("cfgEnd"), $dur=document.getElementById("cfgDur"), $pause=document.getElementById("cfgPause");
 function initCfgInputs(){ $start.value=state.config.start; $end.value=state.config.end; $dur.value=state.config.durationMin; if($pause) $pause.value=normalizePauseMin(state.config.pauseMin); }
-function scheduleChanged(){ state.config.pauseMin=normalizePauseMin(state.config.pauseMin); state.config.pauseAfter=normalizePauseAfter(state.config.pauseAfter); saveState(); renderCalendar(); try{ scheduleRenderMails(null,80); }catch(e){} }
+function scheduleChanged(){ state.config.pauseMin=normalizePauseMin(state.config.pauseMin); state.config.pauseAfter=normalizePauseAfter(state.config.pauseAfter); state.config.timeOverrides=normalizeTimeOverrides(state.config.timeOverrides); saveState(); renderCalendar(); try{ scheduleRenderMails(null,80); }catch(e){} }
 $start.onchange=()=>{ state.config.start=$start.value; scheduleChanged(); }; $end.onchange=()=>{ state.config.end=$end.value; scheduleChanged(); }; $dur.onchange=()=>{ state.config.durationMin=Number($dur.value)||20; scheduleChanged(); }; if($pause){ $pause.onchange=()=>{ state.config.pauseMin=normalizePauseMin($pause.value); saveState(); }; }
-document.getElementById("resetCal").onclick=(e)=>{ if(e) e.preventDefault(); if(!confirm("Voulez-vous vraiment supprimer tous les jours sélectionnés et les rendez-vous attribués ?\n\nLes élèves, le modèle et la signature sont conservés.")) return; state.config.dates=[]; state.config.pauseMin=5; state.config.pauseAfter={}; state.assignments={}; state.overrides={}; state.subjectOverrides={}; state.sent=[]; state.reminderSent=[]; setCalendarViewToToday(); try{ sentSet.clear(); reminderSentSet.clear(); excludedSet.clear(); excludedReminderSet.clear(); }catch(e){} saveState(); renderDateList(); renderCalendar(); renderMails(); };
+document.getElementById("resetCal").onclick=(e)=>{ if(e) e.preventDefault(); if(!confirm("Voulez-vous vraiment supprimer tous les jours sélectionnés et les rendez-vous attribués ?\n\nLes élèves, le modèle et la signature sont conservés.")) return; state.config.dates=[]; state.config.pauseMin=5; state.config.pauseAfter={}; state.config.timeOverrides={}; state.assignments={}; state.overrides={}; state.subjectOverrides={}; state.sent=[]; state.reminderSent=[]; setCalendarViewToToday(); try{ sentSet.clear(); reminderSentSet.clear(); excludedSet.clear(); excludedReminderSet.clear(); }catch(e){} saveState(); renderDateList(); renderCalendar(); renderMails(); };
 let calView=(function(){ const t=new Date(); return {y:t.getFullYear(), m:t.getMonth()}; })();
 const MINICAL_CSS='<style>.minical{max-width:520px;margin:0 auto;border:0;border-radius:0;padding:2px 0;background:transparent}.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.cal-title{font-weight:650;font-size:16px}.cal-nav{background:#fff;color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:4px 13px;font-size:18px;font-weight:700;cursor:pointer}.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.cal-wd{text-align:center;font-size:12px;color:var(--muted);font-weight:600;padding:3px 0}.cal-day{text-align:center;padding:11px 0;border-radius:9px;cursor:pointer;font-size:15px;border:1px solid transparent;user-select:none}.cal-day:hover{background:var(--accent-soft)}.cal-day.sel{background:var(--accent);color:#fff;font-weight:700}.cal-day.sel:hover{background:var(--accent-d)}.cal-day.today{border-color:var(--accent)}.cal-day.empty{visibility:hidden;cursor:default}.cal-day.wknd{color:#c9ccd2;cursor:default}.cal-day.wknd:hover{background:transparent}.cal-day.past{color:#c9ccd2;background:transparent;border-color:transparent;cursor:not-allowed}.cal-day.past:hover{background:transparent}.cal-day.past.sel{background:transparent;color:#c9ccd2;font-weight:400}.minical .hint{white-space:nowrap}</style>';
 function localDateIso(dt){ dt=dt||new Date(); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); }
@@ -2681,7 +2774,7 @@ function renderDateList(){
   }
   host.innerHTML=MINICAL_CSS+'<div class="minical"><div class="cal-head"><button class="cal-nav" data-dir="-1">‹</button><span class="cal-title">'+title+'</span><button class="cal-nav" data-dir="1">›</button></div><div class="cal-grid">'+wd.map(w=>'<div class="cal-wd">'+w+'</div>').join("")+cells+'</div><div class="hint" style="margin-top:6px">'+countFr(state.config.dates.length,"jour sélectionné","jours sélectionnés")+'</div></div>';
   host.querySelectorAll(".cal-nav").forEach(b=>{ b.onclick=()=>{ calView.m+=(+b.dataset.dir); if(calView.m<0){calView.m=11;calView.y--;} if(calView.m>11){calView.m=0;calView.y++;} renderDateList(); }; });
-  host.querySelectorAll(".cal-day[data-d]").forEach(c=>{ c.onclick=()=>{ const ds=c.dataset.d; if(state.config.dates.includes(ds)){ state.config.dates=state.config.dates.filter(x=>x!==ds); Object.keys(state.assignments).forEach(k=>{ if(k.startsWith(ds+"__")) delete state.assignments[k]; }); state.config.pauseAfter=normalizePauseAfter(state.config.pauseAfter); if(state.config.pauseAfter[ds]) delete state.config.pauseAfter[ds]; } else { state.config.dates.push(ds); state.config.dates.sort(); } saveState(); renderDateList(); renderCalendar(); }; });
+  host.querySelectorAll(".cal-day[data-d]").forEach(c=>{ c.onclick=()=>{ const ds=c.dataset.d; if(state.config.dates.includes(ds)){ state.config.dates=state.config.dates.filter(x=>x!==ds); Object.keys(state.assignments).forEach(k=>{ if(k.startsWith(ds+"__")) delete state.assignments[k]; }); state.config.pauseAfter=normalizePauseAfter(state.config.pauseAfter); if(state.config.pauseAfter[ds]) delete state.config.pauseAfter[ds]; state.config.timeOverrides=normalizeTimeOverrides(state.config.timeOverrides); if(state.config.timeOverrides[ds]) delete state.config.timeOverrides[ds]; } else { state.config.dates.push(ds); state.config.dates.sort(); } saveState(); renderDateList(); renderCalendar(); }; });
   updateCalResetVisibility();
 }
 function updateCalResetVisibility(){ const row=document.getElementById("resetCalRow"); if(row) row.style.display = (state.config.dates && state.config.dates.length>0) ? "" : "none"; }
@@ -2718,53 +2811,45 @@ function renderCalendar(){
   const groups={};
   state.config.dates.slice().sort().forEach(ds=>{ const wk=weekKeyOf(ds); (groups[wk]=groups[wk]||[]).push(ds); });
   const weekKeys=Object.keys(groups).sort();
-  const labelForSlot=slot=>slot ? (slot.start+"–"+slot.end) : "—";
-  const makeDayGridStyle=days=>'--day-count:'+days.length+';grid-template-columns:repeat('+days.length+', minmax(170px, 1fr))';
+  const now=new Date();
   grid.innerHTML=weekKeys.map(wk=>{
     const days=groups[wk];
     const monLbl=new Date(wk+"T00:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
     const daySlots={}; days.forEach(d=>daySlots[d]=slotsForDate(d));
-    const dayGridStyle=makeDayGridStyle(days);
-    const head='<div class="schedule-head"><div class="rdv-head">Rdv</div><div class="days-head" style="'+dayGridStyle+'">'+days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<div class="day-head">'+esc(lbl)+'</div>'; }).join("")+'</div></div>';
-    const now=new Date();
-    let bodyRows="";
-    for(let i=0;i<count;i++){
-      const rowPastAll=days.every(d=>appointmentDateTime(d, (daySlots[d][i]||{}).end) <= now);
-      let blocks="";
-      for(let j=0;j<days.length;){
-        const firstDay=days[j];
-        const firstLabel=labelForSlot(daySlots[firstDay][i]);
-        let k=j+1;
-        while(k<days.length && labelForSlot(daySlots[days[k]][i])===firstLabel) k++;
-        const span=k-j;
-        const blockDays=days.slice(j,k);
-        const blockPastAll=blockDays.every(d=>appointmentDateTime(d, (daySlots[d][i]||{}).end) <= now);
-        const cells=blockDays.map(d=>{
-          const slot=daySlots[d][i];
-          if(!slot) return '<div class="appt-cell past"><select disabled><option>—</option></select></div>';
-          const key=d+"__"+i, sel=state.assignments[key]||"";
-          const isPast=appointmentDateTime(d, slot.end) <= now;
-          const cls=["appt-cell"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
-          const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
-          return '<div class="'+cls.join(' ')+'"><select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key)+'</select></div>';
-        }).join("");
-        blocks += '<div class="timegroup '+(blockPastAll?'past-timegroup':'')+'" style="grid-column:span '+span+';--span:'+span+'"><div class="block-time">'+esc(firstLabel)+'</div><div class="block-cells" style="grid-template-columns:repeat('+span+', minmax(145px, 1fr))">'+cells+'</div></div>';
-        j=k;
+    const layout=makeTimelineLayout(days, daySlots);
+    const dayHeaders=days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<div class="timeline-day-head">'+esc(lbl)+'</div>'; }).join("");
+    const axisGuides=layout.times.map(t=>'<div class="timeline-guide '+(t%60===0?'major':'')+'" style="top:'+layout.pos[t]+'px"></div>').join("");
+    const axisLabels=layout.times.map(t=>'<div class="axis-label" style="top:'+layout.pos[t]+'px">'+esc(minToTime(t))+'</div>').join("");
+    const columns=days.map(d=>{
+      const slots=daySlots[d]||[];
+      const guides=axisGuides;
+      const appts=slots.map((slot,i)=>{
+        const key=d+"__"+i, sel=state.assignments[key]||"";
+        const isPast=appointmentDateTime(d, slot.end) <= now;
+        const cls=["tl-appt"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
+        const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
+        const manual=hasTimeOverrideForDay(d,i);
+        const timeCls='tl-time-select'+(manual?' manual':'');
+        return '<div class="'+cls.join(' ')+'" style="top:'+(layout.pos[slot.startMin]-layout.cardH/2)+'px;height:'+layout.cardH+'px">'
+          +'<select class="'+timeCls+'" data-time-day="'+d+'" data-time-index="'+i+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous">'+timeSelectOptions(d,i,slot.startMin)+'</select>'
+          +'<select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key)+'</select>'
+          +'</div>';
+      }).join("");
+      let pauses="";
+      for(let i=0;i<count-1;i++){
+        const prev=slots[i], next=slots[i+1]; if(!prev || !next) continue;
+        const pause=pauseAfterMinForDay(d,i);
+        const y=Math.max(14, ((layout.pos[prev.startMin] + (layout.cardH/2) + layout.pos[next.startMin] - (layout.cardH/2)) / 2));
+        if(pause){
+          pauses += '<button type="button" class="tl-pause active" style="top:'+y+'px" data-pause-remove-day="'+d+'" data-pause-remove-index="'+i+'" title="Supprimer la pause">Pause '+pause+' min <span class="tl-pause-remove">×</span></button>';
+        } else {
+          pauses += '<button type="button" class="tl-pause" style="top:'+y+'px" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Insérer une pause de '+normalizePauseMin(state.config.pauseMin)+' min ce jour-là">Ⅱ</button>';
+        }
       }
-      bodyRows += '<div class="appt-grid-row"><div class="rdv-num '+(rowPastAll?'past-time':'')+'">'+(i+1)+'</div><div class="appt-blocks" style="'+dayGridStyle+'">'+blocks+'</div></div>';
-      if(i<count-1){
-        const hasActive=days.some(d=>pauseAfterMinForDay(d,i));
-        const pauseCells=days.map(d=>{
-          const pause=pauseAfterMinForDay(d,i);
-          if(pause){
-            return '<div class="pause-day active"><div class="pause-slot active">Pause '+pause+' min <button type="button" class="pause-remove" data-pause-remove-day="'+d+'" data-pause-remove-index="'+i+'" title="Supprimer la pause">×</button></div></div>';
-          }
-          return '<div class="pause-day idle"><div class="pause-slot idle"><button type="button" class="pause-insert" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Insérer une pause de '+normalizePauseMin(state.config.pauseMin)+' min ce jour-là">Ⅱ</button></div></div>';
-        }).join("");
-        bodyRows += '<div class="pause-grid-row '+(hasActive?'has-active':'idle-all')+'"><div class="pause-gutter"></div><div class="pause-days" style="'+dayGridStyle+'">'+pauseCells+'</div></div>';
-      }
-    }
-    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div><div class="schedule-scroll"><div class="schedule-grid" style="--day-count:'+days.length+'">'+head+bodyRows+'</div></div></div>';
+      return '<div class="timeline-day" style="height:'+layout.height+'px">'+guides+appts+pauses+'</div>';
+    }).join("");
+    const legend='<div class="tl-legend"><span class="mini-ii">Ⅱ</span><span>Pause individuelle par jour</span><span>·</span><span>Heure orange = départ fixé manuellement</span></div>';
+    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="timeline-calendar" style="--day-count:'+days.length+'"><div class="timeline-head"><div class="timeline-corner">Heure</div>'+dayHeaders+'</div><div class="timeline-axis" style="height:'+layout.height+'px">'+axisGuides+axisLabels+'</div>'+columns+'</div></div></div>';
   }).join("");
   grid.querySelectorAll("select[data-key]").forEach(sel=>{
     sel.onchange=()=>{
@@ -2773,6 +2858,14 @@ function renderCalendar(){
       else { delete state.assignments[k]; }
       saveState();
       renderCalendar();
+    };
+  });
+  grid.querySelectorAll("select[data-time-day]").forEach(sel=>{
+    sel.onchange=()=>{
+      const day=sel.dataset.timeDay, i=parseInt(sel.dataset.timeIndex,10);
+      if(sel.value==="auto") removeTimeOverrideForDay(day,i);
+      else setTimeOverrideForDay(day,i,Number(sel.value));
+      scheduleChanged();
     };
   });
   grid.querySelectorAll("button[data-pause-add-day]").forEach(btn=>{
