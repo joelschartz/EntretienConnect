@@ -142,6 +142,20 @@
   .schedule select{min-width:145px;padding:7px 8px;border-radius:9px}
   .schedule td.assigned{background:var(--accent-soft)}.schedule td.assigned select{border-color:var(--accent);font-weight:700;color:var(--ink);background:#fff}.schedule td.past{background:#fff;color:#98a2b3}.schedule td.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important;box-shadow:none!important}.schedule td.past.assigned{background:#fff}.schedule td.td-time.past-time{background:#fbfbfe;color:#98a2b3}
   .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
+  /* Insertion d'une pause entre deux créneaux */
+  .schedule tr.ins-row td{padding:0;border-right:none;background:transparent}
+  .ins-line{display:flex;align-items:center;justify-content:center;height:15px;position:relative;cursor:pointer}
+  .ins-line::before{content:"";position:absolute;left:16px;right:16px;top:50%;height:1px;background:var(--accent);opacity:0;transition:opacity .15s}
+  .ins-line:hover::before{opacity:.4}
+  .ins-btn{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;opacity:.4;transition:opacity .15s,color .15s,border-color .15s,transform .15s;position:relative;z-index:1}
+  .ins-line:hover .ins-btn{opacity:1;color:var(--accent);border-color:var(--accent);transform:scale(1.08)}
+  .schedule tr.pause-row td{background:var(--warn-soft);padding:7px 11px;border-right:none}
+  .pause-bar{display:flex;align-items:center;gap:9px;color:var(--warn);font-weight:800;font-size:12.5px}
+  .pause-bar .pause-ico{font-size:14px;letter-spacing:1px}
+  .pause-bar input{width:58px;padding:4px 6px;border-radius:8px;text-align:center;font-weight:700;background:#fff}
+  .pause-bar .pause-range{font-variant-numeric:tabular-nums;opacity:.75;font-weight:600}
+  .pause-bar .pause-del{margin-left:auto;cursor:pointer;border:0;background:transparent;color:var(--warn);font-size:15px;line-height:1;opacity:.6;padding:3px 7px;border-radius:7px;transition:opacity .15s,background .15s}
+  .pause-bar .pause-del:hover{opacity:1;background:#f3e2c4}
   .weekblock .weekhead{font-weight:750;font-size:13px;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid var(--line);padding:9px 12px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
   #mailTemplatePreview{display:none}
@@ -465,10 +479,8 @@
   .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
   .maintenance-modal input{width:100%;height:42px;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
 
-  /* v236: Performance-Test gegen v220.
-     Das große Karten-Grading aus v234 ist deaktiviert, weil es beim Scrollen/Tippen
-     in manchen Browsern teure Repaints erzeugen kann. Die Modus-Erkennung bleibt
-     wie in der schnellen v220 über Badge und aktive Tabs sichtbar. */
+  /* v220: la couleur du mode (vert = e-Bichelchen, bleu = e-mail, ambre = complet) suit
+     l'utilisateur — badge nommé dans la barre d'onglets + onglets Envoi assortis. */
   .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid transparent;flex:0 0 auto;align-self:center;user-select:none}
   @media (max-width:900px){.mode-badge{font-size:11px;padding:5px 9px;gap:5px}}
   .mode-badge .mode-dot{width:8px;height:8px;min-width:8px;border-radius:50%;background:currentColor}
@@ -494,7 +506,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v236</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v221</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -591,6 +603,7 @@ Langues : FR, DE, EN, LU">?</span>
         <div><label>Début</label><input type="time" id="cfgStart"></div>
         <div><label>Fin</label><input type="time" id="cfgEnd"></div>
         <div><label>Durée par rendez-vous (min)</label><input type="number" id="cfgDur" min="5" max="120" step="5"></div>
+        <div><label>Pause par défaut (min)</label><input type="number" id="cfgPause" min="1" max="60" step="1"></div>
       </div>
     </div>
     <div class="card">
@@ -771,7 +784,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 236;
+const APP_VERSION = 221;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1228,7 +1241,7 @@ function defaultState(){
   return {
     appVersion: APP_VERSION,
     students: [],
-    config: { dates: [], start:"14:00", end:"18:00", durationMin:20 },
+    config: { dates: [], start:"14:00", end:"18:00", durationMin:20, pauseDefault:5, pauses:{} },
     assignments: {}, sent: [], reminderSent: [], subjectOverrides: {},
     reminderAttachments: {},
     ebOverrides: {},
@@ -1391,6 +1404,9 @@ function normalizeStateObject(s){
     if((s.appVersion||0) < 82 && config.start==="14:00" && config.end==="16:00" && Number(config.durationMin||20)===20){
       config.end="18:00";
     }
+    // v221: pauses entre créneaux — s'assurer que les nouveaux réglages existent.
+    if(!config.pauses || typeof config.pauses!=="object") config.pauses={}; else config.pauses=Object.assign({}, config.pauses);
+    if(!(Number(config.pauseDefault)>0)) config.pauseDefault=5;
     // v144: appliquer une fois les nouveaux réglages par défaut (même pour une session en cours) :
     // trimestre déduit de la date et rappel décoché.
     if((s.appVersion||0) < 144){
@@ -1525,7 +1541,7 @@ function setCalendarViewToToday(){
 }
 function clearWorkSession(){
   state.students=[];
-  state.config=Object.assign({}, state.config||{}, {dates:[], start:"14:00", end:"18:00", durationMin:20});
+  state.config=Object.assign({}, state.config||{}, {dates:[], start:"14:00", end:"18:00", durationMin:20, pauses:{}});
   setCalendarViewToToday();
   state.assignments={};
   state.overrides={};
@@ -1605,7 +1621,7 @@ function updateNewSessionButton(){
 
 function timeToMin(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
 function minToTime(x){ return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0"); }
-function slots(){ const a=timeToMin(state.config.start), b=timeToMin(state.config.end), d=Number(state.config.durationMin)||0; const out=[]; if(d>0){ for(let t=a;t+d<=b;t+=d) out.push({start:minToTime(t), end:minToTime(t+d)}); } return out; }
+function slots(){ const a=timeToMin(state.config.start), b=timeToMin(state.config.end), d=Number(state.config.durationMin)||0; const out=[]; if(d<=0) return out; const pauses=(state.config&&state.config.pauses)||{}; let t=a, i=0; while(t+d<=b){ out.push({start:minToTime(t), end:minToTime(t+d)}); t+=d; const p=Number(pauses[i]||0); if(p>0) t+=p; i++; } return out; }
 function fillPlain(tpl,map){ return Object.keys(map).reduce((s,k)=>s.split("{"+k+"}").join(map[k]), tpl||""); }
 function fillHtml(tpl,map){ const safe={}; Object.keys(map).forEach(k=>safe[k]=escHtml(map[k])); return fillPlain(tpl||"", safe); }
 function sanitizeHtml(html){
@@ -2409,7 +2425,7 @@ function renderStudents(){
       const langSel=tr.querySelector(".st-l"+(idx+1));
       if(inp){
         inp.onfocus=()=>{ inp.classList.remove("email-invalid"); inp.title=""; const box=document.getElementById("studentEmailWarnings"); if(box) box.innerHTML=""; };
-        inp.oninput=e=>{ st[key]=e.target.value; saveState(); inp.classList.remove("email-invalid"); inp.title=""; scheduleRenderMails(); };
+        inp.oninput=e=>{ st[key]=e.target.value; saveState(); inp.classList.remove("email-invalid"); inp.title=""; renderMails(); };
         inp.onblur=()=>{ touchedStudentEmailFields.add(studentEmailFieldKey(id, idx+1)); studentDuplicateValidationActive=true; maybePruneEmptyStudentAfterBlur(id); validateStudentEmailsUI(); renderMails(); };
       }
       if(langSel) langSel.onchange=e=>{ st["lang"+(idx+1)]=normalizeLang(e.target.value); if(idx===0 && emailEnabled() && ebichelchenEnabled()) st.langEb=st.lang1; saveState(); renderMails(); };
@@ -2559,10 +2575,11 @@ document.getElementById("csvFile").onchange=e=>{
 };
 
 /* Calendar */
-const $start=document.getElementById("cfgStart"), $end=document.getElementById("cfgEnd"), $dur=document.getElementById("cfgDur");
-function initCfgInputs(){ $start.value=state.config.start; $end.value=state.config.end; $dur.value=state.config.durationMin; }
+const $start=document.getElementById("cfgStart"), $end=document.getElementById("cfgEnd"), $dur=document.getElementById("cfgDur"), $pause=document.getElementById("cfgPause");
+function initCfgInputs(){ $start.value=state.config.start; $end.value=state.config.end; $dur.value=state.config.durationMin; if($pause) $pause.value=Number(state.config.pauseDefault)||5; }
 $start.onchange=()=>{ state.config.start=$start.value; saveState(); renderCalendar(); }; $end.onchange=()=>{ state.config.end=$end.value; saveState(); renderCalendar(); }; $dur.onchange=()=>{ state.config.durationMin=Number($dur.value)||20; saveState(); renderCalendar(); };
-document.getElementById("resetCal").onclick=(e)=>{ if(e) e.preventDefault(); if(!confirm("Voulez-vous vraiment supprimer tous les jours sélectionnés et les rendez-vous attribués ?\n\nLes élèves, le modèle et la signature sont conservés.")) return; state.config.dates=[]; state.assignments={}; state.overrides={}; state.subjectOverrides={}; state.sent=[]; state.reminderSent=[]; setCalendarViewToToday(); try{ sentSet.clear(); reminderSentSet.clear(); excludedSet.clear(); excludedReminderSet.clear(); }catch(e){} saveState(); renderDateList(); renderCalendar(); renderMails(); };
+if($pause) $pause.onchange=()=>{ let v=Math.round(Number($pause.value)||0); if(v<1)v=1; if(v>60)v=60; state.config.pauseDefault=v; $pause.value=v; saveState(); };
+document.getElementById("resetCal").onclick=(e)=>{ if(e) e.preventDefault(); if(!confirm("Voulez-vous vraiment supprimer tous les jours sélectionnés et les rendez-vous attribués ?\n\nLes élèves, le modèle et la signature sont conservés.")) return; state.config.dates=[]; state.config.pauses={}; state.assignments={}; state.overrides={}; state.subjectOverrides={}; state.sent=[]; state.reminderSent=[]; setCalendarViewToToday(); try{ sentSet.clear(); reminderSentSet.clear(); excludedSet.clear(); excludedReminderSet.clear(); }catch(e){} saveState(); renderDateList(); renderCalendar(); renderMails(); };
 let calView=(function(){ const t=new Date(); return {y:t.getFullYear(), m:t.getMonth()}; })();
 const MINICAL_CSS='<style>.minical{max-width:520px;margin:0 auto;border:0;border-radius:0;padding:2px 0;background:transparent}.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.cal-title{font-weight:650;font-size:16px}.cal-nav{background:#fff;color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:4px 13px;font-size:18px;font-weight:700;cursor:pointer}.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.cal-wd{text-align:center;font-size:12px;color:var(--muted);font-weight:600;padding:3px 0}.cal-day{text-align:center;padding:11px 0;border-radius:9px;cursor:pointer;font-size:15px;border:1px solid transparent;user-select:none}.cal-day:hover{background:var(--accent-soft)}.cal-day.sel{background:var(--accent);color:#fff;font-weight:700}.cal-day.sel:hover{background:var(--accent-d)}.cal-day.today{border-color:var(--accent)}.cal-day.empty{visibility:hidden;cursor:default}.cal-day.wknd{color:#c9ccd2;cursor:default}.cal-day.wknd:hover{background:transparent}.cal-day.past{color:#c9ccd2;background:transparent;border-color:transparent;cursor:not-allowed}.cal-day.past:hover{background:transparent}.cal-day.past.sel{background:transparent;color:#c9ccd2;font-weight:400}.minical .hint{white-space:nowrap}</style>';
 function localDateIso(dt){ dt=dt||new Date(); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); }
@@ -2623,7 +2640,10 @@ function renderCalendar(){
     const monLbl=new Date(wk+"T00:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
     const head='<tr><th class="th-time">Heure</th>'+days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<th>'+lbl+'</th>'; }).join("")+'</tr>';
     const now=new Date();
-    const bodyRows=sl.map((slot,i)=>{
+    const pauses=(state.config&&state.config.pauses)||{};
+    const colCount=1+days.length;
+    const rowsHtml=[];
+    sl.forEach((slot,i)=>{
       const rowPastAll=days.every(d=>appointmentDateTime(d, slot.end) <= now);
       const cells=days.map(d=>{
         const key=d+"__"+i, sel=state.assignments[key]||"";
@@ -2632,8 +2652,25 @@ function renderCalendar(){
         const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
         return '<td'+(cls.length?' class="'+cls.join(' ')+""+'"':'')+'><select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key)+'</select></td>';
       }).join("");
-      return '<tr><td class="td-time'+(rowPastAll?' past-time':'')+'">'+slot.start+'–'+slot.end+'</td>'+cells+'</tr>';
-    }).join("");
+      rowsHtml.push('<tr><td class="td-time'+(rowPastAll?' past-time':'')+'">'+slot.start+'–'+slot.end+'</td>'+cells+'</tr>');
+      // Entre deux créneaux : pause active (barre éditable) ou petit bouton d'insertion.
+      if(i < sl.length-1){
+        const pmin=Number(pauses[i]||0);
+        if(pmin>0){
+          const pStart=slot.end, pEnd=minToTime(timeToMin(slot.end)+pmin);
+          rowsHtml.push('<tr class="pause-row"><td colspan="'+colCount+'"><div class="pause-bar">'
+            +'<span class="pause-ico">‖</span><span>Pause</span>'
+            +'<input type="number" min="1" max="60" step="1" value="'+pmin+'" data-pause-idx="'+i+'" title="Durée de la pause (min)">'
+            +'<span>min</span>'
+            +'<span class="pause-range">'+pStart+'–'+pEnd+'</span>'
+            +'<button type="button" class="pause-del" data-pause-del="'+i+'" title="Supprimer la pause">✕</button>'
+            +'</div></td></tr>');
+        } else {
+          rowsHtml.push('<tr class="ins-row"><td colspan="'+colCount+'"><div class="ins-line" data-pause-add="'+i+'" title="Insérer une pause"><span class="ins-btn">＋</span></div></td></tr>');
+        }
+      }
+    });
+    const bodyRows=rowsHtml.join("");
     return '<div class="weekblock"><div class="weekhead">Semaine du '+monLbl+'</div><div style="overflow-x:auto"><table class="schedule"><thead>'+head+'</thead><tbody>'+bodyRows+'</tbody></table></div></div>';
   }).join("");
   grid.querySelectorAll("select[data-key]").forEach(sel=>{
@@ -2644,6 +2681,15 @@ function renderCalendar(){
       saveState();
       renderCalendar();
     };
+  });
+  grid.querySelectorAll("[data-pause-add]").forEach(el=>{
+    el.onclick=()=>{ const i=Number(el.dataset.pauseAdd); const def=Number(state.config.pauseDefault)||5; state.config.pauses=state.config.pauses||{}; state.config.pauses[i]=def; saveState(); renderCalendar(); };
+  });
+  grid.querySelectorAll("[data-pause-del]").forEach(el=>{
+    el.onclick=()=>{ const i=Number(el.dataset.pauseDel); if(state.config.pauses) delete state.config.pauses[i]; saveState(); renderCalendar(); };
+  });
+  grid.querySelectorAll("input[data-pause-idx]").forEach(inp=>{
+    inp.onchange=()=>{ const i=Number(inp.dataset.pauseIdx); let v=Math.round(Number(inp.value)||0); if(v<1)v=1; if(v>60)v=60; state.config.pauses=state.config.pauses||{}; state.config.pauses[i]=v; saveState(); renderCalendar(); };
   });
   updateAssignSummary();
 }
@@ -2678,7 +2724,7 @@ function updateAssignSummary(){
 }
 
 /* Rich editor */
-let activeEditor=null, savedRange=null, toolbarBusy=false, toolbarStateTimer=null, richToolbarDocClickWired=false;
+let activeEditor=null, savedRange=null, toolbarBusy=false, toolbarStateTimer=null;
 let suppressTemplateCommit=false;
 function editorFromNode(node){
   if(!node) return null;
@@ -3034,7 +3080,7 @@ function commitEditor(editor){
       tpl.bodyHtml=simpleHtmlFromPlainText(txt);
       tpl.body=txt;
       renderTemplatePreview();
-      saveState(); scheduleRenderMails(currentOpenPreviewId()); updateTplResetVisibility();
+      saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility();
       return;
     }
     sanitizePastedImages(editor);
@@ -3053,7 +3099,7 @@ function commitEditor(editor){
       if(typeof showToast==="function") showToast("Logo retiré — ↺ sous l’éditeur pour le rétablir.");
     }
     renderTemplatePreview(); renderLogoPreview();
-    saveState(); scheduleRenderMails(currentOpenPreviewId()); updateTplResetVisibility();
+    saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility();
   } else if(editor.classList && editor.classList.contains("mail-editor")){
     const ovk=editor.dataset.ovk;
     if(ovk){
@@ -3097,7 +3143,7 @@ function wireRichEditor(id){
     else if(e.inputType==="historyRedo") markEditorRedo(el);
     else if(String(e.inputType||"").startsWith("insert") || String(e.inputType||"").startsWith("delete") || String(e.inputType||"").startsWith("format")) markEditorChanged(el);
   });
-  el.addEventListener("input",()=>{ commitEditor(el); scheduleToolbarStateUpdate(el); });
+  el.addEventListener("input",()=>{ commitEditor(el); scheduleToolbarStateUpdate(el); setTimeout(()=>updateToolbarState(el),0); });
   el.addEventListener("paste",e=>{ setTimeout(()=>{ commitEditor(el); scheduleToolbarStateUpdate(el); updateToolbarState(el); },0); });
 }
 function bindRichToolbars(){
@@ -3180,18 +3226,14 @@ function bindRichToolbars(){
       if(ctrl.tagName==="SELECT" || ctrl.type==="color") ctrl.addEventListener("change",run); else ctrl.addEventListener("click",run);
     });
   });
-  if(!richToolbarDocClickWired){
-    richToolbarDocClickWired=true;
-    document.addEventListener("click", e=>{
-      document.querySelectorAll(".ot-more.open").forEach(m=>{
-        const tb=m.closest(".rich-toolbar");
-        if(tb && !tb.contains(e.target)) m.classList.remove("open");
-      });
-      document.querySelectorAll(".color-picker.open").forEach(p=>{
-        if(!p.contains(e.target)) p.classList.remove("open");
-      });
+  document.addEventListener("click", e=>{
+    document.querySelectorAll(".ot-more.open").forEach(m=>{
+      if(!m.closest(".rich-toolbar").contains(e.target)) m.classList.remove("open");
     });
-  }
+    document.querySelectorAll(".color-picker.open").forEach(p=>{
+      if(!p.contains(e.target)) p.classList.remove("open");
+    });
+  });
 }
 
 /* Signature/logo/template binding */
@@ -3244,21 +3286,13 @@ function renderLogoPreview(){
     else st.textContent=(state.template.logo && state.template.logo.dataUrl) ? "" : "Chargement du logo UNESCO.";
   }
 }
-let mailRenderRaf = null, mailRenderTimer = null, mailRenderOpenId = undefined;
-function scheduleRenderMails(openId, delay){
-  if(openId!==undefined) mailRenderOpenId=openId;
-  const wait = (delay===0 ? 0 : (delay || 120));
-  if(mailRenderTimer) clearTimeout(mailRenderTimer);
-  mailRenderTimer = setTimeout(()=>{
-    mailRenderTimer = null;
-    if(mailRenderRaf) cancelAnimationFrame(mailRenderRaf);
-    mailRenderRaf = requestAnimationFrame(()=>{
-      const keepOpen = mailRenderOpenId;
-      mailRenderOpenId = undefined;
-      mailRenderRaf = null;
-      renderMails(keepOpen);
-    });
-  }, wait);
+let mailRenderRaf = null;
+function scheduleRenderMails(openId){
+  if(mailRenderRaf) cancelAnimationFrame(mailRenderRaf);
+  mailRenderRaf = requestAnimationFrame(()=>{
+    mailRenderRaf = null;
+    renderMails(openId);
+  });
 }
 function updateTemplateSignatureView(body, renderTemplateCollapseState){
   renderTemplateCollapseState();
@@ -3329,7 +3363,7 @@ function bindSettings(){
   const reminderTime=document.getElementById("reminderTime");
   const currentTpl=()=>templateDataForMode(currentTemplateMode(), currentTemplateLang());
   su.value=currentTpl().subject; forceTemplateEditorHtml(composeEditorHtml(currentTemplateMode(), currentTemplateLang()));
-  su.oninput=()=>{ const tpl=currentTpl(); tpl.subject=su.value; saveState(); scheduleRenderMails(currentOpenPreviewId()); updateTplResetVisibility(); };
+  su.oninput=()=>{ const tpl=currentTpl(); tpl.subject=su.value; saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility(); };
   // Robuste, direkte Reaktion auf jede Änderung im Editor (unabhängig vom Commit-Pfad):
   body.addEventListener("input", updateTplResetVisibility);
   body.addEventListener("keyup", updateTplResetVisibility);
@@ -4675,7 +4709,7 @@ function applyChannelVisibility(){
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
   }
-  // v236: refléter le mode partout — classe sur <body> (mode rapide sans grand grading)
+  // v220: refléter le mode partout — classe sur <body> (couleurs des onglets Envoi)
   // + badge de mode nommé dans la barre d'onglets collante.
   try{
     const mode=workflowMode();
@@ -5234,12 +5268,7 @@ bootEntretienConnect();
     setTimeout(updateEbResetVisibility, 0);
     return r;
   };
-  document.addEventListener("input", function(ev){
-    var t=ev && ev.target;
-    if(t && (t.id==="tplSubject" || t.id==="tplBodyEditor" || (t.closest && t.closest("#tplBodyEditor")))){
-      setTimeout(updateEbResetVisibility, 50);
-    }
-  }, true);
+  document.addEventListener("input", function(){ setTimeout(updateEbResetVisibility, 50); }, true);
   document.addEventListener("click", function(ev){
     var t = ev.target && ev.target.closest ? ev.target.closest("button") : null;
     if(t && /réinitialiser|reinitialiser|standard|zurücksetzen/i.test(t.textContent||"")){
@@ -5340,10 +5369,8 @@ bootEntretienConnect();
     setTimeout(ecEnhanceEbStudentLanguages, 0);
     return r;
   };
-  // v234: Keine globalen input/change-Listener mehr. Die Sprachfelder werden beim
-  // Rendern der Schülerliste und über ihre eigenen onchange-Handler aktualisiert.
-  // Die alten globalen Listener liefen bei jedem Tastendruck in der App mit und machten
-  // die Oberfläche mit der Zeit spürbar träger.
+  document.addEventListener("input", function(){ setTimeout(ecEnhanceEbStudentLanguages, 80); }, true);
+  document.addEventListener("change", function(){ setTimeout(ecEnhanceEbStudentLanguages, 80); }, true);
   setTimeout(ecEnhanceEbStudentLanguages, 500);
 })();
 </script>
