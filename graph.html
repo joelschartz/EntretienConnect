@@ -178,15 +178,12 @@
   .schedule-grid .pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}
   .schedule-grid .pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}
   .schedule-grid .pause-remove:hover{background:#fff3df;border-color:#dcae65}
-  .timeline-calendar{display:grid;grid-template-columns:76px repeat(var(--day-count), minmax(172px,1fr));min-width:calc(76px + (var(--day-count) * 190px));background:#fff}
-  .timeline-head{display:contents}.timeline-corner,.timeline-day-head{background:#f8f8fb;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px 8px;font-size:12px;font-weight:800;color:var(--ink);white-space:nowrap}.timeline-corner{position:sticky;left:0;z-index:5;text-align:center;color:#667085}.timeline-day-head:last-child{border-right:none}
-  .timeline-axis,.timeline-day{position:relative;min-height:80px;background:#fff}.timeline-axis{position:sticky;left:0;z-index:4;background:#fbfbfe;border-right:1px solid var(--line)}.timeline-day{border-right:1px solid var(--line)}.timeline-day:last-child{border-right:none}
-  .axis-label{position:absolute;left:7px;right:7px;transform:translateY(-50%);font-size:12px;font-weight:850;font-variant-numeric:tabular-nums;color:#667085;text-align:center;line-height:1;background:#fbfbfe;border-radius:999px;padding:2px 0}.axis-label.muted{color:#98a2b3}
-  .timeline-guide{position:absolute;left:0;right:0;height:1px;background:#eef0f4;pointer-events:none}.timeline-guide.major{background:#e4e7ec}
-  .tl-appt{position:absolute;left:7px;right:7px;min-height:34px;display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:6px;padding:4px 6px;border:1px solid var(--line);border-radius:11px;background:#fff;box-sizing:border-box;box-shadow:none;z-index:2}.tl-appt.assigned{background:var(--accent-soft);border-color:#dfe3fc}.tl-appt.past{opacity:.62;background:#fff}
-  .tl-appt select{width:100%;min-width:0;padding:6px 7px;border-radius:9px;font-size:13px}.tl-appt.assigned select[data-key]{border-color:var(--accent);font-weight:700}.tl-time-select{font-variant-numeric:tabular-nums;font-weight:850;color:#667085;background:#fbfbfe;border-color:#e4e7ec!important;padding-left:4px!important;padding-right:4px!important}.tl-time-select.manual{color:#7a4800;background:#fff7e8;border-color:#efd7aa!important}.tl-appt.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important}
-  .tl-pause{position:absolute;left:50%;transform:translate(-50%,-50%);z-index:3;appearance:none;-webkit-appearance:none;border:1px solid #e4e7ec;background:#fff;color:#667085;border-radius:999px;min-width:26px;height:18px;padding:0 8px;font-weight:850;font-size:12px;line-height:16px;cursor:pointer;box-shadow:none;opacity:.48}.tl-pause:hover,.tl-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
-  .tl-pause.active{opacity:1;min-width:82px;height:22px;border-color:#efd7aa;background:#fff7e8;color:#8a5a18;font-size:11.5px}.tl-pause-remove{margin-left:5px;border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0}.tl-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px;color:#667085;font-size:12.5px}.tl-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}
+  .timeline-calendar{display:grid;grid-template-columns:76px repeat(var(--day-count), minmax(178px,1fr));min-width:calc(76px + (var(--day-count) * 190px));background:#fff}
+  .timeline-head,.timeline-row{display:contents}
+  .timeline-corner,.timeline-day-head{background:#f8f8fb;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px 8px;font-size:12px;font-weight:800;color:var(--ink);white-space:nowrap}.timeline-corner{position:sticky;left:0;z-index:5;text-align:center;color:#667085}.timeline-day-head:last-child{border-right:none}
+  .time-row-label{position:sticky;left:0;z-index:4;min-height:var(--row-h,54px);display:flex;align-items:center;justify-content:center;background:#fbfbfe;border-right:1px solid var(--line);border-bottom:1px solid #eef0f4;color:#667085;font-size:12px;font-weight:850;font-variant-numeric:tabular-nums;line-height:1}.timeline-cell{min-height:var(--row-h,54px);display:flex;align-items:center;padding:5px 7px;border-right:1px solid #edf0f5;border-bottom:1px solid #f1f3f7;background:#fff;box-sizing:border-box}.timeline-cell:last-child{border-right:none}.timeline-cell.empty{background:#fff}.timeline-row.has-pause .time-row-label,.timeline-row.has-pause .timeline-cell{min-height:72px}.timeline-row.manual-row .time-row-label{color:#7a4800;background:#fff7e8}
+  .timeline-card{width:100%;display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:6px;box-sizing:border-box;background:#fff;border:0;border-radius:10px;padding:2px}.timeline-card.assigned{background:var(--accent-soft);border:1px solid #dfe3fc;padding:3px}.timeline-card.past{opacity:.62;background:#fff}.timeline-card select{width:100%;min-width:0;border-color:#e7eaf1;border-radius:9px;padding:6px 7px;font-size:13px;box-shadow:none}.timeline-card.assigned select[data-key]{border-color:var(--accent);font-weight:700}.tl-time-select{font-variant-numeric:tabular-nums;font-weight:850;color:#667085;background:transparent!important;border-color:transparent!important;padding-left:2px!important;padding-right:2px!important;text-align:center}.tl-time-select:hover,.tl-time-select:focus{background:#fbfbfe!important;border-color:#e4e7ec!important}.tl-time-select.manual{color:#7a4800;background:#fff7e8!important;border-color:#efd7aa!important}.timeline-card.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important}
+  .tl-pause-wrap{grid-column:1 / -1;display:flex;align-items:center;justify-content:center;height:18px;margin-top:2px;line-height:1}.tl-pause{position:static;transform:none;z-index:auto;appearance:none;-webkit-appearance:none;border:1px solid transparent;background:transparent;color:#98a2b3;border-radius:999px;min-width:26px;height:17px;padding:0 8px;font-weight:850;font-size:12px;line-height:15px;cursor:pointer;box-shadow:none;opacity:.72}.tl-pause:hover,.tl-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.tl-pause.active{opacity:1;min-width:86px;height:21px;border-color:#efd7aa;background:#fff7e8;color:#8a5a18;font-size:11.5px}.tl-pause-remove{margin-left:5px;border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0}.tl-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px;color:#667085;font-size:12.5px}.tl-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}
   .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
   .weekblock .weekhead{font-weight:750;font-size:13px;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid var(--line);padding:9px 12px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
@@ -540,7 +537,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v240</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v241</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -819,7 +816,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 240;
+const APP_VERSION = 241;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1798,6 +1795,24 @@ function makeTimelineLayout(days, daySlots){
   }
   return {pos, times:uniq, height:y+58, cardH:36};
 }
+
+function makeTimelineRows(days, daySlots){
+  const starts=[];
+  days.forEach(d=>(daySlots[d]||[]).forEach(slot=>{ if(Number.isFinite(slot.startMin)) starts.push(slot.startMin); }));
+  const times=[...new Set(starts)].sort((a,b)=>a-b);
+  const rows=times.map(t=>{
+    const hasPause=days.some(d=>{
+      const slot=(daySlots[d]||[]).find(s=>s.startMin===t);
+      return slot && slot.idx < baseSlotCount()-1 && !!pauseAfterMinForDay(d,slot.idx);
+    });
+    const manual=days.some(d=>{
+      const slot=(daySlots[d]||[]).find(s=>s.startMin===t);
+      return slot && hasTimeOverrideForDay(d,slot.idx);
+    });
+    return {time:t, hasPause, manual};
+  });
+  return {times, rows};
+}
 function fillPlain(tpl,map){ return Object.keys(map).reduce((s,k)=>s.split("{"+k+"}").join(map[k]), tpl||""); }
 function fillHtml(tpl,map){ const safe={}; Object.keys(map).forEach(k=>safe[k]=escHtml(map[k])); return fillPlain(tpl||"", safe); }
 function sanitizeHtml(html){
@@ -2753,7 +2768,12 @@ document.getElementById("csvFile").onchange=e=>{
 /* Calendar */
 const $start=document.getElementById("cfgStart"), $end=document.getElementById("cfgEnd"), $dur=document.getElementById("cfgDur"), $pause=document.getElementById("cfgPause");
 function initCfgInputs(){ $start.value=state.config.start; $end.value=state.config.end; $dur.value=state.config.durationMin; if($pause) $pause.value=normalizePauseMin(state.config.pauseMin); }
-function scheduleChanged(){ state.config.pauseMin=normalizePauseMin(state.config.pauseMin); state.config.pauseAfter=normalizePauseAfter(state.config.pauseAfter); state.config.timeOverrides=normalizeTimeOverrides(state.config.timeOverrides); saveState(); renderCalendar(); try{ scheduleRenderMails(null,80); }catch(e){} }
+let calendarRenderRaf=null;
+function requestCalendarRender(){
+  if(calendarRenderRaf) cancelAnimationFrame(calendarRenderRaf);
+  calendarRenderRaf=requestAnimationFrame(()=>{ calendarRenderRaf=null; renderCalendar(); });
+}
+function scheduleChanged(){ state.config.pauseMin=normalizePauseMin(state.config.pauseMin); state.config.pauseAfter=normalizePauseAfter(state.config.pauseAfter); state.config.timeOverrides=normalizeTimeOverrides(state.config.timeOverrides); saveState(); requestCalendarRender(); try{ scheduleRenderMails(null,260); }catch(e){} }
 $start.onchange=()=>{ state.config.start=$start.value; scheduleChanged(); }; $end.onchange=()=>{ state.config.end=$end.value; scheduleChanged(); }; $dur.onchange=()=>{ state.config.durationMin=Number($dur.value)||20; scheduleChanged(); }; if($pause){ $pause.onchange=()=>{ state.config.pauseMin=normalizePauseMin($pause.value); saveState(); }; }
 document.getElementById("resetCal").onclick=(e)=>{ if(e) e.preventDefault(); if(!confirm("Voulez-vous vraiment supprimer tous les jours sélectionnés et les rendez-vous attribués ?\n\nLes élèves, le modèle et la signature sont conservés.")) return; state.config.dates=[]; state.config.pauseMin=5; state.config.pauseAfter={}; state.config.timeOverrides={}; state.assignments={}; state.overrides={}; state.subjectOverrides={}; state.sent=[]; state.reminderSent=[]; setCalendarViewToToday(); try{ sentSet.clear(); reminderSentSet.clear(); excludedSet.clear(); excludedReminderSet.clear(); }catch(e){} saveState(); renderDateList(); renderCalendar(); renderMails(); };
 let calView=(function(){ const t=new Date(); return {y:t.getFullYear(), m:t.getMonth()}; })();
@@ -2792,8 +2812,10 @@ function assignmentOptionsFor(key){
 }
 function renderCalendar(){
   initCfgInputs();
-  renderDateList();
+  const mini=document.getElementById("miniCal");
+  if(mini && !mini.querySelector(".minical")) renderDateList();
   const grid=document.getElementById("calendarGrid"), count=baseSlotCount();
+  if(!grid) return;
   if(state.config.dates.length===0){
     const students=assignmentStudents();
     const el=document.getElementById("assignSummary");
@@ -2812,76 +2834,89 @@ function renderCalendar(){
   state.config.dates.slice().sort().forEach(ds=>{ const wk=weekKeyOf(ds); (groups[wk]=groups[wk]||[]).push(ds); });
   const weekKeys=Object.keys(groups).sort();
   const now=new Date();
-  grid.innerHTML=weekKeys.map(wk=>{
+  const html=weekKeys.map(wk=>{
     const days=groups[wk];
     const monLbl=new Date(wk+"T00:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
-    const daySlots={}; days.forEach(d=>daySlots[d]=slotsForDate(d));
-    const layout=makeTimelineLayout(days, daySlots);
+    const daySlots={};
+    const slotByDayTime={};
+    days.forEach(d=>{
+      const list=slotsForDate(d);
+      daySlots[d]=list;
+      const m={};
+      list.forEach(slot=>{ if(Number.isFinite(slot.startMin)) m[String(slot.startMin)]=slot; });
+      slotByDayTime[d]=m;
+    });
+    const layout=makeTimelineRows(days, daySlots);
     const dayHeaders=days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<div class="timeline-day-head">'+esc(lbl)+'</div>'; }).join("");
-    const axisGuides=layout.times.map(t=>'<div class="timeline-guide '+(t%60===0?'major':'')+'" style="top:'+layout.pos[t]+'px"></div>').join("");
-    const axisLabels=layout.times.map(t=>'<div class="axis-label" style="top:'+layout.pos[t]+'px">'+esc(minToTime(t))+'</div>').join("");
-    const columns=days.map(d=>{
-      const slots=daySlots[d]||[];
-      const guides=axisGuides;
-      const appts=slots.map((slot,i)=>{
-        const key=d+"__"+i, sel=state.assignments[key]||"";
+    const rows=layout.rows.map(row=>{
+      const t=row.time;
+      const rowCls=['timeline-row'];
+      if(row.hasPause) rowCls.push('has-pause');
+      if(row.manual) rowCls.push('manual-row');
+      const cells=days.map(d=>{
+        const slot=slotByDayTime[d] ? slotByDayTime[d][String(t)] : null;
+        if(!slot) return '<div class="timeline-cell empty"></div>';
+        const i=slot.idx, key=d+"__"+i, sel=state.assignments[key]||"";
         const isPast=appointmentDateTime(d, slot.end) <= now;
-        const cls=["tl-appt"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
+        const cls=["timeline-card"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
         const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
         const manual=hasTimeOverrideForDay(d,i);
         const timeCls='tl-time-select'+(manual?' manual':'');
-        return '<div class="'+cls.join(' ')+'" style="top:'+(layout.pos[slot.startMin]-layout.cardH/2)+'px;height:'+layout.cardH+'px">'
+        let pauseCtl='';
+        if(i<count-1){
+          const pause=pauseAfterMinForDay(d,i);
+          if(pause){
+            pauseCtl='<div class="tl-pause-wrap"><button type="button" class="tl-pause active" data-pause-remove-day="'+d+'" data-pause-remove-index="'+i+'" title="Supprimer la pause">Pause '+pause+' min <span class="tl-pause-remove">×</span></button></div>';
+          }else{
+            pauseCtl='<div class="tl-pause-wrap"><button type="button" class="tl-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Insérer une pause de '+normalizePauseMin(state.config.pauseMin)+' min ce jour-là">Ⅱ</button></div>';
+          }
+        }
+        return '<div class="timeline-cell"><div class="'+cls.join(' ')+'">'
           +'<select class="'+timeCls+'" data-time-day="'+d+'" data-time-index="'+i+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous">'+timeSelectOptions(d,i,slot.startMin)+'</select>'
           +'<select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key)+'</select>'
-          +'</div>';
+          +pauseCtl
+          +'</div></div>';
       }).join("");
-      let pauses="";
-      for(let i=0;i<count-1;i++){
-        const prev=slots[i], next=slots[i+1]; if(!prev || !next) continue;
-        const pause=pauseAfterMinForDay(d,i);
-        const y=Math.max(14, ((layout.pos[prev.startMin] + (layout.cardH/2) + layout.pos[next.startMin] - (layout.cardH/2)) / 2));
-        if(pause){
-          pauses += '<button type="button" class="tl-pause active" style="top:'+y+'px" data-pause-remove-day="'+d+'" data-pause-remove-index="'+i+'" title="Supprimer la pause">Pause '+pause+' min <span class="tl-pause-remove">×</span></button>';
-        } else {
-          pauses += '<button type="button" class="tl-pause" style="top:'+y+'px" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Insérer une pause de '+normalizePauseMin(state.config.pauseMin)+' min ce jour-là">Ⅱ</button>';
-        }
-      }
-      return '<div class="timeline-day" style="height:'+layout.height+'px">'+guides+appts+pauses+'</div>';
+      return '<div class="'+rowCls.join(' ')+'"><div class="time-row-label">'+esc(minToTime(t))+'</div>'+cells+'</div>';
     }).join("");
     const legend='<div class="tl-legend"><span class="mini-ii">Ⅱ</span><span>Pause individuelle par jour</span><span>·</span><span>Heure orange = départ fixé manuellement</span></div>';
-    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="timeline-calendar" style="--day-count:'+days.length+'"><div class="timeline-head"><div class="timeline-corner">Heure</div>'+dayHeaders+'</div><div class="timeline-axis" style="height:'+layout.height+'px">'+axisGuides+axisLabels+'</div>'+columns+'</div></div></div>';
+    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="timeline-calendar" style="--day-count:'+days.length+'"><div class="timeline-head"><div class="timeline-corner">Heure</div>'+dayHeaders+'</div>'+rows+'</div></div></div>';
   }).join("");
-  grid.querySelectorAll("select[data-key]").forEach(sel=>{
-    sel.onchange=()=>{
-      const k=sel.dataset.key;
-      if(sel.value){ state.assignments[k]=sel.value; }
+  grid.innerHTML=html;
+  grid.onchange=(e)=>{
+    const keySel=e.target.closest && e.target.closest('select[data-key]');
+    if(keySel){
+      const k=keySel.dataset.key;
+      if(keySel.value){ state.assignments[k]=keySel.value; }
       else { delete state.assignments[k]; }
       saveState();
-      renderCalendar();
-    };
-  });
-  grid.querySelectorAll("select[data-time-day]").forEach(sel=>{
-    sel.onchange=()=>{
-      const day=sel.dataset.timeDay, i=parseInt(sel.dataset.timeIndex,10);
-      if(sel.value==="auto") removeTimeOverrideForDay(day,i);
-      else setTimeOverrideForDay(day,i,Number(sel.value));
+      requestCalendarRender();
+      try{ scheduleRenderMails(null,260); }catch(err){}
+      return;
+    }
+    const timeSel=e.target.closest && e.target.closest('select[data-time-day]');
+    if(timeSel){
+      const day=timeSel.dataset.timeDay, i=parseInt(timeSel.dataset.timeIndex,10);
+      if(timeSel.value==="auto") removeTimeOverrideForDay(day,i);
+      else setTimeOverrideForDay(day,i,Number(timeSel.value));
       scheduleChanged();
-    };
-  });
-  grid.querySelectorAll("button[data-pause-add-day]").forEach(btn=>{
-    btn.onclick=()=>{
-      const i=parseInt(btn.dataset.pauseAddIndex,10);
-      setPauseAfterForDay(btn.dataset.pauseAddDay, i, state.config.pauseMin);
+    }
+  };
+  grid.onclick=(e)=>{
+    const add=e.target.closest && e.target.closest('button[data-pause-add-day]');
+    if(add){
+      const i=parseInt(add.dataset.pauseAddIndex,10);
+      setPauseAfterForDay(add.dataset.pauseAddDay, i, state.config.pauseMin);
       scheduleChanged();
-    };
-  });
-  grid.querySelectorAll("button[data-pause-remove-day]").forEach(btn=>{
-    btn.onclick=()=>{
-      const i=parseInt(btn.dataset.pauseRemoveIndex,10);
-      removePauseAfterForDay(btn.dataset.pauseRemoveDay, i);
+      return;
+    }
+    const rem=e.target.closest && e.target.closest('button[data-pause-remove-day]');
+    if(rem){
+      const i=parseInt(rem.dataset.pauseRemoveIndex,10);
+      removePauseAfterForDay(rem.dataset.pauseRemoveDay, i);
       scheduleChanged();
-    };
-  });
+    }
+  };
   updateAssignSummary();
 }
 function updateAssignSummary(){
