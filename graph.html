@@ -297,7 +297,7 @@
   #trimesterSelect{width:auto;min-width:220px;height:40px;border-radius:12px;background:#fff}
   .reminder-tab-group{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
   .reminder-tab{display:inline-flex;align-items:center}
-  .rt-check{appearance:none;-webkit-appearance:none;pointer-events:none;width:15px;height:15px;min-width:15px;margin:0 7px 0 0;padding:0;border:1px solid var(--line-strong);border-radius:4px;background:#fff;display:inline-grid;place-content:center}
+  .rt-check{appearance:none;-webkit-appearance:none;cursor:pointer;width:15px;height:15px;min-width:15px;margin:0 7px 0 0;padding:0;border:1px solid var(--line-strong);border-radius:4px;background:#fff;display:inline-grid;place-content:center}
   .rt-check:checked{background:var(--accent);border-color:var(--accent)}
   .rt-check:checked:after{content:"";width:7px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-top:-1px}
   .template-tab.active .rt-check{border-color:#fff;background:transparent}
@@ -469,7 +469,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v216</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v217</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -533,6 +533,7 @@
   <section class="panel" id="panel-students">
     <div class="card">
       <div class="card-head"><h2 id="studentsTitle">Liste des élèves</h2><span id="resetStudentsRow" style="display:none"><a href="#" id="resetStudents" class="icon-btn" title="Réinitialiser la liste d’élèves">↺</a></span></div>
+      <p class="hint" id="studentsIntro" style="margin:2px 0 10px"></p>
       <div id="studentModeNote" class="student-mode-note"></div>
       <div class="student-lang-default">
         <label for="defaultLangStudents">Langue standard pour nouveaux contacts <span class="tip" tabindex="0" data-tip="La langue du CONTACT 1 définit la langue du message e-Bichelchen.">?</span></label>
@@ -622,7 +623,7 @@ Langues : FR, DE, EN, LU">?</span>
         <button type="button" class="template-tab" data-template-mode="ebichelchen" style="display:none">e-Bichelchen</button>
         <button type="button" class="template-tab active" data-template-mode="confirmation">E-mail</button>
         <span id="emailSub" class="reminder-tab-group">
-          <button type="button" class="template-tab reminder-tab" data-template-mode="reminder" title="Rappel automatique — programmé dans Outlook au moment de l’envoi"><input type="checkbox" id="reminderEnabled" class="rt-check" tabindex="-1"> Activer Rappel</button>
+          <button type="button" class="template-tab reminder-tab" data-template-mode="reminder" title="Rappel automatique — programmé dans Outlook au moment de l’envoi"><input type="checkbox" id="reminderEnabled" class="rt-check" tabindex="-1"> <span id="reminderTabLabel">Activer Rappel</span></button>
           <span class="reminder-controls"><span>à</span><input type="time" id="reminderTime"><span>,</span><select id="reminderDays"><option value="1">1 jour</option><option value="2">2 jours</option><option value="3">3 jours</option></select><span>avant le rendez-vous</span></span>
         </span>
         <div class="template-language-edit"><span>Langue du modèle</span><select id="templateLang"><option value="fr">Français</option><option value="de">Deutsch</option><option value="en">English</option><option value="lb">Lëtzebuergesch</option></select><span class="tip tip-left tip-down" tabindex="0" data-tip="Variables remplacées automatiquement à l’envoi :
@@ -633,6 +634,7 @@ Langues : FR, DE, EN, LU">?</span>
 {TRIMESTRE} — trimestre choisi
 {RAPPEL_DELAI} — délai du rappel">?</span></div>
       </div>
+      <div class="template-note" id="templateNote"></div>
       <div class="template-settings" aria-label="Paramètres des messages">
         <label for="trimesterSelect" class="setting-title">Trimestre</label>
         <select id="trimesterSelect">
@@ -743,7 +745,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 216;
+const APP_VERSION = 217;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2011,7 +2013,13 @@ function setWorkflowMode(mode, opts={}){
   if(opts.openEmail && modeNeedsEmail(mode)){ const b=document.getElementById("signIn"); if(b) b.click(); }
 }
 function setupProgressHtml(){
-  return "";
+  // v217: après le choix du mode, dire clairement quelle est la prochaine étape —
+  // seulement tant qu'aucun élève n'existe (les habitués n'en ont plus besoin).
+  try{
+    if(!workflowMode()) return "";
+    if((state.students||[]).length) return "";
+  }catch(_){ return ""; }
+  return '<div class="banner ok compact" style="margin:14px 0 0">Mode enregistré ✓ — continuez avec l’onglet « 2 · Élèves ».</div>';
 }
 function ebConnectedSummaryHtml(){
   if(!ebReady()) return "";
@@ -2120,8 +2128,8 @@ function ecVisualSelectMode(mode){
       }
     });
     const cur=document.getElementById("setupCurrent");
-    if(cur){ cur.innerHTML=""; }
-    const nav=document.getElementById("setupNavHint"); if(nav) nav.style.display="inline";
+    // v217: ne plus effacer le message de progression — afficher la prochaine étape ici aussi.
+    if(cur){ try{ cur.innerHTML=(typeof setupProgressHtml==="function")?setupProgressHtml():""; }catch(_){ cur.innerHTML=""; } }
   }catch(e){ console.error(e); }
 }
 function ecSafeChooseMode(mode){
@@ -2317,7 +2325,20 @@ function renderStudents(){
   }
   if(!wrap) return;
   if(state.students.length===0){
-    wrap.innerHTML='<div class="banner warn empty-state">Aucun élève pour l’instant.</div>';
+    // v217: l'état vide dit quoi faire, selon le mode — plus de cul-de-sac.
+    let emptyMsg;
+    if(eb && !em){
+      emptyMsg = ebReady()
+        ? "Aucun élève pour l’instant. Utilisez le bouton « Importer … depuis e-Bichelchen » ci-dessous."
+        : "Aucun élève pour l’instant. Connectez e-Bichelchen dans l’onglet « 1 · Démarrage » — la classe sera importée automatiquement.";
+    } else if(eb && em){
+      emptyMsg = ebReady()
+        ? "Aucun élève pour l’instant. Importez les élèves depuis e-Bichelchen ou par CSV, puis complétez les adresses e-mail."
+        : "Aucun élève pour l’instant. Connectez e-Bichelchen dans l’onglet « 1 · Démarrage » pour importer les noms, ou importez un CSV.";
+    } else {
+      emptyMsg = "Aucun élève pour l’instant. Ajoutez un élève avec « + Ajouter un élève » ou importez un CSV.";
+    }
+    wrap.innerHTML='<div class="banner warn empty-state">'+emptyMsg+'</div>';
     return;
   }
   if(eb && !em){
@@ -2497,6 +2518,9 @@ document.getElementById("csvFile").onchange=e=>{
       if(res.added) parts.push(res.added+" élève(s) importé(s)");
       if(res.merged) parts.push(res.merged+" complété(s)");
       showToast(parts.join(", ")+" par CSV.");
+    } else {
+      // v217: plus d'échec silencieux — dire clairement que rien n'a été reconnu.
+      showToast("Aucun élève reconnu dans ce fichier CSV. Vérifiez le format (voir « ? »).");
     }
   };
   r.readAsText(f); e.target.value="";
@@ -3296,7 +3320,9 @@ function bindSettings(){
       if(tm==="reminder"){
         btn.classList.toggle("reminder-off", !reminderOn);
         btn.classList.toggle("reminder-on", reminderOn);
-        btn.title = reminderOn ? "Rappel actif — cliquer pour afficher ou désactiver" : "Rappel inactif — cliquer pour l’activer";
+        btn.title = reminderOn ? "Rappel actif — cliquer pour afficher le modèle ; décocher la case pour désactiver" : "Rappel inactif — cliquer pour l’activer";
+        const lbl=btn.querySelector("#reminderTabLabel");
+        if(lbl) lbl.textContent = reminderOn ? "Rappel activé" : "Activer Rappel";
       }
     }); }
     // Bei e-Bichelchen-Meldungen: Signatur/Logo/Rappel ausblenden, „Objet“ → „Titre“.
@@ -3313,7 +3339,9 @@ function bindSettings(){
     if(templateLang) templateLang.value=lang;
     if(reminderDays){ reminderDays.value=String(reminderDaysBefore()); reminderDays.disabled=!reminderOn; }
     if(reminderTime){ reminderTime.value=reminderTimeValue(); reminderTime.disabled=!reminderOn; }
-    if(templateNote){ templateNote.textContent=""; }
+    // v217: quand le modèle de rappel est affiché, dire clairement comment le rappel fonctionne
+    // (avant, cette info n'existait qu'en info-bulle au survol).
+    if(templateNote){ templateNote.textContent = (mode==="reminder" && reminderOn) ? "Les rappels sont programmés automatiquement dans Outlook au moment de l’envoi des confirmations." : ""; }
   }
   function reloadTemplateEditor(openId){
     const tpl=currentTpl();
@@ -3356,7 +3384,15 @@ function bindSettings(){
     reloadTemplateEditor(keepOpen);
   }
   window._switchTemplateLangFromPreview=function(lang, openId){ switchTemplateLang(lang, openId); };
-  if(templateModeTabs){ templateModeTabs.querySelectorAll(".template-tab").forEach(btn=>{ btn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation();
+  if(templateModeTabs){ templateModeTabs.querySelectorAll(".template-tab").forEach(btn=>{ btn.onclick=(e)=>{
+    // v217: un clic sur la case à cocher du rappel bascule l'état de façon explicite —
+    // c'est le seul endroit qui désactive le rappel (plus de désactivation surprise via l'onglet).
+    // Pas de preventDefault ici : le navigateur bascule la case, puis son onchange gère l'état.
+    if(e && e.target && e.target.id==="reminderEnabled"){
+      e.stopPropagation();
+      return;
+    }
+    e.preventDefault(); e.stopPropagation();
     const tm=btn.dataset.templateMode;
     if(tm==="ebichelchen" && ebModelLocked()){
       showToast("e-Bichelchen n’est pas connecté. Connectez-vous dans l’onglet Démarrage.");
@@ -3375,13 +3411,8 @@ function bindSettings(){
         return;
       }
       if(currentTemplateMode()!=="reminder"){ switchTemplateMode("reminder"); return; }
-      // Actif + déjà affiché -> désactiver
-      commitEditor(body);
-      state.options.reminderEnabled=false;
-      state.options.templateMode = emailEnabled() ? "confirmation" : (ebichelchenEnabled()?"ebichelchen":"confirmation");
-      syncPreviewKindToTemplateMode(state.options.templateMode);
-      saveState(); if(typeof applyChannelVisibility==="function") applyChannelVisibility();
-      reloadTemplateEditor(); renderMails();
+      // v217: actif + déjà affiché -> ne rien faire (comportement d'onglet standard).
+      // La désactivation passe par la case à cocher, jamais par un clic « de trop ».
       return;
     }
     switchTemplateMode(tm);
@@ -3883,7 +3914,7 @@ async function startMicrosoftLoginDevice(loginBoxId, buttonId){
   try{
     d=await api("/api/graph/login-start");
   }catch(e){
-    lb.innerHTML='<div class="banner err">Assistant local inaccessible. « EntretienConnect_MAC.command » ou « EntretienConnect_WINDOWS.vbs » est-il lancé ?</div>';
+    lb.innerHTML='<div class="banner err">Assistant local inaccessible. « EntretienConnect_MAC.app » (Mac) ou « EntretienConnect_WINDOWS.exe » (Windows) est-il lancé ?</div>';
     if(inBtn) inBtn.disabled=false;
     return;
   }
@@ -4446,7 +4477,7 @@ function localBackendAvailable(){
   return h==="127.0.0.1" || h==="localhost" || h==="::1";
 }
 function localBackendMissingMessage(){
-  return "Cette fonction e-Bichelchen nécessite le dossier de démarrage local. Ouvrez l’app avec EntretienConnect_MAC.command ou EntretienConnect_WINDOWS.vbs, pas directement depuis GitHub.";
+  return "Cette fonction e-Bichelchen nécessite le dossier de démarrage local. Ouvrez l’app avec EntretienConnect_MAC.app ou EntretienConnect_WINDOWS.exe, pas directement depuis GitHub.";
 }
 async function readJsonResponse(res){
   const text=await res.text();
