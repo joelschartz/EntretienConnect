@@ -465,7 +465,7 @@
   .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
   .maintenance-modal input{width:100%;height:42px;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
 
-  /* v220: la couleur du mode (vert = e-Bichelchen, bleu = e-mail, ambre = complet) suit
+  /* v223: la couleur du mode (vert = e-Bichelchen, bleu = e-mail, ambre = complet) suit
      l'utilisateur — badge nommé dans la barre d'onglets + onglets Envoi assortis. */
   .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid transparent;flex:0 0 auto;align-self:center;user-select:none}
   @media (max-width:900px){.mode-badge{font-size:11px;padding:5px 9px;gap:5px}}
@@ -474,6 +474,129 @@
   body.wf-eb .mode-badge{background:var(--ok-soft);color:var(--ok);border-color:#bfe5d1}
   body.wf-email .mode-badge{background:var(--accent-soft);color:#4a55a2;border-color:#dfe3fc}
   body.wf-both .mode-badge{background:#faefda;color:#a4691a;border-color:#ecd5a8}
+
+  /* v223: Envoi übernimmt die Modus-Farben aus Démarrage.
+     Wichtig: nur die äußeren Fenster/Flächen werden eingefärbt;
+     Editor- und Vorschau-Inhalte bleiben weiß. */
+  body.wf-eb{
+    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f6fcf9 42%,#eef8f3 100%);
+    --mode-panel-border:#2e8b64;
+    --mode-panel-border-soft:#bfe5d1;
+    --mode-panel-accent:#2e8b64;
+    --mode-panel-accent-d:#27795a;
+    --mode-panel-soft:#e3f5ec;
+    --mode-panel-glow:rgba(46,139,100,.12);
+    --mode-panel-line:rgba(46,139,100,.18);
+  }
+  body.wf-email{
+    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f8f9ff 42%,#f2f4fe 100%);
+    --mode-panel-border:#6c7cf0;
+    --mode-panel-border-soft:#dfe3fc;
+    --mode-panel-accent:#6c7cf0;
+    --mode-panel-accent-d:#5563d8;
+    --mode-panel-soft:#eef0fe;
+    --mode-panel-glow:rgba(108,124,240,.12);
+    --mode-panel-line:rgba(108,124,240,.18);
+  }
+  body.wf-both{
+    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#fffaf2 42%,#fdf6ee 100%);
+    --mode-panel-border:#c98a2e;
+    --mode-panel-border-soft:#ecd5a8;
+    --mode-panel-accent:#c98a2e;
+    --mode-panel-accent-d:#b57a24;
+    --mode-panel-soft:#fcf2df;
+    --mode-panel-glow:rgba(201,138,46,.13);
+    --mode-panel-line:rgba(201,138,46,.20);
+  }
+  body.wf-eb #panel-mails .template-card,
+  body.wf-email #panel-mails .template-card,
+  body.wf-both #panel-mails .template-card,
+  body.wf-eb #panel-mails .preview-card,
+  body.wf-email #panel-mails .preview-card,
+  body.wf-both #panel-mails .preview-card{
+    background:var(--mode-panel-bg);
+    border:2px solid var(--mode-panel-border);
+    box-shadow:0 8px 26px var(--mode-panel-glow),var(--shadow-sm);
+  }
+  body.wf-eb #panel-mails .mail-template-head,
+  body.wf-email #panel-mails .mail-template-head,
+  body.wf-both #panel-mails .mail-template-head,
+  body.wf-eb #panel-mails .preview-head,
+  body.wf-email #panel-mails .preview-head,
+  body.wf-both #panel-mails .preview-head{
+    background:transparent;
+    border-bottom-color:var(--mode-panel-line);
+  }
+  body.wf-eb #panel-mails .template-chevron,
+  body.wf-email #panel-mails .template-chevron,
+  body.wf-both #panel-mails .template-chevron{
+    color:var(--mode-panel-accent);
+    border-color:var(--mode-panel-border-soft);
+  }
+  body.wf-eb #panel-mails .template-chevron:hover,
+  body.wf-email #panel-mails .template-chevron:hover,
+  body.wf-both #panel-mails .template-chevron:hover,
+  body.wf-eb #panel-mails .template-toggle-zone:hover .template-chevron,
+  body.wf-email #panel-mails .template-toggle-zone:hover .template-chevron,
+  body.wf-both #panel-mails .template-toggle-zone:hover .template-chevron{
+    background:var(--mode-panel-soft);
+    border-color:var(--mode-panel-border-soft);
+  }
+  body.wf-eb #panel-mails .template-language-edit span,
+  body.wf-email #panel-mails .template-language-edit span,
+  body.wf-both #panel-mails .template-language-edit span,
+  body.wf-eb #panel-mails .mail-subject-label,
+  body.wf-email #panel-mails .mail-subject-label,
+  body.wf-both #panel-mails .mail-subject-label{
+    color:var(--mode-panel-accent);
+  }
+  body.wf-eb #panel-mails .template-compose-shell,
+  body.wf-email #panel-mails .template-compose-shell,
+  body.wf-both #panel-mails .template-compose-shell,
+  body.wf-eb #panel-mails .mailitem,
+  body.wf-email #panel-mails .mailitem,
+  body.wf-both #panel-mails .mailitem,
+  body.wf-eb #panel-mails .mailhead,
+  body.wf-email #panel-mails .mailhead,
+  body.wf-both #panel-mails .mailhead,
+  body.wf-eb #panel-mails .mail-compose-shell,
+  body.wf-email #panel-mails .mail-compose-shell,
+  body.wf-both #panel-mails .mail-compose-shell,
+  body.wf-eb #panel-mails .mailbody-head,
+  body.wf-email #panel-mails .mailbody-head,
+  body.wf-both #panel-mails .mailbody-head,
+  body.wf-eb #panel-mails .mail-editor,
+  body.wf-email #panel-mails .mail-editor,
+  body.wf-both #panel-mails .mail-editor,
+  body.wf-eb #panel-mails #tplBodyEditor,
+  body.wf-email #panel-mails #tplBodyEditor,
+  body.wf-both #panel-mails #tplBodyEditor{
+    background:#fff;
+  }
+  body.wf-eb #panel-mails .mail-compose-shell:focus-within,
+  body.wf-email #panel-mails .mail-compose-shell:focus-within,
+  body.wf-both #panel-mails .mail-compose-shell:focus-within,
+  body.wf-eb #panel-mails #tplBodyEditor.plain-template-editor:focus,
+  body.wf-email #panel-mails #tplBodyEditor.plain-template-editor:focus,
+  body.wf-both #panel-mails #tplBodyEditor.plain-template-editor:focus{
+    border-color:var(--mode-panel-accent);
+    box-shadow:0 0 0 3px var(--mode-panel-soft);
+  }
+  body.wf-eb #panel-mails .mailhead .toggle,
+  body.wf-email #panel-mails .mailhead .toggle,
+  body.wf-both #panel-mails .mailhead .toggle{
+    color:var(--mode-panel-accent);
+    background:var(--mode-panel-soft);
+    border-color:var(--mode-panel-border-soft);
+  }
+  body.wf-eb #panel-mails .mailitem.open .toggle,
+  body.wf-email #panel-mails .mailitem.open .toggle,
+  body.wf-both #panel-mails .mailitem.open .toggle{
+    background:var(--mode-panel-accent);
+    border-color:var(--mode-panel-accent);
+    color:#fff;
+  }
+
   /* Onglet e-Bichelchen actif : toujours vert (comme la carte du Démarrage) */
   .template-tab.active[data-template-mode="ebichelchen"],.preview-tab.active[data-preview-kind="eb"]{background:var(--ok);border-color:var(--ok);color:#fff}
   .template-tab.active[data-template-mode="ebichelchen"]:hover,.preview-tab.active[data-preview-kind="eb"]:hover{background:#27795a;border-color:#27795a}
@@ -488,147 +611,11 @@
   body.wf-both .preview-tab.active[data-preview-kind="email"]:hover,
   body.wf-both .preview-tab.active[data-preview-kind="reminder"]:hover{background:#b57a24;border-color:#b57a24}
   body.wf-both .template-tab.active .rt-check:checked:after{border-left-color:#c98a2e;border-bottom-color:#c98a2e}
-
-  /* v222: Modusfarbe deutlich sichtbar auf den Envoi-Fenstern.
-     Nicht der App-Hintergrund und nicht der Editor werden gefärbt, sondern die Kartenflächen
-     hinter « Modèles de messages » und « Aperçu & envoi » — im gleichen Gradienten-Stil wie Démarrage. */
-  body.wf-eb{
-    --wf-card-bg:linear-gradient(180deg,#eef9f4 0%,#f8fffb 34%,#e1f3ea 100%);
-    --wf-card-border:#9ad7b8;
-    --wf-card-shadow:0 10px 28px rgba(46,139,100,.18);
-    --wf-soft:#e3f5ec;
-    --wf-panel:rgba(227,245,236,.62);
-    --wf-strong:var(--ok);
-  }
-  body.wf-email{
-    --wf-card-bg:linear-gradient(180deg,#eef2ff 0%,#fbfcff 34%,#e3e8ff 100%);
-    --wf-card-border:#bfc8fb;
-    --wf-card-shadow:0 10px 28px rgba(108,124,240,.18);
-    --wf-soft:var(--accent-soft);
-    --wf-panel:rgba(238,240,254,.66);
-    --wf-strong:var(--accent);
-  }
-  body.wf-both{
-    --wf-card-bg:linear-gradient(180deg,#fff4dc 0%,#fffdf8 34%,#f9e7c2 100%);
-    --wf-card-border:#e5c48e;
-    --wf-card-shadow:0 10px 28px rgba(201,138,46,.18);
-    --wf-soft:#faefda;
-    --wf-panel:rgba(250,239,218,.68);
-    --wf-strong:#c98a2e;
-  }
-  body.wf-eb #mails .template-card,
-  body.wf-email #mails .template-card,
-  body.wf-both #mails .template-card,
-  body.wf-eb #mails .preview-card,
-  body.wf-email #mails .preview-card,
-  body.wf-both #mails .preview-card{
-    background:var(--wf-card-bg);
-    border:2px solid var(--wf-card-border);
-    box-shadow:var(--wf-card-shadow);
-  }
-  body.wf-eb #mails .mail-template-head,
-  body.wf-email #mails .mail-template-head,
-  body.wf-both #mails .mail-template-head,
-  body.wf-eb #mails .preview-head,
-  body.wf-email #mails .preview-head,
-  body.wf-both #mails .preview-head{
-    background:transparent;
-    border-bottom-color:rgba(28,28,45,.10);
-  }
-  body.wf-eb #mails .template-editor-area,
-  body.wf-email #mails .template-editor-area,
-  body.wf-both #mails .template-editor-area{
-    background:var(--wf-panel);
-    border:1px solid rgba(255,255,255,.72);
-    border-radius:18px;
-    padding:12px;
-    margin:0 -8px -8px;
-  }
-  body.wf-eb #mails .preview-tabs,
-  body.wf-email #mails .preview-tabs,
-  body.wf-both #mails .preview-tabs,
-  body.wf-eb #mails .mail-select-bar,
-  body.wf-email #mails .mail-select-bar,
-  body.wf-both #mails .mail-select-bar,
-  body.wf-eb #mails #mailList,
-  body.wf-email #mails #mailList,
-  body.wf-both #mails #mailList,
-  body.wf-eb #mails #mailBanner,
-  body.wf-email #mails #mailBanner,
-  body.wf-both #mails #mailBanner{
-    background:transparent;
-  }
-  body.wf-eb #mails .preview-tabs,
-  body.wf-email #mails .preview-tabs,
-  body.wf-both #mails .preview-tabs{
-    padding-top:16px;
-  }
-  body.wf-eb #mails .template-chevron,
-  body.wf-email #mails .template-chevron,
-  body.wf-both #mails .template-chevron{
-    color:var(--wf-strong);
-    border-color:var(--wf-card-border);
-  }
-  body.wf-eb #mails .template-chevron:hover,
-  body.wf-email #mails .template-chevron:hover,
-  body.wf-both #mails .template-chevron:hover,
-  body.wf-eb #mails .template-toggle-zone:hover .template-chevron,
-  body.wf-email #mails .template-toggle-zone:hover .template-chevron,
-  body.wf-both #mails .template-toggle-zone:hover .template-chevron{
-    background:rgba(255,255,255,.82);
-    border-color:var(--wf-card-border);
-  }
-  body.wf-eb #mails .template-editor-area > .rich-toolbar,
-  body.wf-email #mails .template-editor-area > .rich-toolbar,
-  body.wf-both #mails .template-editor-area > .rich-toolbar,
-  body.wf-eb #mails .mailbody .rich-toolbar,
-  body.wf-email #mails .mailbody .rich-toolbar,
-  body.wf-both #mails .mailbody .rich-toolbar{
-    background:rgba(255,255,255,.94);
-    border-color:var(--wf-card-border);
-  }
-  body.wf-eb #mails .template-compose-shell,
-  body.wf-email #mails .template-compose-shell,
-  body.wf-both #mails .template-compose-shell,
-  body.wf-eb #mails .mail-compose-shell,
-  body.wf-email #mails .mail-compose-shell,
-  body.wf-both #mails .mail-compose-shell,
-  body.wf-eb #mails .mailbody-head,
-  body.wf-email #mails .mailbody-head,
-  body.wf-both #mails .mailbody-head,
-  body.wf-eb #mails .mail-compose-shell .mail-editor,
-  body.wf-email #mails .mail-compose-shell .mail-editor,
-  body.wf-both #mails .mail-compose-shell .mail-editor,
-  body.wf-eb #mails #tplBodyEditor,
-  body.wf-email #mails #tplBodyEditor,
-  body.wf-both #mails #tplBodyEditor,
-  body.wf-eb #mails .mailitem,
-  body.wf-email #mails .mailitem,
-  body.wf-both #mails .mailitem,
-  body.wf-eb #mails .mailhead{
-    background:#fff;
-  }
-  body.wf-email #mails .mailhead,
-  body.wf-both #mails .mailhead{
-    background:#fff;
-  }
-  body.wf-eb #mails .mailbody,
-  body.wf-email #mails .mailbody,
-  body.wf-both #mails .mailbody{
-    background:rgba(255,255,255,.62);
-  }
-  body.wf-eb #mails .mail-compose-shell:focus-within,
-  body.wf-email #mails .mail-compose-shell:focus-within,
-  body.wf-both #mails .mail-compose-shell:focus-within{
-    border-color:var(--wf-strong);
-    box-shadow:0 0 0 3px var(--wf-soft);
-  }
-
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v222</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v223</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -905,7 +892,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 221;
+const APP_VERSION = 220;
 
 window.addEventListener("error", function(ev){
   try{
@@ -4797,7 +4784,7 @@ function applyChannelVisibility(){
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
   }
-  // v220: refléter le mode partout — classe sur <body> (couleurs des onglets Envoi)
+  // v223: refléter le mode partout — classe sur <body> (couleurs des fenêtres Envoi)
   // + badge de mode nommé dans la barre d'onglets collante.
   try{
     const mode=workflowMode();
