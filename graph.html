@@ -489,27 +489,31 @@
   body.wf-both .preview-tab.active[data-preview-kind="reminder"]:hover{background:#b57a24;border-color:#b57a24}
   body.wf-both .template-tab.active .rt-check:checked:after{border-left-color:#c98a2e;border-bottom-color:#c98a2e}
 
-  /* v221: Modusfarbe nicht als App-Hintergrund, sondern als weicher Fenster-Hintergrund
-     für « Modèle » und « Aperçu ». Die eigentlichen Editor-/Compose-Flächen bleiben weiß. */
+  /* v222: Modusfarbe deutlich sichtbar auf den Envoi-Fenstern.
+     Nicht der App-Hintergrund und nicht der Editor werden gefärbt, sondern die Kartenflächen
+     hinter « Modèles de messages » und « Aperçu & envoi » — im gleichen Gradienten-Stil wie Démarrage. */
   body.wf-eb{
-    --wf-card-bg:linear-gradient(180deg,#fafffc,#e7f5ee);
-    --wf-card-border:#bfe5d1;
-    --wf-card-shadow:0 8px 24px rgba(46,139,100,.12);
+    --wf-card-bg:linear-gradient(180deg,#eef9f4 0%,#f8fffb 34%,#e1f3ea 100%);
+    --wf-card-border:#9ad7b8;
+    --wf-card-shadow:0 10px 28px rgba(46,139,100,.18);
     --wf-soft:#e3f5ec;
+    --wf-panel:rgba(227,245,236,.62);
     --wf-strong:var(--ok);
   }
   body.wf-email{
-    --wf-card-bg:linear-gradient(180deg,#fafaff,#f0f2fe);
-    --wf-card-border:#dfe3fc;
-    --wf-card-shadow:0 8px 24px rgba(108,124,240,.12);
+    --wf-card-bg:linear-gradient(180deg,#eef2ff 0%,#fbfcff 34%,#e3e8ff 100%);
+    --wf-card-border:#bfc8fb;
+    --wf-card-shadow:0 10px 28px rgba(108,124,240,.18);
     --wf-soft:var(--accent-soft);
+    --wf-panel:rgba(238,240,254,.66);
     --wf-strong:var(--accent);
   }
   body.wf-both{
-    --wf-card-bg:linear-gradient(180deg,#fffdf8,#faefda);
-    --wf-card-border:#ecd5a8;
-    --wf-card-shadow:0 8px 24px rgba(201,138,46,.12);
+    --wf-card-bg:linear-gradient(180deg,#fff4dc 0%,#fffdf8 34%,#f9e7c2 100%);
+    --wf-card-border:#e5c48e;
+    --wf-card-shadow:0 10px 28px rgba(201,138,46,.18);
     --wf-soft:#faefda;
+    --wf-panel:rgba(250,239,218,.68);
     --wf-strong:#c98a2e;
   }
   body.wf-eb #mails .template-card,
@@ -519,7 +523,7 @@
   body.wf-email #mails .preview-card,
   body.wf-both #mails .preview-card{
     background:var(--wf-card-bg);
-    border-color:var(--wf-card-border);
+    border:2px solid var(--wf-card-border);
     box-shadow:var(--wf-card-shadow);
   }
   body.wf-eb #mails .mail-template-head,
@@ -529,7 +533,35 @@
   body.wf-email #mails .preview-head,
   body.wf-both #mails .preview-head{
     background:transparent;
-    border-bottom-color:rgba(28,28,45,.08);
+    border-bottom-color:rgba(28,28,45,.10);
+  }
+  body.wf-eb #mails .template-editor-area,
+  body.wf-email #mails .template-editor-area,
+  body.wf-both #mails .template-editor-area{
+    background:var(--wf-panel);
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:18px;
+    padding:12px;
+    margin:0 -8px -8px;
+  }
+  body.wf-eb #mails .preview-tabs,
+  body.wf-email #mails .preview-tabs,
+  body.wf-both #mails .preview-tabs,
+  body.wf-eb #mails .mail-select-bar,
+  body.wf-email #mails .mail-select-bar,
+  body.wf-both #mails .mail-select-bar,
+  body.wf-eb #mails #mailList,
+  body.wf-email #mails #mailList,
+  body.wf-both #mails #mailList,
+  body.wf-eb #mails #mailBanner,
+  body.wf-email #mails #mailBanner,
+  body.wf-both #mails #mailBanner{
+    background:transparent;
+  }
+  body.wf-eb #mails .preview-tabs,
+  body.wf-email #mails .preview-tabs,
+  body.wf-both #mails .preview-tabs{
+    padding-top:16px;
   }
   body.wf-eb #mails .template-chevron,
   body.wf-email #mails .template-chevron,
@@ -543,7 +575,7 @@
   body.wf-eb #mails .template-toggle-zone:hover .template-chevron,
   body.wf-email #mails .template-toggle-zone:hover .template-chevron,
   body.wf-both #mails .template-toggle-zone:hover .template-chevron{
-    background:rgba(255,255,255,.72);
+    background:rgba(255,255,255,.82);
     border-color:var(--wf-card-border);
   }
   body.wf-eb #mails .template-editor-area > .rich-toolbar,
@@ -552,7 +584,7 @@
   body.wf-eb #mails .mailbody .rich-toolbar,
   body.wf-email #mails .mailbody .rich-toolbar,
   body.wf-both #mails .mailbody .rich-toolbar{
-    background:rgba(255,255,255,.88);
+    background:rgba(255,255,255,.94);
     border-color:var(--wf-card-border);
   }
   body.wf-eb #mails .template-compose-shell,
@@ -573,7 +605,9 @@
   body.wf-eb #mails .mailitem,
   body.wf-email #mails .mailitem,
   body.wf-both #mails .mailitem,
-  body.wf-eb #mails .mailhead,
+  body.wf-eb #mails .mailhead{
+    background:#fff;
+  }
   body.wf-email #mails .mailhead,
   body.wf-both #mails .mailhead{
     background:#fff;
@@ -581,7 +615,7 @@
   body.wf-eb #mails .mailbody,
   body.wf-email #mails .mailbody,
   body.wf-both #mails .mailbody{
-    background:rgba(255,255,255,.54);
+    background:rgba(255,255,255,.62);
   }
   body.wf-eb #mails .mail-compose-shell:focus-within,
   body.wf-email #mails .mail-compose-shell:focus-within,
@@ -589,26 +623,12 @@
     border-color:var(--wf-strong);
     box-shadow:0 0 0 3px var(--wf-soft);
   }
-  body.wf-eb #mails #mailBanner,
-  body.wf-email #mails #mailBanner,
-  body.wf-both #mails #mailBanner,
-  body.wf-eb #mails #mailList,
-  body.wf-email #mails #mailList,
-  body.wf-both #mails #mailList,
-  body.wf-eb #mails .preview-tabs,
-  body.wf-email #mails .preview-tabs,
-  body.wf-both #mails .preview-tabs,
-  body.wf-eb #mails .mail-select-bar,
-  body.wf-email #mails .mail-select-bar,
-  body.wf-both #mails .mail-select-bar{
-    background:transparent;
-  }
 
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v221</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v222</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
