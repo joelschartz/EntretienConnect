@@ -178,12 +178,12 @@
   .schedule-grid .pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}
   .schedule-grid .pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}
   .schedule-grid .pause-remove:hover{background:#fff3df;border-color:#dcae65}
-  .timeline-calendar{display:grid;grid-template-columns:76px repeat(var(--day-count), minmax(178px,1fr));min-width:calc(76px + (var(--day-count) * 190px));background:#fff}
+  .timeline-calendar{display:grid;grid-template-columns:46px repeat(var(--day-count), minmax(164px,1fr));min-width:calc(46px + (var(--day-count) * 176px));background:#fff}
   .timeline-head,.timeline-row{display:contents}
-  .timeline-corner,.timeline-day-head{background:#f8f8fb;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px 8px;font-size:12px;font-weight:800;color:var(--ink);white-space:nowrap}.timeline-corner{position:sticky;left:0;z-index:5;text-align:center;color:#667085}.timeline-day-head:last-child{border-right:none}
-  .time-row-label{position:sticky;left:0;z-index:4;min-height:var(--row-h,54px);display:flex;align-items:center;justify-content:center;background:#fbfbfe;border-right:1px solid var(--line);border-bottom:1px solid #eef0f4;color:#667085;font-size:12px;font-weight:850;font-variant-numeric:tabular-nums;line-height:1}.timeline-cell{min-height:var(--row-h,54px);display:flex;align-items:center;padding:5px 7px;border-right:1px solid #edf0f5;border-bottom:1px solid #f1f3f7;background:#fff;box-sizing:border-box}.timeline-cell:last-child{border-right:none}.timeline-cell.empty{background:#fff}.timeline-row.has-pause .time-row-label,.timeline-row.has-pause .timeline-cell{min-height:72px}.timeline-row.manual-row .time-row-label{color:#7a4800;background:#fff7e8}
-  .timeline-card{width:100%;display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:6px;box-sizing:border-box;background:#fff;border:0;border-radius:10px;padding:2px}.timeline-card.assigned{background:var(--accent-soft);border:1px solid #dfe3fc;padding:3px}.timeline-card.past{opacity:.62;background:#fff}.timeline-card select{width:100%;min-width:0;border-color:#e7eaf1;border-radius:9px;padding:6px 7px;font-size:13px;box-shadow:none}.timeline-card.assigned select[data-key]{border-color:var(--accent);font-weight:700}.tl-time-select{font-variant-numeric:tabular-nums;font-weight:850;color:#667085;background:transparent!important;border-color:transparent!important;padding-left:2px!important;padding-right:2px!important;text-align:center}.tl-time-select:hover,.tl-time-select:focus{background:#fbfbfe!important;border-color:#e4e7ec!important}.tl-time-select.manual{color:#7a4800;background:#fff7e8!important;border-color:#efd7aa!important}.timeline-card.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important}
-  .tl-pause-wrap{grid-column:1 / -1;display:flex;align-items:center;justify-content:center;height:18px;margin-top:2px;line-height:1}.tl-pause{position:static;transform:none;z-index:auto;appearance:none;-webkit-appearance:none;border:1px solid transparent;background:transparent;color:#98a2b3;border-radius:999px;min-width:26px;height:17px;padding:0 8px;font-weight:850;font-size:12px;line-height:15px;cursor:pointer;box-shadow:none;opacity:.72}.tl-pause:hover,.tl-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.tl-pause.active{opacity:1;min-width:86px;height:21px;border-color:#efd7aa;background:#fff7e8;color:#8a5a18;font-size:11.5px}.tl-pause-remove{margin-left:5px;border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0}.tl-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px;color:#667085;font-size:12.5px}.tl-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}
+  .timeline-corner,.timeline-day-head{background:#f8f8fb;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px 8px;font-size:12px;font-weight:800;color:var(--ink);white-space:nowrap}.timeline-corner{position:sticky;left:0;z-index:5;text-align:center;color:#667085;padding-left:4px;padding-right:4px}.timeline-day-head:last-child{border-right:none}
+  .time-row-label{position:sticky;left:0;z-index:4;min-height:42px;display:flex;align-items:flex-start;justify-content:center;padding-top:7px;background:#fbfbfe;border-right:1px solid var(--line);border-bottom:1px solid #f1f3f7;color:#667085;font-size:11.5px;font-weight:850;font-variant-numeric:tabular-nums;line-height:1}.time-row-label.blank{color:transparent}.timeline-cell{min-height:42px;display:flex;align-items:center;padding:3px 6px;border-right:1px solid #edf0f5;border-bottom:1px solid #f5f6fa;background:#fff;box-sizing:border-box;overflow:visible}.timeline-cell:last-child{border-right:none}.timeline-cell.empty{background:#fff}.timeline-row.has-pause .time-row-label,.timeline-row.has-pause .timeline-cell{min-height:52px}.timeline-row.manual-row .time-row-label:not(.blank){color:#7a4800;background:#fff7e8}
+  .timeline-card{position:relative;width:100%;display:grid;grid-template-columns:60px minmax(0,1fr);align-items:center;gap:5px;box-sizing:border-box;background:#fff;border:0;border-radius:10px;padding:1px 2px;min-height:34px}.timeline-card.assigned{background:var(--accent-soft)}.timeline-card.past{opacity:.62;background:#fff}.timeline-card select{width:100%;min-width:0;border-color:#e7eaf1;border-radius:9px;padding:5px 7px;font-size:13px;box-shadow:none;height:32px}.timeline-card.assigned select[data-key]{border-color:var(--accent);font-weight:700}.timeline-card.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important}.tl-time-btn{height:32px;border:1px solid transparent;background:transparent;border-radius:9px;padding:0 3px;color:#667085;font-size:13px;font-weight:850;font-variant-numeric:tabular-nums;cursor:pointer;text-align:center}.tl-time-btn:hover,.tl-time-btn:focus{background:#fbfbfe;border-color:#e4e7ec}.tl-time-btn.manual{color:#7a4800;background:#fff7e8;border-color:#efd7aa}.timeline-card.past .tl-time-btn{color:#98a2b3;cursor:not-allowed}
+  .tl-pause-wrap{position:absolute;left:0;right:0;bottom:-9px;height:0;display:flex;align-items:center;justify-content:center;line-height:1;pointer-events:none}.tl-pause{pointer-events:auto;appearance:none;-webkit-appearance:none;border:1px solid #e7eaf1;background:#fff;color:#98a2b3;border-radius:999px;min-width:22px;height:16px;padding:0 6px;font-weight:850;font-size:11px;line-height:14px;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.04);opacity:.42}.tl-pause:hover,.tl-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.tl-pause.active{opacity:1;min-width:78px;height:18px;border-color:#efd7aa;background:#fff7e8;color:#8a5a18;font-size:11px}.tl-pause-remove{margin-left:4px;border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0}.tl-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px;color:#667085;font-size:12.5px}.tl-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}.tl-time-popover{position:absolute;z-index:9999;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 26px rgba(15,23,42,.16);padding:6px}.tl-time-popover select{font-size:13px;border-radius:8px;padding:5px 8px}
   .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
   .weekblock .weekhead{font-weight:750;font-size:13px;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid var(--line);padding:9px 12px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
@@ -537,7 +537,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v241</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v242</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -636,7 +636,7 @@ Langues : FR, DE, EN, LU">?</span>
         <div><label>Durée par rendez-vous (min)</label><input type="number" id="cfgDur" min="5" max="120" step="5"></div>
         <div><label>Pause à insérer</label><select id="cfgPause"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
       </div>
-      <p class="hint pause-note">Cliquez sur « Ⅱ » dans le jour concerné pour insérer une pause courte. Les rendez-vous sont placés sur une vraie ligne du temps : même heure = même hauteur. Cliquez sur une heure pour forcer un nouveau départ en pas de 5 minutes.</p>
+      <p class="hint pause-note">Cliquez sur « Ⅱ » entre deux rendez-vous pour insérer une pause individuelle. Les rendez-vous restent alignés par heure ; seules les heures pleines sont indiquées à gauche. Cliquez sur l’heure d’un rendez-vous pour forcer un nouveau départ en pas de 5 minutes.</p>
     </div>
     <div class="card">
       <div class="card-head"><h2>Jours d’entretien</h2><span id="resetCalRow" style="display:none"><a href="#" id="resetCal" class="icon-btn" title="Réinitialiser le calendrier &amp; les rendez-vous">↺</a></span></div>
@@ -816,7 +816,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 241;
+const APP_VERSION = 242;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1813,6 +1813,51 @@ function makeTimelineRows(days, daySlots){
   });
   return {times, rows};
 }
+function timelineHourLabel(min, rowIndex){
+  if(rowIndex===0 || min % 60 === 0) return minToTime(min);
+  return "";
+}
+function closeTimelineTimePicker(){
+  const old=document.getElementById("tlTimePopover");
+  if(old) old.remove();
+}
+function openTimelineTimePicker(btn){
+  if(!btn || btn.disabled) return;
+  const day=btn.dataset.timeDay;
+  const idx=parseInt(btn.dataset.timeIndex,10);
+  const current=Number(btn.dataset.timeCurrent);
+  if(!day || !Number.isFinite(idx)) return;
+  closeTimelineTimePicker();
+  const pop=document.createElement("div");
+  pop.id="tlTimePopover";
+  pop.className="tl-time-popover";
+  pop.innerHTML='<select aria-label="Choisir l’heure">'+timeSelectOptions(day,idx,current)+'</select>';
+  document.body.appendChild(pop);
+  const r=btn.getBoundingClientRect();
+  const popW=pop.offsetWidth || 120;
+  const left=Math.max(8, Math.min(window.scrollX+r.left, window.scrollX+document.documentElement.clientWidth-popW-8));
+  pop.style.left=left+"px";
+  pop.style.top=(window.scrollY+r.bottom+4)+"px";
+  const sel=pop.querySelector("select");
+  sel.focus();
+  sel.onchange=()=>{
+    if(sel.value==="auto") removeTimeOverrideForDay(day,idx);
+    else setTimeOverrideForDay(day,idx,Number(sel.value));
+    closeTimelineTimePicker();
+    scheduleChanged();
+  };
+}
+if(!window.__timelineTimePickerCloseInstalled){
+  window.__timelineTimePickerCloseInstalled=true;
+  document.addEventListener("click", function(ev){
+    const pop=document.getElementById("tlTimePopover");
+    if(!pop) return;
+    if(pop.contains(ev.target)) return;
+    if(ev.target.closest && ev.target.closest("button[data-time-day]")) return;
+    closeTimelineTimePicker();
+  }, true);
+  document.addEventListener("keydown", function(ev){ if(ev.key==="Escape") closeTimelineTimePicker(); }, true);
+}
 function fillPlain(tpl,map){ return Object.keys(map).reduce((s,k)=>s.split("{"+k+"}").join(map[k]), tpl||""); }
 function fillHtml(tpl,map){ const safe={}; Object.keys(map).forEach(k=>safe[k]=escHtml(map[k])); return fillPlain(tpl||"", safe); }
 function sanitizeHtml(html){
@@ -2799,11 +2844,12 @@ function renderDateList(){
 }
 function updateCalResetVisibility(){ const row=document.getElementById("resetCalRow"); if(row) row.style.display = (state.config.dates && state.config.dates.length>0) ? "" : "none"; }
 function assignmentStudents(){ return state.students.filter(s=>(s.name||"").trim() || contactEmails(s).length); }
-function assignmentOptionsFor(key){
+function assignmentOptionsFor(key, studentsList, assignmentEntries){
   const current=state.assignments[key]||"";
-  const already=new Set(Object.entries(state.assignments).filter(([k,v])=>k!==key && v).map(([k,v])=>v));
+  const entries=assignmentEntries || Object.entries(state.assignments);
+  const already=new Set(entries.filter(([k,v])=>k!==key && v).map(([k,v])=>v));
   const opts=['<option value="">— libre —</option>'];
-  assignmentStudents().forEach(st=>{
+  (studentsList || assignmentStudents()).forEach(st=>{
     if(already.has(st.id) && st.id!==current) return;
     const selected=st.id===current ? ' selected' : '';
     opts.push(`<option value="${st.id}" title="${esc(st.name||"(sans nom)")}"${selected}>${esc(displayStudentName(st.name))}</option>`);
@@ -2847,8 +2893,10 @@ function renderCalendar(){
       slotByDayTime[d]=m;
     });
     const layout=makeTimelineRows(days, daySlots);
+    const assignList=assignmentStudents();
+    const assignEntries=Object.entries(state.assignments);
     const dayHeaders=days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<div class="timeline-day-head">'+esc(lbl)+'</div>'; }).join("");
-    const rows=layout.rows.map(row=>{
+    const rows=layout.rows.map((row,rowIndex)=>{
       const t=row.time;
       const rowCls=['timeline-row'];
       if(row.hasPause) rowCls.push('has-pause');
@@ -2861,7 +2909,7 @@ function renderCalendar(){
         const cls=["timeline-card"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
         const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
         const manual=hasTimeOverrideForDay(d,i);
-        const timeCls='tl-time-select'+(manual?' manual':'');
+        const timeCls='tl-time-btn'+(manual?' manual':'');
         let pauseCtl='';
         if(i<count-1){
           const pause=pauseAfterMinForDay(d,i);
@@ -2872,15 +2920,17 @@ function renderCalendar(){
           }
         }
         return '<div class="timeline-cell"><div class="'+cls.join(' ')+'">'
-          +'<select class="'+timeCls+'" data-time-day="'+d+'" data-time-index="'+i+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous">'+timeSelectOptions(d,i,slot.startMin)+'</select>'
-          +'<select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key)+'</select>'
+          +'<button type="button" class="'+timeCls+'" data-time-day="'+d+'" data-time-index="'+i+'" data-time-current="'+slot.startMin+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous">'+esc(minToTime(slot.startMin))+'</button>'
+          +'<select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key,assignList,assignEntries)+'</select>'
           +pauseCtl
           +'</div></div>';
       }).join("");
-      return '<div class="'+rowCls.join(' ')+'"><div class="time-row-label">'+esc(minToTime(t))+'</div>'+cells+'</div>';
+      const lbl=timelineHourLabel(t,rowIndex);
+      const labelCls='time-row-label'+(lbl?'':' blank');
+      return '<div class="'+rowCls.join(' ')+'"><div class="'+labelCls+'">'+(lbl?esc(lbl):'·')+'</div>'+cells+'</div>';
     }).join("");
-    const legend='<div class="tl-legend"><span class="mini-ii">Ⅱ</span><span>Pause individuelle par jour</span><span>·</span><span>Heure orange = départ fixé manuellement</span></div>';
-    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="timeline-calendar" style="--day-count:'+days.length+'"><div class="timeline-head"><div class="timeline-corner">Heure</div>'+dayHeaders+'</div>'+rows+'</div></div></div>';
+    const legend='<div class="tl-legend"><span class="mini-ii">Ⅱ</span><span>Pause entre deux rendez-vous</span><span>·</span><span>Heures pleines à gauche</span><span>·</span><span>Heure orange = départ fixé manuellement</span></div>';
+    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="timeline-calendar" style="--day-count:'+days.length+'"><div class="timeline-head"><div class="timeline-corner">h</div>'+dayHeaders+'</div>'+rows+'</div></div></div>';
   }).join("");
   grid.innerHTML=html;
   grid.onchange=(e)=>{
@@ -2894,15 +2944,10 @@ function renderCalendar(){
       try{ scheduleRenderMails(null,260); }catch(err){}
       return;
     }
-    const timeSel=e.target.closest && e.target.closest('select[data-time-day]');
-    if(timeSel){
-      const day=timeSel.dataset.timeDay, i=parseInt(timeSel.dataset.timeIndex,10);
-      if(timeSel.value==="auto") removeTimeOverrideForDay(day,i);
-      else setTimeOverrideForDay(day,i,Number(timeSel.value));
-      scheduleChanged();
-    }
   };
   grid.onclick=(e)=>{
+    const timeBtn=e.target.closest && e.target.closest('button[data-time-day]');
+    if(timeBtn){ openTimelineTimePicker(timeBtn); return; }
     const add=e.target.closest && e.target.closest('button[data-pause-add-day]');
     if(add){
       const i=parseInt(add.dataset.pauseAddIndex,10);
