@@ -465,50 +465,23 @@
   .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
   .maintenance-modal input{width:100%;height:42px;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
 
-  /* v224: la couleur du mode (vert = e-Bichelchen, bleu = e-mail, ambre = complet) suit
-     l'utilisateur — badge nommé dans la barre d'onglets + onglets Envoi assortis. */
-  .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid transparent;flex:0 0 auto;align-self:center;user-select:none}
+  /* v227: la couleur du mode ne sert plus qu'à l'orientation — un point coloré
+     dans le badge de la barre d'onglets + un fond très doux sur les cartes Envoi.
+     Boutons, cases, textes et bannières restent neutres pour ne pas entrer en
+     collision avec les couleurs de statut (jaune = avertissement, etc.). */
+  .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--muted);flex:0 0 auto;align-self:center;user-select:none}
   @media (max-width:900px){.mode-badge{font-size:11px;padding:5px 9px;gap:5px}}
-  .mode-badge .mode-dot{width:8px;height:8px;min-width:8px;border-radius:50%;background:currentColor}
+  .mode-badge .mode-dot{width:8px;height:8px;min-width:8px;border-radius:50%;background:var(--muted-2)}
   body.wf-eb .mode-badge,body.wf-email .mode-badge,body.wf-both .mode-badge{display:inline-flex}
-  body.wf-eb .mode-badge{background:var(--ok-soft);color:var(--ok);border-color:#bfe5d1}
-  body.wf-email .mode-badge{background:var(--accent-soft);color:#4a55a2;border-color:#dfe3fc}
-  body.wf-both .mode-badge{background:#faefda;color:#a4691a;border-color:#ecd5a8}
+  body.wf-eb .mode-badge .mode-dot{background:var(--ok)}
+  body.wf-email .mode-badge .mode-dot{background:var(--accent)}
+  body.wf-both .mode-badge .mode-dot{background:#c98a2e}
 
-
-  /* v224: Envoi übernimmt die dezente, helle Modus-Farbe aus Démarrage.
-     Die Karten bleiben ohne kräftige Außenumrandung; nur der Hintergrund
-     wird sanft eingefärbt. Editor- und Vorschau-Inhalte bleiben weiß. */
-  body.wf-eb{
-    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f7fcf9 28%,#f2faf6 100%);
-    --mode-panel-border:rgba(28,28,45,.06);
-    --mode-panel-border-soft:#d8e9df;
-    --mode-panel-accent:#4f9c79;
-    --mode-panel-accent-d:#3e8866;
-    --mode-panel-soft:#edf7f1;
-    --mode-panel-glow:rgba(46,139,100,.07);
-    --mode-panel-line:rgba(79,156,121,.12);
-  }
-  body.wf-email{
-    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#fbfbff 28%,#f2f4fe 100%);
-    --mode-panel-border:rgba(28,28,45,.06);
-    --mode-panel-border-soft:#e3e6fb;
-    --mode-panel-accent:#7f8deb;
-    --mode-panel-accent-d:#6d7bdd;
-    --mode-panel-soft:#f1f3fe;
-    --mode-panel-glow:rgba(108,124,240,.07);
-    --mode-panel-line:rgba(127,141,235,.14);
-  }
-  body.wf-both{
-    --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#fffcf8 28%,#fdf6ee 100%);
-    --mode-panel-border:rgba(28,28,45,.06);
-    --mode-panel-border-soft:#efe2c6;
-    --mode-panel-accent:#d0a157;
-    --mode-panel-accent-d:#bc8e44;
-    --mode-panel-soft:#fcf5e8;
-    --mode-panel-glow:rgba(201,138,46,.08);
-    --mode-panel-line:rgba(208,161,87,.15);
-  }
+  /* v224: Envoi übernimmt die dezente, helle Modus-Farbe aus Démarrage — nur der
+     Kartenhintergrund. Editor- und Vorschau-Inhalte bleiben weiß. */
+  body.wf-eb{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f7fcf9 28%,#f2faf6 100%); }
+  body.wf-email{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#fbfbff 28%,#f2f4fe 100%); }
+  body.wf-both{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#fffcf8 28%,#fdf6ee 100%); }
   body.wf-eb #panel-mails .template-card,
   body.wf-email #panel-mails .template-card,
   body.wf-both #panel-mails .template-card,
@@ -516,8 +489,8 @@
   body.wf-email #panel-mails .preview-card,
   body.wf-both #panel-mails .preview-card{
     background:var(--mode-panel-bg);
-    border:1px solid var(--mode-panel-border);
-    box-shadow:0 6px 18px var(--mode-panel-glow),var(--shadow-sm);
+    border:1px solid rgba(28,28,45,.06);
+    box-shadow:var(--shadow-sm);
   }
   body.wf-eb #panel-mails .mail-template-head,
   body.wf-email #panel-mails .mail-template-head,
@@ -526,7 +499,6 @@
   body.wf-email #panel-mails .preview-head,
   body.wf-both #panel-mails .preview-head{
     background:transparent;
-    border-bottom-color:var(--mode-panel-line);
   }
   body.wf-eb #panel-mails .template-compose-shell,
   body.wf-email #panel-mails .template-compose-shell,
@@ -551,16 +523,6 @@
   body.wf-both #panel-mails #tplBodyEditor{
     background:#fff;
   }
-  body.wf-eb #panel-mails .mail-compose-shell:focus-within,
-  body.wf-email #panel-mails .mail-compose-shell:focus-within,
-  body.wf-both #panel-mails .mail-compose-shell:focus-within,
-  body.wf-eb #panel-mails #tplBodyEditor.plain-template-editor:focus,
-  body.wf-email #panel-mails #tplBodyEditor.plain-template-editor:focus,
-  body.wf-both #panel-mails #tplBodyEditor.plain-template-editor:focus{
-    border-color:var(--mode-panel-border-soft);
-    box-shadow:0 0 0 3px var(--mode-panel-soft);
-  }
-
   /* Onglet e-Bichelchen actif : toujours vert (comme la carte du Démarrage) */
   .template-tab.active[data-template-mode="ebichelchen"],.preview-tab.active[data-preview-kind="eb"]{background:var(--ok);border-color:var(--ok);color:#fff}
   .template-tab.active[data-template-mode="ebichelchen"]:hover,.preview-tab.active[data-preview-kind="eb"]:hover{background:#27795a;border-color:#27795a}
@@ -579,7 +541,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v227</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v228</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
