@@ -477,7 +477,7 @@
   body.wf-email .mode-badge .mode-dot{background:var(--accent)}
   body.wf-both .mode-badge .mode-dot{background:#c98a2e}
 
-  /* v233: Envoi nutzt exakt die dezente, unselektierte Démarrage-Abstufung.
+  /* v234: Envoi nutzt exakt die dezente, unselektierte Démarrage-Abstufung.
      Dadurch bleibt der Modus sichtbar, ohne die Fenster dunkel oder eingerahmt wirken
      zu lassen. Editor- und Vorschau-Inhalte bleiben weiß. */
   body.wf-eb{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f2faf6 100%); }
@@ -528,7 +528,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v233</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v234</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -805,7 +805,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 220;
+const APP_VERSION = 234;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2443,7 +2443,7 @@ function renderStudents(){
       const langSel=tr.querySelector(".st-l"+(idx+1));
       if(inp){
         inp.onfocus=()=>{ inp.classList.remove("email-invalid"); inp.title=""; const box=document.getElementById("studentEmailWarnings"); if(box) box.innerHTML=""; };
-        inp.oninput=e=>{ st[key]=e.target.value; saveState(); inp.classList.remove("email-invalid"); inp.title=""; renderMails(); };
+        inp.oninput=e=>{ st[key]=e.target.value; saveState(); inp.classList.remove("email-invalid"); inp.title=""; scheduleRenderMails(); };
         inp.onblur=()=>{ touchedStudentEmailFields.add(studentEmailFieldKey(id, idx+1)); studentDuplicateValidationActive=true; maybePruneEmptyStudentAfterBlur(id); validateStudentEmailsUI(); renderMails(); };
       }
       if(langSel) langSel.onchange=e=>{ st["lang"+(idx+1)]=normalizeLang(e.target.value); if(idx===0 && emailEnabled() && ebichelchenEnabled()) st.langEb=st.lang1; saveState(); renderMails(); };
@@ -2712,7 +2712,7 @@ function updateAssignSummary(){
 }
 
 /* Rich editor */
-let activeEditor=null, savedRange=null, toolbarBusy=false, toolbarStateTimer=null;
+let activeEditor=null, savedRange=null, toolbarBusy=false, toolbarStateTimer=null, richToolbarDocClickWired=false;
 let suppressTemplateCommit=false;
 function editorFromNode(node){
   if(!node) return null;
@@ -3068,7 +3068,7 @@ function commitEditor(editor){
       tpl.bodyHtml=simpleHtmlFromPlainText(txt);
       tpl.body=txt;
       renderTemplatePreview();
-      saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility();
+      saveState(); scheduleRenderMails(currentOpenPreviewId()); updateTplResetVisibility();
       return;
     }
     sanitizePastedImages(editor);
@@ -3087,7 +3087,7 @@ function commitEditor(editor){
       if(typeof showToast==="function") showToast("Logo retiré — ↺ sous l’éditeur pour le rétablir.");
     }
     renderTemplatePreview(); renderLogoPreview();
-    saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility();
+    saveState(); scheduleRenderMails(currentOpenPreviewId()); updateTplResetVisibility();
   } else if(editor.classList && editor.classList.contains("mail-editor")){
     const ovk=editor.dataset.ovk;
     if(ovk){
@@ -3131,7 +3131,7 @@ function wireRichEditor(id){
     else if(e.inputType==="historyRedo") markEditorRedo(el);
     else if(String(e.inputType||"").startsWith("insert") || String(e.inputType||"").startsWith("delete") || String(e.inputType||"").startsWith("format")) markEditorChanged(el);
   });
-  el.addEventListener("input",()=>{ commitEditor(el); scheduleToolbarStateUpdate(el); setTimeout(()=>updateToolbarState(el),0); });
+  el.addEventListener("input",()=>{ commitEditor(el); scheduleToolbarStateUpdate(el); });
   el.addEventListener("paste",e=>{ setTimeout(()=>{ commitEditor(el); scheduleToolbarStateUpdate(el); updateToolbarState(el); },0); });
 }
 function bindRichToolbars(){
@@ -3214,14 +3214,18 @@ function bindRichToolbars(){
       if(ctrl.tagName==="SELECT" || ctrl.type==="color") ctrl.addEventListener("change",run); else ctrl.addEventListener("click",run);
     });
   });
-  document.addEventListener("click", e=>{
-    document.querySelectorAll(".ot-more.open").forEach(m=>{
-      if(!m.closest(".rich-toolbar").contains(e.target)) m.classList.remove("open");
+  if(!richToolbarDocClickWired){
+    richToolbarDocClickWired=true;
+    document.addEventListener("click", e=>{
+      document.querySelectorAll(".ot-more.open").forEach(m=>{
+        const tb=m.closest(".rich-toolbar");
+        if(tb && !tb.contains(e.target)) m.classList.remove("open");
+      });
+      document.querySelectorAll(".color-picker.open").forEach(p=>{
+        if(!p.contains(e.target)) p.classList.remove("open");
+      });
     });
-    document.querySelectorAll(".color-picker.open").forEach(p=>{
-      if(!p.contains(e.target)) p.classList.remove("open");
-    });
-  });
+  }
 }
 
 /* Signature/logo/template binding */
@@ -3274,13 +3278,21 @@ function renderLogoPreview(){
     else st.textContent=(state.template.logo && state.template.logo.dataUrl) ? "" : "Chargement du logo UNESCO.";
   }
 }
-let mailRenderRaf = null;
-function scheduleRenderMails(openId){
-  if(mailRenderRaf) cancelAnimationFrame(mailRenderRaf);
-  mailRenderRaf = requestAnimationFrame(()=>{
-    mailRenderRaf = null;
-    renderMails(openId);
-  });
+let mailRenderRaf = null, mailRenderTimer = null, mailRenderOpenId = undefined;
+function scheduleRenderMails(openId, delay){
+  if(openId!==undefined) mailRenderOpenId=openId;
+  const wait = (delay===0 ? 0 : (delay || 120));
+  if(mailRenderTimer) clearTimeout(mailRenderTimer);
+  mailRenderTimer = setTimeout(()=>{
+    mailRenderTimer = null;
+    if(mailRenderRaf) cancelAnimationFrame(mailRenderRaf);
+    mailRenderRaf = requestAnimationFrame(()=>{
+      const keepOpen = mailRenderOpenId;
+      mailRenderOpenId = undefined;
+      mailRenderRaf = null;
+      renderMails(keepOpen);
+    });
+  }, wait);
 }
 function updateTemplateSignatureView(body, renderTemplateCollapseState){
   renderTemplateCollapseState();
@@ -3351,7 +3363,7 @@ function bindSettings(){
   const reminderTime=document.getElementById("reminderTime");
   const currentTpl=()=>templateDataForMode(currentTemplateMode(), currentTemplateLang());
   su.value=currentTpl().subject; forceTemplateEditorHtml(composeEditorHtml(currentTemplateMode(), currentTemplateLang()));
-  su.oninput=()=>{ const tpl=currentTpl(); tpl.subject=su.value; saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility(); };
+  su.oninput=()=>{ const tpl=currentTpl(); tpl.subject=su.value; saveState(); scheduleRenderMails(currentOpenPreviewId()); updateTplResetVisibility(); };
   // Robuste, direkte Reaktion auf jede Änderung im Editor (unabhängig vom Commit-Pfad):
   body.addEventListener("input", updateTplResetVisibility);
   body.addEventListener("keyup", updateTplResetVisibility);
@@ -5256,7 +5268,12 @@ bootEntretienConnect();
     setTimeout(updateEbResetVisibility, 0);
     return r;
   };
-  document.addEventListener("input", function(){ setTimeout(updateEbResetVisibility, 50); }, true);
+  document.addEventListener("input", function(ev){
+    var t=ev && ev.target;
+    if(t && (t.id==="tplSubject" || t.id==="tplBodyEditor" || (t.closest && t.closest("#tplBodyEditor")))){
+      setTimeout(updateEbResetVisibility, 50);
+    }
+  }, true);
   document.addEventListener("click", function(ev){
     var t = ev.target && ev.target.closest ? ev.target.closest("button") : null;
     if(t && /réinitialiser|reinitialiser|standard|zurücksetzen/i.test(t.textContent||"")){
@@ -5357,8 +5374,10 @@ bootEntretienConnect();
     setTimeout(ecEnhanceEbStudentLanguages, 0);
     return r;
   };
-  document.addEventListener("input", function(){ setTimeout(ecEnhanceEbStudentLanguages, 80); }, true);
-  document.addEventListener("change", function(){ setTimeout(ecEnhanceEbStudentLanguages, 80); }, true);
+  // v234: Keine globalen input/change-Listener mehr. Die Sprachfelder werden beim
+  // Rendern der Schülerliste und über ihre eigenen onchange-Handler aktualisiert.
+  // Die alten globalen Listener liefen bei jedem Tastendruck in der App mit und machten
+  // die Oberfläche mit der Zeit spürbar träger.
   setTimeout(ecEnhanceEbStudentLanguages, 500);
 })();
 </script>
