@@ -178,12 +178,14 @@
   .schedule-grid .pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}
   .schedule-grid .pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}
   .schedule-grid .pause-remove:hover{background:#fff3df;border-color:#dcae65}
-  .timeline-calendar{display:grid;grid-template-columns:46px repeat(var(--day-count), minmax(164px,1fr));min-width:calc(46px + (var(--day-count) * 176px));background:#fff}
-  .timeline-head,.timeline-row{display:contents}
-  .timeline-corner,.timeline-day-head{background:#f8f8fb;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px 8px;font-size:12px;font-weight:800;color:var(--ink);white-space:nowrap}.timeline-corner{position:sticky;left:0;z-index:5;text-align:center;color:#667085;padding-left:4px;padding-right:4px}.timeline-day-head:last-child{border-right:none}
-  .time-row-label{position:sticky;left:0;z-index:4;min-height:42px;display:flex;align-items:flex-start;justify-content:center;padding-top:7px;background:#fbfbfe;border-right:1px solid var(--line);border-bottom:1px solid #f1f3f7;color:#667085;font-size:11.5px;font-weight:850;font-variant-numeric:tabular-nums;line-height:1}.time-row-label.blank{color:transparent}.timeline-cell{min-height:42px;display:flex;align-items:center;padding:3px 6px;border-right:1px solid #edf0f5;border-bottom:1px solid #f5f6fa;background:#fff;box-sizing:border-box;overflow:visible}.timeline-cell:last-child{border-right:none}.timeline-cell.empty{background:#fff}.timeline-row.has-pause .time-row-label,.timeline-row.has-pause .timeline-cell{min-height:52px}.timeline-row.manual-row .time-row-label:not(.blank){color:#7a4800;background:#fff7e8}
-  .timeline-card{position:relative;width:100%;display:grid;grid-template-columns:60px minmax(0,1fr);align-items:center;gap:5px;box-sizing:border-box;background:#fff;border:0;border-radius:10px;padding:1px 2px;min-height:34px}.timeline-card.assigned{background:var(--accent-soft)}.timeline-card.past{opacity:.62;background:#fff}.timeline-card select{width:100%;min-width:0;border-color:#e7eaf1;border-radius:9px;padding:5px 7px;font-size:13px;box-shadow:none;height:32px}.timeline-card.assigned select[data-key]{border-color:var(--accent);font-weight:700}.timeline-card.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important}.tl-time-btn{height:32px;border:1px solid transparent;background:transparent;border-radius:9px;padding:0 3px;color:#667085;font-size:13px;font-weight:850;font-variant-numeric:tabular-nums;cursor:pointer;text-align:center}.tl-time-btn:hover,.tl-time-btn:focus{background:#fbfbfe;border-color:#e4e7ec}.tl-time-btn.manual{color:#7a4800;background:#fff7e8;border-color:#efd7aa}.timeline-card.past .tl-time-btn{color:#98a2b3;cursor:not-allowed}
-  .tl-pause-wrap{position:absolute;left:0;right:0;bottom:-9px;height:0;display:flex;align-items:center;justify-content:center;line-height:1;pointer-events:none}.tl-pause{pointer-events:auto;appearance:none;-webkit-appearance:none;border:1px solid #e7eaf1;background:#fff;color:#98a2b3;border-radius:999px;min-width:22px;height:16px;padding:0 6px;font-weight:850;font-size:11px;line-height:14px;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.04);opacity:.42}.tl-pause:hover,.tl-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.tl-pause.active{opacity:1;min-width:78px;height:18px;border-color:#efd7aa;background:#fff7e8;color:#8a5a18;font-size:11px}.tl-pause-remove{margin-left:4px;border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0}.tl-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px;color:#667085;font-size:12.5px}.tl-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}.tl-time-popover{position:absolute;z-index:9999;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 26px rgba(15,23,42,.16);padding:6px}.tl-time-popover select{font-size:13px;border-radius:8px;padding:5px 8px}
+  .block-calendar{--slot-unit:9px;min-width:calc(52px + (var(--day-count) * 188px));background:#fff;color:var(--ink)}
+  .block-head{display:grid;grid-template-columns:52px repeat(var(--day-count), minmax(176px,1fr));background:#f8f8fb;border-bottom:1px solid var(--line)}
+  .block-corner,.block-day-head{padding:7px 9px;font-size:12px;font-weight:850;color:var(--ink);border-right:1px solid var(--line);white-space:nowrap}.block-corner{position:sticky;left:0;z-index:7;text-align:center;color:#667085;background:#f8f8fb}.block-day-head:last-child{border-right:none}
+  .block-body{display:grid;grid-template-columns:52px repeat(var(--day-count), minmax(176px,1fr));align-items:stretch;background:#fff}
+  .block-axis,.block-day-col{display:grid;grid-template-rows:repeat(var(--rows), var(--slot-unit));position:relative;min-height:calc(var(--rows) * var(--slot-unit));box-sizing:border-box}.block-axis{position:sticky;left:0;z-index:5;background:#fbfbfe;border-right:1px solid var(--line)}.block-day-col{border-right:1px solid #edf0f5;background:#fff}.block-day-col:last-child{border-right:none}
+  .block-hour-label{grid-column:1;display:flex;align-items:flex-start;justify-content:center;border-top:1px solid #e8ebf2;color:#667085;font-size:11px;font-weight:850;font-variant-numeric:tabular-nums;padding-top:2px;line-height:1;background:#fbfbfe}.block-hour-label:first-child{border-top:none}.block-hour-line{grid-column:1;border-top:1px solid #eef1f6;pointer-events:none;z-index:0}
+  .block-appt{position:relative;z-index:2;display:grid;grid-template-columns:64px minmax(0,1fr);align-items:center;gap:6px;margin:2px 6px;padding:3px 5px;border:1px solid #e4e7ec;border-radius:10px;background:#fff;box-sizing:border-box;box-shadow:none;overflow:visible;min-height:30px}.block-appt.assigned{background:var(--accent-soft);border-color:#dfe4ff}.block-appt.past{opacity:.62;background:#fff}.block-appt select{width:100%;min-width:0;height:28px;border-color:#e7eaf1;border-radius:8px;padding:3px 7px;font-size:13px;box-shadow:none;background:#fff}.block-appt.assigned select[data-key]{border-color:var(--accent);font-weight:700}.block-appt.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important}.block-time-btn{height:28px;border:0;background:transparent;border-radius:8px;padding:0 2px;color:#667085;font-size:12.5px;font-weight:850;font-variant-numeric:tabular-nums;cursor:pointer;text-align:center;line-height:1.05}.block-time-btn small{display:block;margin-top:1px;font-size:9.5px;font-weight:750;color:#98a2b3;line-height:1}.block-time-btn:hover,.block-time-btn:focus{background:#fbfbfe;outline:1px solid #e4e7ec}.block-time-btn.manual{color:#7a4800;background:#fff7e8;outline:1px solid #efd7aa}.block-time-btn.manual small{color:#a4691a}.block-appt.past .block-time-btn{color:#98a2b3;cursor:not-allowed}.block-appt.past .block-time-btn small{color:#c3c8d0}
+  .block-insert-pause{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);z-index:5;appearance:none;-webkit-appearance:none;border:1px solid #e7eaf1;background:#fff;color:#98a2b3;border-radius:999px;min-width:23px;height:16px;padding:0 6px;font-weight:850;font-size:11px;line-height:14px;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.04);opacity:.42}.block-insert-pause:hover,.block-insert-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.block-pause{position:relative;z-index:4;justify-self:center;align-self:center;display:inline-flex;align-items:center;justify-content:center;gap:4px;max-width:112px;height:16px;padding:0 9px;border:1px solid #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-size:11px;font-weight:850;line-height:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}.block-pause-remove{border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0;margin:0 0 0 1px;line-height:1}.block-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px;color:#667085;font-size:12.5px}.block-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}.tl-time-popover{position:absolute;z-index:9999;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 26px rgba(15,23,42,.16);padding:6px}.tl-time-popover select{font-size:13px;border-radius:8px;padding:5px 8px}
   .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
   .weekblock .weekhead{font-weight:750;font-size:13px;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid var(--line);padding:9px 12px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
@@ -537,7 +539,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v242</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v243</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -816,7 +818,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 242;
+const APP_VERSION = 243;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1750,13 +1752,17 @@ function slotsForDate(day){
   let t=a;
   for(let i=0;i<count;i++){
     const ov=timeOverrideForDay(day,i);
-    if(ov!==null) t=ov;
-    out.push({start:minToTime(t), end:minToTime(t+d), startMin:t, endMin:t+d, idx:i});
+    if(ov!==null){
+      const prev=out.length ? out[out.length-1] : null;
+      t = prev ? Math.max(ov, prev.endMin) : ov;
+    }
+    const startMin=t, endMin=t+d;
+    out.push({start:minToTime(startMin), end:minToTime(endMin), startMin, endMin, idx:i});
     if(i<count-1){
       const pause=pauseAfterMinForDay(day,i);
-      // Intention utilisateur : une pause de 5 min sous 12:40 donne 12:45, puis 13:05...
-      // Donc la pause remplace l'écart suivant, elle ne s'ajoute pas à la durée standard.
-      t += pause ? pause : d;
+      // v243: pause = vraie coupure APRÈS le bloc de rendez-vous.
+      // Exemple avec durée 20 : 14:40–15:00, pause 5, puis 15:05.
+      t = endMin + pause;
     }
   }
   return out;
@@ -1780,42 +1786,34 @@ function timeSelectOptions(day, idx, currentMin){
   if(!hasCurrent){ opts.push('<option value="'+current+'" selected>'+minToTime(current)+'</option>'); }
   return opts.join("");
 }
-function makeTimelineLayout(days, daySlots){
-  const starts=[];
-  days.forEach(d=>(daySlots[d]||[]).forEach(s=>starts.push(s.startMin)));
-  const uniq=[...new Set(starts.filter(Number.isFinite))].sort((a,b)=>a-b);
-  const pos={}; let y=22;
-  if(!uniq.length) return {pos, times:[], height:80, cardH:36};
-  pos[uniq[0]]=y;
-  for(let i=1;i<uniq.length;i++){
-    const gap=Math.max(0, uniq[i]-uniq[i-1]);
-    const step=Math.round(Math.min(76, Math.max(11, gap*2.05)));
-    y += step;
-    pos[uniq[i]]=y;
+function makeBlockTimelineBounds(days, daySlots){
+  const vals=[];
+  const a=timeToMin(state.config.start), b=timeToMin(state.config.end);
+  if(Number.isFinite(a)) vals.push(a);
+  if(Number.isFinite(b)) vals.push(b);
+  days.forEach(d=>(daySlots[d]||[]).forEach(s=>{ vals.push(s.startMin); vals.push(s.endMin); const p=pauseAfterMinForDay(d,s.idx); if(p) vals.push(s.endMin+p); }));
+  const finite=vals.filter(Number.isFinite);
+  let min=finite.length ? Math.min(...finite) : a;
+  let max=finite.length ? Math.max(...finite) : b;
+  min=Math.max(0, Math.floor(min/60)*60);
+  max=Math.min(24*60, Math.ceil(max/60)*60);
+  if(max<=min) max=min+60;
+  const rows=Math.max(12, Math.ceil((max-min)/5));
+  return {startMin:min, endMin:max, rows};
+}
+function blockGridRow(min, bounds){
+  return Math.max(1, Math.round((Number(min)-bounds.startMin)/5)+1);
+}
+function blockSpan(startMin,endMin){
+  return Math.max(1, Math.round((Number(endMin)-Number(startMin))/5));
+}
+function blockHourLabels(bounds){
+  const out=[];
+  for(let h=bounds.startMin; h<=bounds.endMin; h+=60){
+    const row=blockGridRow(h,bounds);
+    if(row<=bounds.rows) out.push({min:h,row,span:Math.min(12, bounds.rows-row+1)});
   }
-  return {pos, times:uniq, height:y+58, cardH:36};
-}
-
-function makeTimelineRows(days, daySlots){
-  const starts=[];
-  days.forEach(d=>(daySlots[d]||[]).forEach(slot=>{ if(Number.isFinite(slot.startMin)) starts.push(slot.startMin); }));
-  const times=[...new Set(starts)].sort((a,b)=>a-b);
-  const rows=times.map(t=>{
-    const hasPause=days.some(d=>{
-      const slot=(daySlots[d]||[]).find(s=>s.startMin===t);
-      return slot && slot.idx < baseSlotCount()-1 && !!pauseAfterMinForDay(d,slot.idx);
-    });
-    const manual=days.some(d=>{
-      const slot=(daySlots[d]||[]).find(s=>s.startMin===t);
-      return slot && hasTimeOverrideForDay(d,slot.idx);
-    });
-    return {time:t, hasPause, manual};
-  });
-  return {times, rows};
-}
-function timelineHourLabel(min, rowIndex){
-  if(rowIndex===0 || min % 60 === 0) return minToTime(min);
-  return "";
+  return out;
 }
 function closeTimelineTimePicker(){
   const old=document.getElementById("tlTimePopover");
@@ -2862,6 +2860,7 @@ function renderCalendar(){
   if(mini && !mini.querySelector(".minical")) renderDateList();
   const grid=document.getElementById("calendarGrid"), count=baseSlotCount();
   if(!grid) return;
+  closeTimelineTimePicker();
   if(state.config.dates.length===0){
     const students=assignmentStudents();
     const el=document.getElementById("assignSummary");
@@ -2884,53 +2883,47 @@ function renderCalendar(){
     const days=groups[wk];
     const monLbl=new Date(wk+"T00:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
     const daySlots={};
-    const slotByDayTime={};
-    days.forEach(d=>{
-      const list=slotsForDate(d);
-      daySlots[d]=list;
-      const m={};
-      list.forEach(slot=>{ if(Number.isFinite(slot.startMin)) m[String(slot.startMin)]=slot; });
-      slotByDayTime[d]=m;
-    });
-    const layout=makeTimelineRows(days, daySlots);
+    days.forEach(d=>{ daySlots[d]=slotsForDate(d); });
+    const bounds=makeBlockTimelineBounds(days, daySlots);
+    const hours=blockHourLabels(bounds);
     const assignList=assignmentStudents();
     const assignEntries=Object.entries(state.assignments);
-    const dayHeaders=days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<div class="timeline-day-head">'+esc(lbl)+'</div>'; }).join("");
-    const rows=layout.rows.map((row,rowIndex)=>{
-      const t=row.time;
-      const rowCls=['timeline-row'];
-      if(row.hasPause) rowCls.push('has-pause');
-      if(row.manual) rowCls.push('manual-row');
-      const cells=days.map(d=>{
-        const slot=slotByDayTime[d] ? slotByDayTime[d][String(t)] : null;
-        if(!slot) return '<div class="timeline-cell empty"></div>';
+    const dayHeaders=days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<div class="block-day-head">'+esc(lbl)+'</div>'; }).join("");
+    const axis=hours.map(h=>'<div class="block-hour-label" style="grid-row:'+h.row+' / span '+h.span+'">'+esc(minToTime(h.min))+'</div>').join("");
+    const dayCols=days.map(d=>{
+      const hourLines=hours.map(h=>'<div class="block-hour-line" style="grid-row:'+h.row+' / span 1"></div>').join("");
+      const items=(daySlots[d]||[]).map(slot=>{
         const i=slot.idx, key=d+"__"+i, sel=state.assignments[key]||"";
         const isPast=appointmentDateTime(d, slot.end) <= now;
-        const cls=["timeline-card"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
+        const cls=["block-appt"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
         const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
         const manual=hasTimeOverrideForDay(d,i);
-        const timeCls='tl-time-btn'+(manual?' manual':'');
-        let pauseCtl='';
-        if(i<count-1){
-          const pause=pauseAfterMinForDay(d,i);
-          if(pause){
-            pauseCtl='<div class="tl-pause-wrap"><button type="button" class="tl-pause active" data-pause-remove-day="'+d+'" data-pause-remove-index="'+i+'" title="Supprimer la pause">Pause '+pause+' min <span class="tl-pause-remove">×</span></button></div>';
-          }else{
-            pauseCtl='<div class="tl-pause-wrap"><button type="button" class="tl-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Insérer une pause de '+normalizePauseMin(state.config.pauseMin)+' min ce jour-là">Ⅱ</button></div>';
-          }
+        const timeCls='block-time-btn'+(manual?' manual':'');
+        const startRow=blockGridRow(slot.startMin,bounds);
+        const span=blockSpan(slot.startMin,slot.endMin);
+        const style='grid-row:'+startRow+' / span '+span;
+        let insert='';
+        if(i<count-1 && !isPast && !pauseAfterMinForDay(d,i)){
+          insert='<button type="button" class="block-insert-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Insérer une pause de '+normalizePauseMin(state.config.pauseMin)+' min après ce rendez-vous">Ⅱ</button>';
         }
-        return '<div class="timeline-cell"><div class="'+cls.join(' ')+'">'
-          +'<button type="button" class="'+timeCls+'" data-time-day="'+d+'" data-time-index="'+i+'" data-time-current="'+slot.startMin+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous">'+esc(minToTime(slot.startMin))+'</button>'
+        return '<div class="'+cls.join(' ')+'" style="'+style+'">'
+          +'<button type="button" class="'+timeCls+'" data-time-day="'+d+'" data-time-index="'+i+'" data-time-current="'+slot.startMin+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous"><span>'+esc(minToTime(slot.startMin))+'</span><small>'+esc(minToTime(slot.endMin))+'</small></button>'
           +'<select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key,assignList,assignEntries)+'</select>'
-          +pauseCtl
-          +'</div></div>';
+          +insert
+          +'</div>';
       }).join("");
-      const lbl=timelineHourLabel(t,rowIndex);
-      const labelCls='time-row-label'+(lbl?'':' blank');
-      return '<div class="'+rowCls.join(' ')+'"><div class="'+labelCls+'">'+(lbl?esc(lbl):'·')+'</div>'+cells+'</div>';
+      const pauses=(daySlots[d]||[]).map(slot=>{
+        if(slot.idx>=count-1) return '';
+        const pause=pauseAfterMinForDay(d,slot.idx);
+        if(!pause) return '';
+        const row=blockGridRow(slot.endMin,bounds);
+        const span=Math.max(1, Math.round(pause/5));
+        return '<div class="block-pause" style="grid-row:'+row+' / span '+span+'" title="Pause après '+esc(minToTime(slot.startMin))+'">Pause '+pause+' min <button type="button" class="block-pause-remove" data-pause-remove-day="'+d+'" data-pause-remove-index="'+slot.idx+'" aria-label="Supprimer la pause">×</button></div>';
+      }).join("");
+      return '<div class="block-day-col" style="--rows:'+bounds.rows+'">'+hourLines+items+pauses+'</div>';
     }).join("");
-    const legend='<div class="tl-legend"><span class="mini-ii">Ⅱ</span><span>Pause entre deux rendez-vous</span><span>·</span><span>Heures pleines à gauche</span><span>·</span><span>Heure orange = départ fixé manuellement</span></div>';
-    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="timeline-calendar" style="--day-count:'+days.length+'"><div class="timeline-head"><div class="timeline-corner">h</div>'+dayHeaders+'</div>'+rows+'</div></div></div>';
+    const legend='<div class="block-legend"><span class="mini-ii">Ⅱ</span><span>Pause après un bloc</span><span>·</span><span>Chaque rendez-vous occupe toute sa durée</span><span>·</span><span>Heures pleines à gauche</span></div>';
+    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="block-calendar" style="--day-count:'+days.length+'"><div class="block-head"><div class="block-corner">h</div>'+dayHeaders+'</div><div class="block-body"><div class="block-axis" style="--rows:'+bounds.rows+'">'+axis+'</div>'+dayCols+'</div></div></div></div>';
   }).join("");
   grid.innerHTML=html;
   grid.onchange=(e)=>{
@@ -2946,6 +2939,13 @@ function renderCalendar(){
     }
   };
   grid.onclick=(e)=>{
+    const rem=e.target.closest && e.target.closest('button[data-pause-remove-day]');
+    if(rem){
+      const i=parseInt(rem.dataset.pauseRemoveIndex,10);
+      removePauseAfterForDay(rem.dataset.pauseRemoveDay, i);
+      scheduleChanged();
+      return;
+    }
     const timeBtn=e.target.closest && e.target.closest('button[data-time-day]');
     if(timeBtn){ openTimelineTimePicker(timeBtn); return; }
     const add=e.target.closest && e.target.closest('button[data-pause-add-day]');
@@ -2954,12 +2954,6 @@ function renderCalendar(){
       setPauseAfterForDay(add.dataset.pauseAddDay, i, state.config.pauseMin);
       scheduleChanged();
       return;
-    }
-    const rem=e.target.closest && e.target.closest('button[data-pause-remove-day]');
-    if(rem){
-      const i=parseInt(rem.dataset.pauseRemoveIndex,10);
-      removePauseAfterForDay(rem.dataset.pauseRemoveDay, i);
-      scheduleChanged();
     }
   };
   updateAssignSummary();
