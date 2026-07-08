@@ -465,7 +465,7 @@
   .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
   .maintenance-modal input{width:100%;height:42px;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
 
-  /* v235: Performance-Test gegen v220.
+  /* v236: Performance-Test gegen v220.
      Das große Karten-Grading aus v234 ist deaktiviert, weil es beim Scrollen/Tippen
      in manchen Browsern teure Repaints erzeugen kann. Die Modus-Erkennung bleibt
      wie in der schnellen v220 über Badge und aktive Tabs sichtbar. */
@@ -494,7 +494,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v235</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v236</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -771,7 +771,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 235;
+const APP_VERSION = 236;
 
 window.addEventListener("error", function(ev){
   try{
@@ -4675,7 +4675,7 @@ function applyChannelVisibility(){
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
   }
-  // v235: refléter le mode partout — classe sur <body> (mode rapide sans grand grading)
+  // v236: refléter le mode partout — classe sur <body> (mode rapide sans grand grading)
   // + badge de mode nommé dans la barre d'onglets collante.
   try{
     const mode=workflowMode();
