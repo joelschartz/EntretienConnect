@@ -14,7 +14,6 @@ import pathlib
 import platform
 import secrets
 import shutil
-import signal
 import socket
 import ssl
 import struct
@@ -924,61 +923,6 @@ def close_ebichelchen_target() -> dict:
             except Exception as third_exc:
                 raise RuntimeError(f"e-Bichelchen konnte nicht geschlossen werden: Browser.close={first_exc}; json-close={second_exc}; Page.close={third_exc}")
 
-def _find_pids_by_cmdline(needle: str) -> list[int]:
-    """Findet PIDs, deren Kommandozeile den angegebenen Text enthält.
-    v232: BROWSER_PROCESSES kennt nur Prozesse, die der AKTUELLE Helfer-Lauf selbst
-    gestartet hat. Nach einem Neustart des Helfers (App neu geöffnet, Absturz, …)
-    verwaist ein zuvor gestarteter Chrome-Prozess sonst unsichtbar im Hintergrund
-    und blockiert jede weitere Verbindungsanfrage stillschweigend."""
-    system = platform.system().lower()
-    pids: list[int] = []
-    try:
-        if system in ("darwin", "linux"):
-            out = subprocess.run(["pgrep", "-f", needle], capture_output=True, text=True, timeout=3)
-            for line in out.stdout.splitlines():
-                line = line.strip()
-                if line.isdigit():
-                    pids.append(int(line))
-        elif system == "windows":
-            ps_cmd = (
-                "Get-CimInstance Win32_Process | "
-                f"Where-Object {{ $_.CommandLine -like '*{needle}*' }} | "
-                "Select-Object -ExpandProperty ProcessId"
-            )
-            out = subprocess.run(
-                ["powershell", "-NoProfile", "-Command", ps_cmd],
-                capture_output=True, text=True, timeout=5,
-            )
-            for line in out.stdout.splitlines():
-                line = line.strip()
-                if line.isdigit():
-                    pids.append(int(line))
-    except Exception:
-        pass
-    return pids
-
-
-def _kill_pid(pid: int) -> bool:
-    system = platform.system().lower()
-    try:
-        if system == "windows":
-            subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, timeout=3)
-            return True
-        os.kill(pid, signal.SIGTERM)
-        time.sleep(0.3)
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return True
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except Exception:
-            pass
-        return True
-    except Exception:
-        return False
-
-
 def force_close_launched_browser() -> dict:
     """v155: Schließt den vom Helfer gestarteten Browser komplett – egal welche Seite
     gerade offen ist (auch IAM-/EduKey-Login). Betrifft ausschließlich den Browser am
@@ -1020,14 +964,6 @@ def force_close_launched_browser() -> dict:
         except Exception:
             pass
         BROWSER_PROCESSES.pop(key, None)
-    # v232: Fallback für verwaiste Prozesse, die kein Browser.close/terminate erreicht hat
-    # (z. B. weil der Helfer zwischenzeitlich neu gestartet wurde). Sucht ausschließlich
-    # nach unserem eigenen Profilordner in der Kommandozeile — der normale Browser des
-    # Benutzers mit seinem Standardprofil ist davon nie betroffen.
-    stale_pids = _find_pids_by_cmdline(str(PROFILE_ROOT))
-    for pid in stale_pids:
-        if _kill_pid(pid):
-            result = {"closed": True, "method": result.get("method") or "cmdline-kill"}
     for _ in range(20):
         try:
             read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1)

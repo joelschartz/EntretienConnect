@@ -465,69 +465,34 @@
   .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
   .maintenance-modal input{width:100%;height:42px;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
 
-  /* v227: la couleur du mode ne sert plus qu'à l'orientation — un point coloré
-     dans le badge de la barre d'onglets + un fond très doux sur les cartes Envoi.
-     Boutons, cases, textes et bannières restent neutres pour ne pas entrer en
-     collision avec les couleurs de statut (jaune = avertissement, etc.). */
-  .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--muted);flex:0 0 auto;align-self:center;user-select:none}
+  /* v220: la couleur du mode (vert = e-Bichelchen, bleu = e-mail, ambre = complet) suit
+     l'utilisateur — badge nommé dans la barre d'onglets + onglets Envoi assortis. */
+  .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid transparent;flex:0 0 auto;align-self:center;user-select:none}
   @media (max-width:900px){.mode-badge{font-size:11px;padding:5px 9px;gap:5px}}
-  .mode-badge .mode-dot{width:8px;height:8px;min-width:8px;border-radius:50%;background:var(--muted-2)}
+  .mode-badge .mode-dot{width:8px;height:8px;min-width:8px;border-radius:50%;background:currentColor}
   body.wf-eb .mode-badge,body.wf-email .mode-badge,body.wf-both .mode-badge{display:inline-flex}
-  body.wf-eb .mode-badge .mode-dot{background:var(--ok)}
-  body.wf-email .mode-badge .mode-dot{background:var(--accent)}
-  body.wf-both .mode-badge .mode-dot{background:#c98a2e}
-
-  /* v224: Envoi übernimmt die dezente, helle Modus-Farbe aus Démarrage — nur der
-     Kartenhintergrund. Editor- und Vorschau-Inhalte bleiben weiß. */
-  body.wf-eb{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0px,#f2faf5 550px,#ebf6ef 1600px); }
-  body.wf-email{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0px,#f7f8fe 550px,#e9edfd 1600px); }
-  body.wf-both{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0px,#fef9f0 550px,#fbeedc 1600px); }
-  body.wf-eb #panel-mails .template-card,
-  body.wf-email #panel-mails .template-card,
-  body.wf-both #panel-mails .template-card,
-  body.wf-eb #panel-mails .preview-card,
-  body.wf-email #panel-mails .preview-card,
-  body.wf-both #panel-mails .preview-card{
-    background:var(--mode-panel-bg);
-    border:1px solid rgba(28,28,45,.06);
-    box-shadow:var(--shadow-sm);
-  }
-  body.wf-eb #panel-mails .mail-template-head,
-  body.wf-email #panel-mails .mail-template-head,
-  body.wf-both #panel-mails .mail-template-head,
-  body.wf-eb #panel-mails .preview-head,
-  body.wf-email #panel-mails .preview-head,
-  body.wf-both #panel-mails .preview-head{
-    background:transparent;
-  }
-  body.wf-eb #panel-mails .template-compose-shell,
-  body.wf-email #panel-mails .template-compose-shell,
-  body.wf-both #panel-mails .template-compose-shell,
-  body.wf-eb #panel-mails .mailitem,
-  body.wf-email #panel-mails .mailitem,
-  body.wf-both #panel-mails .mailitem,
-  body.wf-eb #panel-mails .mailhead,
-  body.wf-email #panel-mails .mailhead,
-  body.wf-both #panel-mails .mailhead,
-  body.wf-eb #panel-mails .mail-compose-shell,
-  body.wf-email #panel-mails .mail-compose-shell,
-  body.wf-both #panel-mails .mail-compose-shell,
-  body.wf-eb #panel-mails .mailbody-head,
-  body.wf-email #panel-mails .mailbody-head,
-  body.wf-both #panel-mails .mailbody-head,
-  body.wf-eb #panel-mails .mail-editor,
-  body.wf-email #panel-mails .mail-editor,
-  body.wf-both #panel-mails .mail-editor,
-  body.wf-eb #panel-mails #tplBodyEditor,
-  body.wf-email #panel-mails #tplBodyEditor,
-  body.wf-both #panel-mails #tplBodyEditor{
-    background:#fff;
-  }
+  body.wf-eb .mode-badge{background:var(--ok-soft);color:var(--ok);border-color:#bfe5d1}
+  body.wf-email .mode-badge{background:var(--accent-soft);color:#4a55a2;border-color:#dfe3fc}
+  body.wf-both .mode-badge{background:#faefda;color:#a4691a;border-color:#ecd5a8}
+  /* Onglet e-Bichelchen actif : toujours vert (comme la carte du Démarrage) */
+  .template-tab.active[data-template-mode="ebichelchen"],.preview-tab.active[data-preview-kind="eb"]{background:var(--ok);border-color:var(--ok);color:#fff}
+  .template-tab.active[data-template-mode="ebichelchen"]:hover,.preview-tab.active[data-preview-kind="eb"]:hover{background:#27795a;border-color:#27795a}
+  /* Mode complet : les onglets e-mail/rappel actifs prennent l'ambre du mode ;
+     en mode e-mail seul, ils gardent le bleu standard de l'app. */
+  body.wf-both .template-tab.active[data-template-mode="confirmation"],
+  body.wf-both .template-tab.active[data-template-mode="reminder"],
+  body.wf-both .preview-tab.active[data-preview-kind="email"],
+  body.wf-both .preview-tab.active[data-preview-kind="reminder"]{background:#c98a2e;border-color:#c98a2e;color:#fff}
+  body.wf-both .template-tab.active[data-template-mode="confirmation"]:hover,
+  body.wf-both .template-tab.active[data-template-mode="reminder"]:hover,
+  body.wf-both .preview-tab.active[data-preview-kind="email"]:hover,
+  body.wf-both .preview-tab.active[data-preview-kind="reminder"]:hover{background:#b57a24;border-color:#b57a24}
+  body.wf-both .template-tab.active .rt-check:checked:after{border-left-color:#c98a2e;border-bottom-color:#c98a2e}
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v232</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v220</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -4696,7 +4661,7 @@ function applyChannelVisibility(){
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
   }
-  // v224: refléter le mode partout — classe sur <body> (couleurs claires des fenêtres Envoi)
+  // v220: refléter le mode partout — classe sur <body> (couleurs des onglets Envoi)
   // + badge de mode nommé dans la barre d'onglets collante.
   try{
     const mode=workflowMode();
