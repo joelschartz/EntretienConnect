@@ -488,11 +488,127 @@
   body.wf-both .preview-tab.active[data-preview-kind="email"]:hover,
   body.wf-both .preview-tab.active[data-preview-kind="reminder"]:hover{background:#b57a24;border-color:#b57a24}
   body.wf-both .template-tab.active .rt-check:checked:after{border-left-color:#c98a2e;border-bottom-color:#c98a2e}
+
+  /* v221: Modusfarbe nicht als App-Hintergrund, sondern als weicher Fenster-Hintergrund
+     für « Modèle » und « Aperçu ». Die eigentlichen Editor-/Compose-Flächen bleiben weiß. */
+  body.wf-eb{
+    --wf-card-bg:linear-gradient(180deg,#fafffc,#e7f5ee);
+    --wf-card-border:#bfe5d1;
+    --wf-card-shadow:0 8px 24px rgba(46,139,100,.12);
+    --wf-soft:#e3f5ec;
+    --wf-strong:var(--ok);
+  }
+  body.wf-email{
+    --wf-card-bg:linear-gradient(180deg,#fafaff,#f0f2fe);
+    --wf-card-border:#dfe3fc;
+    --wf-card-shadow:0 8px 24px rgba(108,124,240,.12);
+    --wf-soft:var(--accent-soft);
+    --wf-strong:var(--accent);
+  }
+  body.wf-both{
+    --wf-card-bg:linear-gradient(180deg,#fffdf8,#faefda);
+    --wf-card-border:#ecd5a8;
+    --wf-card-shadow:0 8px 24px rgba(201,138,46,.12);
+    --wf-soft:#faefda;
+    --wf-strong:#c98a2e;
+  }
+  body.wf-eb #mails .template-card,
+  body.wf-email #mails .template-card,
+  body.wf-both #mails .template-card,
+  body.wf-eb #mails .preview-card,
+  body.wf-email #mails .preview-card,
+  body.wf-both #mails .preview-card{
+    background:var(--wf-card-bg);
+    border-color:var(--wf-card-border);
+    box-shadow:var(--wf-card-shadow);
+  }
+  body.wf-eb #mails .mail-template-head,
+  body.wf-email #mails .mail-template-head,
+  body.wf-both #mails .mail-template-head,
+  body.wf-eb #mails .preview-head,
+  body.wf-email #mails .preview-head,
+  body.wf-both #mails .preview-head{
+    background:transparent;
+    border-bottom-color:rgba(28,28,45,.08);
+  }
+  body.wf-eb #mails .template-chevron,
+  body.wf-email #mails .template-chevron,
+  body.wf-both #mails .template-chevron{
+    color:var(--wf-strong);
+    border-color:var(--wf-card-border);
+  }
+  body.wf-eb #mails .template-chevron:hover,
+  body.wf-email #mails .template-chevron:hover,
+  body.wf-both #mails .template-chevron:hover,
+  body.wf-eb #mails .template-toggle-zone:hover .template-chevron,
+  body.wf-email #mails .template-toggle-zone:hover .template-chevron,
+  body.wf-both #mails .template-toggle-zone:hover .template-chevron{
+    background:rgba(255,255,255,.72);
+    border-color:var(--wf-card-border);
+  }
+  body.wf-eb #mails .template-editor-area > .rich-toolbar,
+  body.wf-email #mails .template-editor-area > .rich-toolbar,
+  body.wf-both #mails .template-editor-area > .rich-toolbar,
+  body.wf-eb #mails .mailbody .rich-toolbar,
+  body.wf-email #mails .mailbody .rich-toolbar,
+  body.wf-both #mails .mailbody .rich-toolbar{
+    background:rgba(255,255,255,.88);
+    border-color:var(--wf-card-border);
+  }
+  body.wf-eb #mails .template-compose-shell,
+  body.wf-email #mails .template-compose-shell,
+  body.wf-both #mails .template-compose-shell,
+  body.wf-eb #mails .mail-compose-shell,
+  body.wf-email #mails .mail-compose-shell,
+  body.wf-both #mails .mail-compose-shell,
+  body.wf-eb #mails .mailbody-head,
+  body.wf-email #mails .mailbody-head,
+  body.wf-both #mails .mailbody-head,
+  body.wf-eb #mails .mail-compose-shell .mail-editor,
+  body.wf-email #mails .mail-compose-shell .mail-editor,
+  body.wf-both #mails .mail-compose-shell .mail-editor,
+  body.wf-eb #mails #tplBodyEditor,
+  body.wf-email #mails #tplBodyEditor,
+  body.wf-both #mails #tplBodyEditor,
+  body.wf-eb #mails .mailitem,
+  body.wf-email #mails .mailitem,
+  body.wf-both #mails .mailitem,
+  body.wf-eb #mails .mailhead,
+  body.wf-email #mails .mailhead,
+  body.wf-both #mails .mailhead{
+    background:#fff;
+  }
+  body.wf-eb #mails .mailbody,
+  body.wf-email #mails .mailbody,
+  body.wf-both #mails .mailbody{
+    background:rgba(255,255,255,.54);
+  }
+  body.wf-eb #mails .mail-compose-shell:focus-within,
+  body.wf-email #mails .mail-compose-shell:focus-within,
+  body.wf-both #mails .mail-compose-shell:focus-within{
+    border-color:var(--wf-strong);
+    box-shadow:0 0 0 3px var(--wf-soft);
+  }
+  body.wf-eb #mails #mailBanner,
+  body.wf-email #mails #mailBanner,
+  body.wf-both #mails #mailBanner,
+  body.wf-eb #mails #mailList,
+  body.wf-email #mails #mailList,
+  body.wf-both #mails #mailList,
+  body.wf-eb #mails .preview-tabs,
+  body.wf-email #mails .preview-tabs,
+  body.wf-both #mails .preview-tabs,
+  body.wf-eb #mails .mail-select-bar,
+  body.wf-email #mails .mail-select-bar,
+  body.wf-both #mails .mail-select-bar{
+    background:transparent;
+  }
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v220</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v221</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -769,7 +885,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 220;
+const APP_VERSION = 221;
 
 window.addEventListener("error", function(ev){
   try{
