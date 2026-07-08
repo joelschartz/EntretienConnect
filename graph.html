@@ -465,11 +465,34 @@
   .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
   .maintenance-modal input{width:100%;height:42px;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
 
+  /* v220: la couleur du mode (vert = e-Bichelchen, bleu = e-mail, ambre = complet) suit
+     l'utilisateur — badge nommé dans la barre d'onglets + onglets Envoi assortis. */
+  .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid transparent;flex:0 0 auto;align-self:center;user-select:none}
+  @media (max-width:900px){.mode-badge{font-size:11px;padding:5px 9px;gap:5px}}
+  .mode-badge .mode-dot{width:8px;height:8px;min-width:8px;border-radius:50%;background:currentColor}
+  body.wf-eb .mode-badge,body.wf-email .mode-badge,body.wf-both .mode-badge{display:inline-flex}
+  body.wf-eb .mode-badge{background:var(--ok-soft);color:var(--ok);border-color:#bfe5d1}
+  body.wf-email .mode-badge{background:var(--accent-soft);color:#4a55a2;border-color:#dfe3fc}
+  body.wf-both .mode-badge{background:#faefda;color:#a4691a;border-color:#ecd5a8}
+  /* Onglet e-Bichelchen actif : toujours vert (comme la carte du Démarrage) */
+  .template-tab.active[data-template-mode="ebichelchen"],.preview-tab.active[data-preview-kind="eb"]{background:var(--ok);border-color:var(--ok);color:#fff}
+  .template-tab.active[data-template-mode="ebichelchen"]:hover,.preview-tab.active[data-preview-kind="eb"]:hover{background:#27795a;border-color:#27795a}
+  /* Mode complet : les onglets e-mail/rappel actifs prennent l'ambre du mode ;
+     en mode e-mail seul, ils gardent le bleu standard de l'app. */
+  body.wf-both .template-tab.active[data-template-mode="confirmation"],
+  body.wf-both .template-tab.active[data-template-mode="reminder"],
+  body.wf-both .preview-tab.active[data-preview-kind="email"],
+  body.wf-both .preview-tab.active[data-preview-kind="reminder"]{background:#c98a2e;border-color:#c98a2e;color:#fff}
+  body.wf-both .template-tab.active[data-template-mode="confirmation"]:hover,
+  body.wf-both .template-tab.active[data-template-mode="reminder"]:hover,
+  body.wf-both .preview-tab.active[data-preview-kind="email"]:hover,
+  body.wf-both .preview-tab.active[data-preview-kind="reminder"]:hover{background:#b57a24;border-color:#b57a24}
+  body.wf-both .template-tab.active .rt-check:checked:after{border-left-color:#c98a2e;border-bottom-color:#c98a2e}
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v217</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v220</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -496,6 +519,7 @@
     <div class="tab" data-tab="calendar">3 · Calendrier</div>
     <div class="tab" data-tab="mails">4 · Envoi</div>
   </div>
+  <span class="mode-badge" id="modeBadge" title="Mode choisi dans « 1 · Démarrage » — cliquer pour le changer"></span>
 </nav>
 
 <div class="wrap">
@@ -745,7 +769,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 217;
+const APP_VERSION = 220;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2013,13 +2037,11 @@ function setWorkflowMode(mode, opts={}){
   if(opts.openEmail && modeNeedsEmail(mode)){ const b=document.getElementById("signIn"); if(b) b.click(); }
 }
 function setupProgressHtml(){
-  // v217: après le choix du mode, dire clairement quelle est la prochaine étape —
-  // seulement tant qu'aucun élève n'existe (les habitués n'en ont plus besoin).
-  try{
-    if(!workflowMode()) return "";
-    if((state.students||[]).length) return "";
-  }catch(_){ return ""; }
-  return '<div class="banner ok compact" style="margin:14px 0 0">Mode enregistré ✓ — continuez avec l’onglet « 2 · Élèves ».</div>';
+  // v219: plus de bannière « prochaine étape » — les onglets numérotés (1→4) suffisent,
+  // et le cas « connexion manquante » est déjà couvert par la ligne de statut ci-dessous
+  // et par l'état vide de la liste des élèves. Un guidage ponctuel ici était incohérent
+  // avec le reste de l'app (pas de hint après l'import des élèves ou le calendrier).
+  return "";
 }
 function ebConnectedSummaryHtml(){
   if(!ebReady()) return "";
@@ -2237,6 +2259,8 @@ document.querySelectorAll(".tab").forEach(t=>{ t.onclick=()=>{
   }
   window.scrollTo(0,0);
 }; });
+// v220: le badge de mode ramène au Démarrage (pour changer de mode).
+(function(){ const b=document.getElementById("modeBadge"); if(b) b.onclick=()=>{ const t=document.querySelector('.tab[data-tab="setup"]'); if(t) t.click(); }; })();
 
 /* Students */
 function contactEmailKeys(){ return ["email1","email2"]; }
@@ -2290,9 +2314,15 @@ function renderStudents(){
   const addStudentBtn=document.getElementById("addStudent");
   if(addStudentBtn){ addStudentBtn.style.display = eb ? "none" : "inline-block"; }
   if(title) title.textContent = eb && !em ? "Élèves e-Bichelchen" : "Liste des élèves";
-  if(intro) intro.textContent = eb && !em
-    ? "Les élèves peuvent être importés depuis e-Bichelchen. Les adresses e-mail ne sont pas nécessaires dans ce mode."
-    : (eb && em ? "Les noms peuvent être importés depuis e-Bichelchen ; complétez ensuite les adresses e-mail des parents pour l’envoi." : "Inscrivez chaque élève une seule fois avec les adresses e-mail de contact et choisissez la langue souhaitée pour chaque contact. Les champs vides seront ignorés lors de l’envoi.");
+  if(intro){
+    // v218: en mode e-mail seul, pas de phrase d'intro — les champs se suffisent.
+    // Les intros e-Bichelchen restent : elles expliquent d'où viennent les élèves.
+    const introTxt = eb && !em
+      ? "Les élèves peuvent être importés depuis e-Bichelchen. Les adresses e-mail ne sont pas nécessaires dans ce mode."
+      : (eb && em ? "Les noms peuvent être importés depuis e-Bichelchen ; complétez ensuite les adresses e-mail des parents pour l’envoi." : "");
+    intro.textContent=introTxt;
+    intro.style.display = introTxt ? "" : "none";
+  }
   // v167: libellé + info-bulle de la langue standard adaptés au mode (en mode e-Bichelchen seul,
   // parler de « contacts » et de « mode complet » n'avait pas de sens).
   const langLabel=document.querySelector('label[for="defaultLangStudents"]');
@@ -4631,6 +4661,19 @@ function applyChannelVisibility(){
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
   }
+  // v220: refléter le mode partout — classe sur <body> (couleurs des onglets Envoi)
+  // + badge de mode nommé dans la barre d'onglets collante.
+  try{
+    const mode=workflowMode();
+    document.body.classList.toggle("wf-eb", mode==="ebichelchen");
+    document.body.classList.toggle("wf-email", mode==="email");
+    document.body.classList.toggle("wf-both", mode==="both");
+    const badge=document.getElementById("modeBadge");
+    if(badge){
+      const lbl = mode==="ebichelchen" ? "e-Bichelchen" : (mode==="email" ? "E-mail" : (mode==="both" ? "e-Bichelchen + e-mail" : ""));
+      badge.innerHTML = lbl ? '<span class="mode-dot"></span>'+lbl : "";
+    }
+  }catch(_){}
   renderSetup();
 }
 function emailToggleHandler(on){
