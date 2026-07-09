@@ -208,6 +208,39 @@
   .timeline-composer{position:absolute;left:22px;width:min(330px,calc(100% - 44px));z-index:30;border:1px solid #d9dfef;border-radius:14px;background:#fff;box-shadow:0 16px 42px rgba(31,41,55,.22);padding:12px;cursor:default}.timeline-composer-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.timeline-composer-title{display:flex;align-items:baseline;gap:8px;color:#344054;font-size:12.5px;font-weight:800}.timeline-composer-title strong{font-size:15px;color:#4a55a2;font-variant-numeric:tabular-nums}.timeline-composer-close{appearance:none;-webkit-appearance:none;width:25px;height:25px;border:0;border-radius:999px;background:transparent;color:#98a2b3;font-size:17px;cursor:pointer;box-shadow:none}.timeline-composer-close:hover{background:#f1f3f7;color:#667085}.timeline-compose-label{display:block;margin:7px 0 5px;color:#667085;font-size:10.5px;font-weight:800}.timeline-duration-set{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.timeline-duration-btn{appearance:none;-webkit-appearance:none;height:30px;min-width:42px;padding:0 8px;border:1px solid #dde2ec;border-radius:8px;background:#fff;color:#475467;font-size:11.5px;font-weight:800;cursor:pointer;box-shadow:none}.timeline-duration-btn:hover{border-color:#b9c2e7;background:#f7f8ff}.timeline-duration-btn.active{border-color:var(--accent);background:var(--accent-soft);color:#4a55a2}.timeline-student-select{height:37px!important;margin:0!important;border-radius:9px!important;background:#fff!important;padding-top:6px!important;padding-bottom:6px!important}.timeline-compose-help{margin:7px 1px 0;color:#98a2b3;font-size:10.5px;line-height:1.35}.timeline-compose-warning{margin:8px 0 0;padding:7px 8px;border:1px solid #efd8aa;border-radius:8px;background:#fff8e8;color:#8a5a18;font-size:10.5px;line-height:1.35}.timeline-compose-sep{height:1px;background:#edf0f5;margin:10px 0}.timeline-pause-choices{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.timeline-pause-choice{appearance:none;-webkit-appearance:none;height:29px;border:1px solid #ead5a9;border-radius:8px;background:#fffaf0;color:#8a5a18;font-size:11px;font-weight:800;padding:0 8px;cursor:pointer;box-shadow:none}.timeline-pause-choice:hover{background:#fff2d8;border-color:#dfbd77}
   .planner-empty{padding:24px 16px;text-align:center;color:#8a92a6;font-size:13px}.planner-empty strong{display:block;color:#5e677a;margin-bottom:4px}
   @media(max-width:760px){.planner-summary{align-items:flex-start;flex-direction:column}.planner-keyhint{white-space:normal}.timeline-stage{grid-template-columns:60px minmax(0,1fr)}.timeline-time-label{right:7px}.timeline-appt{left:8px;right:8px}.timeline-appt-time{flex-basis:58px;font-size:11px;padding:0 5px}.timeline-appt-student{font-size:12px;padding-left:9px!important;padding-right:96px!important}.timeline-composer{left:10px;width:calc(100% - 20px)}}
+  /* v262 — toutes les journées visibles, sélection d'élève déjà ouverte et déplacement par appui long */
+  .timeline-weeks{display:flex;flex-direction:column;gap:18px}
+  .timeline-week{position:relative;border:1px solid #e3e7ef;border-radius:15px;background:#fff;overflow:visible;isolation:isolate}
+  .timeline-week-title{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 13px;background:#f7f8fc;border-bottom:1px solid #e8ebf2;border-radius:15px 15px 0 0;color:#37405a;font-size:13px}
+  .timeline-week-title strong{font-weight:850}.timeline-week-title span{font-size:11px;color:#98a2b3;font-weight:750}
+  .timeline-week-scroll{overflow:visible}
+  .timeline-week-grid{display:grid;grid-template-columns:64px repeat(var(--week-days),minmax(185px,1fr));min-width:calc(64px + (var(--week-days) * 185px));position:relative;background:#fff;border-radius:0 0 15px 15px}
+  .timeline-axis-head,.timeline-day-head-spacer{height:46px;background:#fbfbfd;border-bottom:1px solid #e9ecf3}
+  .timeline-axis-head{display:flex;align-items:center;justify-content:center;color:#98a2b3;font-size:10.5px;font-weight:800;border-right:1px solid #edf0f5}
+  .timeline-day-column{position:relative;min-width:0;border-right:1px solid #edf0f5}.timeline-day-column:last-child{border-right:0}
+  .timeline-day-head{height:46px;display:flex;align-items:center;justify-content:space-between;gap:7px;padding:6px 9px;background:#fbfbfd;border-bottom:1px solid #e9ecf3;box-sizing:border-box}
+  .timeline-day-head>div{min-width:0}.timeline-day-head strong{display:block;color:#344054;font-size:11.5px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.timeline-day-head span{display:block;color:#98a2b3;font-size:9.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .timeline-day-count{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;min-width:21px;height:21px;border-radius:999px;background:#eef0ff;color:#4a55a2!important;font-size:9.5px!important;font-weight:850!important;padding:0 5px;box-sizing:border-box}
+  .timeline-axis{grid-column:1;position:relative;background:#fbfbfd;border-right:1px solid #edf0f5;z-index:2}
+  .timeline-day-column{grid-row:1 / span 2}.timeline-axis-head{grid-column:1;grid-row:1}.timeline-axis{grid-column:1;grid-row:2}.timeline-day-column{grid-row:1 / span 2;display:grid;grid-template-rows:46px auto}.timeline-day-column:nth-of-type(n+2){ }
+  .timeline-canvas{position:relative;min-width:0;background:#fff;cursor:crosshair;overflow:visible;z-index:1;touch-action:pan-y}
+  .timeline-grid-line{position:absolute;left:0;right:0;border-top:1px solid #f4f5f8;pointer-events:none;z-index:0}.timeline-grid-line.major{border-top-color:#e5e9f0}
+  .timeline-time-label{position:absolute;right:8px;transform:translateY(-50%);color:#8e97aa;font-size:10.5px;font-weight:750;font-variant-numeric:tabular-nums;line-height:1;pointer-events:none}.timeline-time-label.first{transform:none;top:5px!important}
+  .timeline-hover-line,.timeline-drop-line{position:absolute;left:0;right:0;height:1px;pointer-events:none;opacity:0;transition:opacity .06s;z-index:18}.timeline-hover-line{background:var(--accent)}.timeline-drop-line{background:#4a55a2;z-index:25}.timeline-hover-line.show,.timeline-drop-line.show{opacity:.88}.timeline-drop-line.invalid{background:#c4473a}
+  .timeline-hover-time,.timeline-drop-time{position:absolute;left:5px;top:0;transform:translateY(-50%);padding:2px 6px;border-radius:999px;color:#fff;font-size:9.5px;font-weight:850;font-variant-numeric:tabular-nums;box-shadow:0 2px 7px rgba(73,83,170,.22)}.timeline-hover-time{background:var(--accent)}.timeline-drop-time{background:#4a55a2}.timeline-drop-line.invalid .timeline-drop-time{background:#c4473a}
+  .timeline-empty-note{position:absolute;left:50%;top:22px;transform:translateX(-50%);z-index:1;color:#b0b6c3;font-size:10.5px;pointer-events:none;white-space:nowrap}
+  .timeline-appt{position:absolute;left:5px;right:5px;min-height:24px;border:1px solid #cdd5f6;border-radius:9px;background:#eef0ff;box-shadow:0 1px 2px rgba(31,41,55,.035);overflow:hidden;z-index:5;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none}.timeline-appt:hover,.timeline-appt:focus-within{border-color:#aeb9f1;background:#e9ecff;z-index:12}.timeline-appt.custom-duration{border-color:#bfc7f3}.timeline-appt.dragging{opacity:.34;cursor:grabbing;box-shadow:none}.timeline-appt.dragging select{pointer-events:none}
+  .timeline-appt-content{display:flex;align-items:center;height:100%;min-height:24px;position:relative}.timeline-appt-time{appearance:none;-webkit-appearance:none;align-self:stretch;flex:0 0 48px;border:0;border-right:1px solid rgba(112,124,203,.18);background:rgba(255,255,255,.26);color:#4a55a2;font-size:10.5px;font-weight:850;font-variant-numeric:tabular-nums;padding:0 4px;cursor:pointer;box-shadow:none}.timeline-appt-time:hover,.timeline-appt-time:focus{background:rgba(255,255,255,.58);outline:none}
+  .timeline-appt-student{height:100%;min-width:0;flex:1;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important;margin:0!important;padding:3px 68px 3px 8px!important;color:#252b36;font-size:11.25px;font-weight:800;text-overflow:ellipsis;cursor:pointer}.timeline-appt-student:focus{outline:none;background:rgba(255,255,255,.34)!important}
+  .timeline-appt-actions{position:absolute;right:3px;top:50%;transform:translateY(-50%);display:flex;gap:2px;align-items:center;padding-left:10px;background:linear-gradient(90deg,rgba(238,240,255,0),#eef0ff 15%);opacity:0;pointer-events:none;transition:opacity .12s}.timeline-appt:hover .timeline-appt-actions,.timeline-appt:focus-within .timeline-appt-actions,.timeline-appt.custom-duration .timeline-appt-actions{opacity:1;pointer-events:auto}.timeline-appt:hover .timeline-appt-actions,.timeline-appt:focus-within .timeline-appt-actions{background:linear-gradient(90deg,rgba(233,236,255,0),#e9ecff 15%)}
+  .timeline-action{appearance:none;-webkit-appearance:none;height:23px;min-width:24px;border:1px solid rgba(113,125,194,.22);border-radius:7px;background:rgba(255,255,255,.85);color:#58617a;font-size:9.5px;font-weight:850;padding:0 4px;cursor:pointer;box-shadow:none}.timeline-action:hover,.timeline-action:focus{border-color:#9facdf;color:#4a55a2;background:#fff;outline:none}.timeline-action.duration.custom{color:#4a55a2;border-color:#aeb8ec}.timeline-action.pause.on{color:#93631b;border-color:#e4ca94;background:#fff8e9}.timeline-action.delete{min-width:20px;padding:0;color:#9aa2b1;border-color:transparent;background:transparent;font-size:13px}.timeline-action.delete:hover{color:#b43a2f;background:#fff1ef;border-color:#f0d1cd}
+  .timeline-pause{position:absolute;left:5px;right:5px;z-index:8;display:flex;align-items:center;justify-content:center;pointer-events:auto}.timeline-pause-pill{display:flex;align-items:center;gap:4px;height:17px;padding:0 6px;border:1px solid #ecd8ad;border-radius:999px;background:#fff7e8;color:#8a5a18;font-size:9px;font-weight:850;box-shadow:0 1px 2px rgba(80,55,10,.04);cursor:pointer}.timeline-pause-pill:hover{background:#fff2d8;border-color:#dfbd77}.timeline-pause-remove{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#a6782b;font-size:11px;font-weight:850;line-height:1;padding:0;cursor:pointer}
+  .timeline-composer{position:absolute;left:8px;width:310px;max-width:calc(200% - 16px);z-index:40;border:1px solid #d9dfef;border-radius:14px;background:#fff;box-shadow:0 16px 42px rgba(31,41,55,.22);padding:12px;cursor:default;box-sizing:border-box}.timeline-composer.align-right{left:auto;right:8px}.timeline-composer-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.timeline-composer-title{display:flex;align-items:baseline;gap:8px;color:#344054;font-size:12px;font-weight:800}.timeline-composer-title strong{font-size:14px;color:#4a55a2;font-variant-numeric:tabular-nums}.timeline-composer-close{appearance:none;-webkit-appearance:none;width:25px;height:25px;border:0;border-radius:999px;background:transparent;color:#98a2b3;font-size:17px;cursor:pointer;box-shadow:none}.timeline-composer-close:hover{background:#f1f3f7;color:#667085}.timeline-compose-label{display:block;margin:7px 0 5px;color:#667085;font-size:10.5px;font-weight:800}.timeline-duration-set{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.timeline-duration-btn{appearance:none;-webkit-appearance:none;height:29px;min-width:40px;padding:0 7px;border:1px solid #dde2ec;border-radius:8px;background:#fff;color:#475467;font-size:11px;font-weight:800;cursor:pointer;box-shadow:none}.timeline-duration-btn:hover{border-color:#b9c2e7;background:#f7f8ff}.timeline-duration-btn.active{border-color:var(--accent);background:var(--accent-soft);color:#4a55a2}
+  .timeline-student-search{height:35px!important;margin:0 0 6px!important;border-radius:9px!important;background:#fff!important;padding:6px 9px!important;font-size:12px!important}.timeline-student-list{display:flex;flex-direction:column;gap:3px;max-height:170px;overflow-y:auto;padding:2px;border:1px solid #e8ebf2;border-radius:9px;background:#fbfbfd}.timeline-student-option{appearance:none;-webkit-appearance:none;width:100%;min-height:31px;border:0;border-radius:7px;background:transparent;color:#344054;text-align:left;padding:6px 8px;font-size:11.5px;font-weight:750;cursor:pointer;box-shadow:none}.timeline-student-option:hover,.timeline-student-option:focus{background:#eef0ff;color:#4a55a2;outline:none}.timeline-student-option[hidden]{display:none}.timeline-student-empty{padding:12px 8px;color:#98a2b3;font-size:10.5px;text-align:center}.timeline-compose-help{margin:6px 1px 0;color:#98a2b3;font-size:10px;line-height:1.35}.timeline-compose-warning{margin:8px 0 0;padding:7px 8px;border:1px solid #efd8aa;border-radius:8px;background:#fff8e8;color:#8a5a18;font-size:10.5px;line-height:1.35}.timeline-compose-sep{height:1px;background:#edf0f5;margin:10px 0}.timeline-pause-choices{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.timeline-pause-choice{appearance:none;-webkit-appearance:none;height:28px;border:1px solid #ead5a9;border-radius:8px;background:#fffaf0;color:#8a5a18;font-size:10.5px;font-weight:800;padding:0 7px;cursor:pointer;box-shadow:none}.timeline-pause-choice:hover{background:#fff2d8;border-color:#dfbd77}
+  .timeline-drag-ghost{position:fixed;z-index:10000;pointer-events:none;display:flex;align-items:center;gap:8px;max-width:240px;padding:8px 10px;border:1px solid #9facdf;border-radius:10px;background:#fff;box-shadow:0 12px 30px rgba(31,41,55,.24);color:#344054;font-size:11px}.timeline-drag-ghost strong{color:#4a55a2;font-variant-numeric:tabular-nums}.timeline-drag-ghost span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:750}.timeline-dragging,.timeline-dragging *{cursor:grabbing!important}
+  @media(max-width:1100px){.timeline-week-scroll{overflow-x:auto;overflow-y:hidden;padding-bottom:8px}.timeline-week-grid{min-width:1040px}.timeline-composer{max-width:310px}}
+  @media(max-width:760px){.timeline-week-grid{grid-template-columns:56px repeat(var(--week-days),minmax(175px,1fr));min-width:calc(56px + (var(--week-days) * 175px))}.timeline-axis-head{width:56px}.timeline-appt-time{flex-basis:44px}.timeline-appt-student{font-size:10.75px;padding-left:6px!important}.timeline-composer{width:290px}.planner-summary{align-items:flex-start;flex-direction:column}.planner-keyhint{white-space:normal}}
+
   .week-preview-card{padding:0;overflow:hidden}.week-preview-card>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;cursor:pointer;font-size:15px;font-weight:800;color:#344054;background:#fff}.week-preview-card>summary::-webkit-details-marker{display:none}.week-preview-card>summary:after{content:"⌄";font-size:14px;color:#8a92a6;transition:transform .15s}.week-preview-card[open]>summary:after{transform:rotate(180deg)}.week-preview-card[open]>summary{border-bottom:1px solid var(--line);background:#fbfbfe}.week-preview-meta{margin-left:auto;color:#8a92a6;font-size:12px;font-weight:700}.week-preview-body{padding:12px 16px 16px;position:relative;z-index:1;overflow:hidden}.week-preview-body .banner{position:relative;z-index:12}.week-preview-body .weekblock{position:relative;z-index:1}.week-preview-body .schedule-scroll{isolation:isolate}.week-preview-body .block-time-btn.manual{color:#5b6478;background:rgba(15,23,42,.015);border-right-color:#e9ecf4}
   @media(max-width:1050px){.planner-entry{grid-template-columns:minmax(210px,1.5fr) minmax(165px,1fr) 112px minmax(250px,1.2fr)}.planner-add{grid-column:1/-1;justify-self:end}.planner-row{grid-template-columns:88px minmax(0,1fr) 60px 32px 32px}}
   @media(max-width:760px){.planner-entry{grid-template-columns:1fr 1fr}.planner-field.student{grid-column:1/-1}.planner-field.duration{grid-column:1/-1}.planner-add{grid-column:1/-1;width:100%}.planner-summary{align-items:flex-start;flex-direction:column}.planner-row,.planner-pause-row{grid-template-columns:84px minmax(0,1fr) 58px 30px 30px;gap:5px;padding-left:6px;padding-right:6px}.planner-keyhint{display:none}}
@@ -553,7 +586,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v261</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v262</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -661,7 +694,7 @@ Langues : FR, DE, EN, LU">?</span>
       <div class="card-head quick-planner-head">
         <div>
           <h2>Planifier les rendez-vous</h2>
-          <p class="hint">Choisissez un jour, puis cliquez directement sur l’heure souhaitée. La ligne suit la souris par pas de 5 minutes.</p>
+          <p class="hint">Tous les jours sélectionnés sont visibles en même temps. Cliquez sur une heure ; la liste des élèves s’ouvre immédiatement. Maintenez un rendez-vous pour le déplacer.</p>
         </div>
       </div>
       <div id="quickPlanner"></div>
@@ -843,7 +876,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 261;
+const APP_VERSION = 262;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3193,11 +3226,29 @@ function plannerDurationButtons(selected){
     +'<button type="button" class="planner-duration-btn" data-planner-duration-custom="1">Perso…</button>';
 }
 window._timelineComposer=window._timelineComposer||null;
-function timelineRangeForDay(day){
-  const items=plannerAssignedItems(day);
+window._timelineSuppressClick=false;
+function plannerWeekStart(day){
+  const dt=new Date(day+'T00:00:00');
+  const offset=(dt.getDay()+6)%7;
+  dt.setDate(dt.getDate()-offset);
+  return localDateIso(dt);
+}
+function plannerWeekGroups(days){
+  const map=new Map();
+  (days||[]).slice().sort().forEach(day=>{
+    const key=plannerWeekStart(day);
+    if(!map.has(key)) map.set(key,[]);
+    map.get(key).push(day);
+  });
+  return [...map.entries()].map(([weekStart,weekDays])=>({weekStart,days:weekDays}));
+}
+function timelineRangeForDays(days){
   let start=Math.floor(timeToMin(state.config.start)/5)*5;
   let end=Math.ceil(timeToMin(state.config.end)/5)*5;
-  if(items.length) end=Math.max(end,...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0)));
+  (days||[]).forEach(day=>{
+    const items=plannerAssignedItems(day);
+    if(items.length) end=Math.max(end,...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0)));
+  });
   if(end<=start) end=start+60;
   end=Math.min(24*60,Math.ceil(end/5)*5);
   return {startMin:start,endMin:end,rows:Math.max(12,Math.round((end-start)/5)),unit:13};
@@ -3234,13 +3285,16 @@ function timelinePreviousAppointmentEndingAt(day,min){
 }
 function timelineComposerTop(startMin,range){
   const raw=((startMin-range.startMin)/5)*range.unit-10;
-  const max=Math.max(8,range.rows*range.unit-310);
+  const max=Math.max(8,range.rows*range.unit-330);
   return Math.max(8,Math.min(raw,max));
 }
 function timelineOpenComposer(day,startMin,durationMin){
   window._timelineComposer={day,startMin,durationMin:normalizeDurationValue(durationMin)||(normalizeDurationValue(state.config.durationMin)||20)};
   renderQuickPlanner();
-  setTimeout(()=>{ const s=document.getElementById('timelineStudent'); if(s&&!s.disabled) s.focus(); },0);
+  setTimeout(()=>{
+    const s=document.getElementById('timelineStudentSearch');
+    if(s){ s.focus(); s.select(); }
+  },20);
 }
 function timelineCloseComposer(){ window._timelineComposer=null; renderQuickPlanner(); }
 function timelineAddAppointment(day,startMin,durationMin,studentId){
@@ -3264,6 +3318,203 @@ function timelineAddPauseAt(day,startMin,pauseMin){
   showToast('Pause de '+pauseMin+' minutes ajoutée.');
   return true;
 }
+function timelineStudentListHtml(){
+  const remaining=plannerRemainingStudents();
+  if(!remaining.length) return '<div class="timeline-student-empty">Tous les élèves sont déjà planifiés.</div>';
+  return remaining.map(st=>'<button type="button" class="timeline-student-option" data-timeline-student-id="'+esc(st.id)+'" data-student-search="'+esc(String(st.name||'').toLocaleLowerCase('fr-FR'))+'"><span>'+esc(displayStudentName(st.name||'(sans nom)'))+'</span></button>').join('');
+}
+function timelineWeekLabel(weekStart){
+  const dt=new Date(weekStart+'T00:00:00');
+  return 'Semaine du '+dt.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+}
+function timelineCanvasHtml(day,range,dayIndex,dayCount){
+  const standard=normalizeDurationValue(state.config.durationMin)||20;
+  const items=plannerAssignedItems(day);
+  let lines='';
+  for(let i=0;i<=range.rows;i++){
+    const min=range.startMin+i*5;
+    const top=i*range.unit;
+    const major=((min-range.startMin)%20===0);
+    lines+='<span class="timeline-grid-line'+(major?' major':'')+'" style="top:'+top+'px"></span>';
+  }
+  const appts=items.map(item=>{
+    const stu=timelineStudentById(item.studentId);
+    const top=((item.startMin-range.startMin)/5)*range.unit+2;
+    const h=Math.max(24,(item.durationMin/5)*range.unit-4);
+    const custom=item.durationMin!==standard;
+    const pauseOn=!!item.pauseMin;
+    return '<div class="timeline-appt'+(custom?' custom-duration':'')+'" data-timeline-appt="'+item.idx+'" data-timeline-appt-day="'+day+'" style="top:'+top+'px;height:'+h+'px" title="Cliquer pour choisir un autre élève · maintenir pour déplacer">'
+      +'<div class="timeline-appt-content">'
+      +'<button type="button" class="timeline-appt-time" data-time-day="'+day+'" data-time-index="'+item.idx+'" data-time-current="'+item.startMin+'" title="Modifier l’heure">'+esc(minToTime(item.startMin))+'</button>'
+      +'<select class="timeline-appt-student" data-timeline-student-day="'+day+'" data-timeline-student-index="'+item.idx+'" aria-label="Élève">'+plannerStudentOptions(item.studentId,false)+'</select>'
+      +'<div class="timeline-appt-actions">'
+      +'<button type="button" class="timeline-action duration'+(custom?' custom':'')+'" data-adjust-day="'+day+'" data-adjust-index="'+item.idx+'" title="Modifier la durée">'+item.durationMin+'&#39;</button>'
+      +'<button type="button" class="timeline-action pause'+(pauseOn?' on':'')+'" data-planner-pause-day="'+day+'" data-planner-pause-index="'+item.idx+'" title="'+(pauseOn?'Modifier la pause':'Ajouter une pause après')+'">Ⅱ</button>'
+      +'<button type="button" class="timeline-action delete" data-planner-delete-day="'+day+'" data-planner-delete-index="'+item.idx+'" title="Retirer le rendez-vous">×</button>'
+      +'</div></div></div>';
+  }).join('');
+  const pauses=items.filter(x=>x.pauseMin).map(item=>{
+    const start=item.startMin+item.durationMin;
+    const top=((start-range.startMin)/5)*range.unit;
+    const h=Math.max(10,(item.pauseMin/5)*range.unit);
+    return '<div class="timeline-pause" style="top:'+top+'px;height:'+h+'px">'
+      +'<div class="timeline-pause-pill" data-planner-pause-edit-day="'+day+'" data-planner-pause-edit-index="'+item.idx+'"><span>Ⅱ '+item.pauseMin+'&#39;</span><button type="button" class="timeline-pause-remove" data-planner-pause-remove-day="'+day+'" data-planner-pause-remove-index="'+item.idx+'" aria-label="Supprimer la pause">×</button></div>'
+      +'</div>';
+  }).join('');
+  let composer='';
+  const comp=window._timelineComposer;
+  if(comp&&comp.day===day){
+    const selected=normalizeDurationValue(comp.durationMin)||standard;
+    const free=timelineIntervalFree(day,comp.startMin,selected);
+    const next=timelineNextOccupiedStart(day,comp.startMin);
+    const available=next!==null?Math.max(0,next-comp.startMin):null;
+    const warning=!free?'<div class="timeline-compose-warning">La durée choisie chevauche le prochain élément'+(available!==null&&available>0?' ; espace libre : '+available+' minutes':'')+'. Choisissez une durée plus courte ou une autre heure.</div>':'';
+    const prev=timelinePreviousAppointmentEndingAt(day,comp.startMin);
+    const pauseChoices=prev?'<div class="timeline-compose-sep"></div><span class="timeline-compose-label">Ou insérer une pause ici</span><div class="timeline-pause-choices"><button type="button" class="timeline-pause-choice" data-timeline-add-pause="5">Ⅱ 5&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause="10">Ⅱ 10&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause="15">Ⅱ 15&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause-custom="1">Perso…</button></div>':'';
+    const alignRight=dayIndex>=Math.ceil(dayCount/2);
+    composer='<div class="timeline-composer'+(alignRight?' align-right':'')+'" style="top:'+timelineComposerTop(comp.startMin,range)+'px" data-timeline-composer="1">'
+      +'<div class="timeline-composer-head"><div class="timeline-composer-title"><span>Nouveau rendez-vous</span><strong>'+esc(minToTime(comp.startMin))+'</strong></div><button type="button" class="timeline-composer-close" data-timeline-close="1" aria-label="Fermer">×</button></div>'
+      +'<span class="timeline-compose-label">Durée</span><div class="timeline-duration-set">'+timelineDurationButtons(selected)+'</div>'
+      +'<label class="timeline-compose-label" for="timelineStudentSearch">Élève</label>'
+      +'<input id="timelineStudentSearch" class="timeline-student-search" type="search" placeholder="Rechercher un élève…" autocomplete="off">'
+      +'<div class="timeline-student-list" id="timelineStudentList">'+timelineStudentListHtml()+'</div>'
+      +'<p class="timeline-compose-help">La liste est déjà ouverte : cliquez simplement sur le nom.</p>'+warning+pauseChoices+'</div>';
+  }
+  const agendaEnd=items.length?Math.max(...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0))):range.startMin;
+  const meta=items.length+' rendez-vous'+(items.length?' · fin '+esc(minToTime(agendaEnd)):'');
+  return '<div class="timeline-day-column">'
+    +'<div class="timeline-day-head"><div><strong>'+esc(plannerDateLabel(day,false))+'</strong><span>'+meta+'</span></div><span class="timeline-day-count">'+items.length+'</span></div>'
+    +'<div class="timeline-canvas" tabindex="0" data-timeline-day="'+day+'" data-range-start="'+range.startMin+'" data-range-unit="'+range.unit+'" data-range-rows="'+range.rows+'" style="height:'+(range.rows*range.unit)+'px">'
+    +lines+(items.length?'':'<span class="timeline-empty-note">Cliquez sur une heure</span>')+appts+pauses
+    +'<div class="timeline-hover-line" data-timeline-hover-line="'+day+'"><span class="timeline-hover-time"></span></div>'
+    +'<div class="timeline-drop-line" data-timeline-drop-line="'+day+'"><span class="timeline-drop-time"></span></div>'
+    +composer+'</div></div>';
+}
+function timelineWeekHtml(group){
+  const range=timelineRangeForDays(group.days);
+  let labels='';
+  for(let i=0;i<=range.rows;i++){
+    const min=range.startMin+i*5;
+    if(((min-range.startMin)%20===0)&&i<range.rows){
+      const top=i*range.unit;
+      labels+='<span class="timeline-time-label'+(i===0?' first':'')+'" style="top:'+top+'px">'+esc(minToTime(min))+'</span>';
+    }
+  }
+  const dayColumns=group.days.map((day,i)=>timelineCanvasHtml(day,range,i,group.days.length)).join('');
+  return '<section class="timeline-week" data-timeline-week="'+group.weekStart+'">'
+    +'<div class="timeline-week-title"><strong>'+esc(timelineWeekLabel(group.weekStart))+'</strong><span>'+group.days.length+' jour'+(group.days.length===1?'':'s')+'</span></div>'
+    +'<div class="timeline-week-scroll"><div class="timeline-week-grid" style="--week-days:'+group.days.length+'">'
+    +'<div class="timeline-axis-head">h</div>'+group.days.map(day=>'<div class="timeline-day-head-spacer"></div>').join('')
+    +'<div class="timeline-axis" style="height:'+(range.rows*range.unit)+'px">'+labels+'</div>'+dayColumns
+    +'</div></div></section>';
+}
+function plannerMoveAppointment(fromDay,idx,toDay,startMin){
+  const source=plannerAssignedItems(fromDay);
+  const item=source.find(x=>x.idx===idx);
+  if(!item) return false;
+  startMin=Math.max(0,Math.min(24*60-item.durationMin-(item.pauseMin||0),Math.round(startMin/5)*5));
+  const occupiedDuration=item.durationMin+(item.pauseMin||0);
+  if(!timelineIntervalFree(toDay,startMin,occupiedDuration,fromDay===toDay?idx:undefined)){
+    showToast('Cette position chevauche déjà un rendez-vous ou une pause.');
+    return false;
+  }
+  if(fromDay===toDay){
+    const next=source.map(x=>x.idx===idx?{studentId:x.studentId,startMin,durationMin:x.durationMin,pauseMin:x.pauseMin}:x);
+    return plannerRebuildDay(fromDay,next,'Rendez-vous déplacé à '+minToTime(startMin)+'.');
+  }
+  const target=plannerAssignedItems(toDay);
+  const sourceNext=source.filter(x=>x.idx!==idx);
+  const targetNext=target.concat([{studentId:item.studentId,startMin,durationMin:item.durationMin,pauseMin:item.pauseMin||0}]);
+  if(!plannerRebuildDay(fromDay,sourceNext)) return false;
+  return plannerRebuildDay(toDay,targetNext,'Rendez-vous déplacé au '+plannerDateLabel(toDay,false)+' à '+minToTime(startMin)+'.');
+}
+function timelineClearHoverLines(host){
+  (host||document).querySelectorAll('.timeline-hover-line.show').forEach(line=>line.classList.remove('show'));
+}
+function timelineClearDropLines(host){
+  (host||document).querySelectorAll('.timeline-drop-line.show').forEach(line=>{ line.classList.remove('show','invalid'); });
+}
+function installTimelineDrag(host){
+  if(host._timelineDragInstalled) return;
+  host._timelineDragInstalled=true;
+  let hold=null;
+  let drag=null;
+  const clearHold=()=>{ if(hold&&hold.timer) clearTimeout(hold.timer); hold=null; };
+  host.addEventListener('pointerdown',ev=>{
+    const appt=ev.target.closest('.timeline-appt');
+    if(!appt||ev.button!==0||ev.target.closest('.timeline-appt-actions,.timeline-action,.timeline-appt-time')) return;
+    const day=appt.dataset.timelineApptDay;
+    const idx=parseInt(appt.dataset.timelineAppt,10);
+    const startX=ev.clientX,startY=ev.clientY,pointerId=ev.pointerId;
+    hold={appt,day,idx,startX,startY,pointerId,active:false,timer:setTimeout(()=>{
+      if(!hold) return;
+      const item=plannerAssignedItems(day).find(x=>x.idx===idx);
+      if(!item){ clearHold(); return; }
+      hold.active=true;
+      appt.classList.add('dragging');
+      document.body.classList.add('timeline-dragging');
+      timelineClearHoverLines(host);
+      const ghost=document.createElement('div');
+      ghost.className='timeline-drag-ghost';
+      ghost.innerHTML='<strong>'+esc(minToTime(item.startMin))+'</strong><span>'+esc(displayStudentName((timelineStudentById(item.studentId)||{}).name||''))+'</span>';
+      document.body.appendChild(ghost);
+      drag={...hold,item,ghost,target:null};
+      ghost.style.left=(startX+12)+'px'; ghost.style.top=(startY+12)+'px';
+      try{ appt.setPointerCapture(pointerId); }catch(_){ }
+      if(navigator.vibrate) try{ navigator.vibrate(20); }catch(_){ }
+    },330)};
+  },true);
+  host.addEventListener('pointermove',ev=>{
+    if(hold&&!hold.active){
+      if(Math.hypot(ev.clientX-hold.startX,ev.clientY-hold.startY)>7) clearHold();
+      return;
+    }
+    if(!drag) return;
+    ev.preventDefault();
+    drag.ghost.style.left=(ev.clientX+12)+'px'; drag.ghost.style.top=(ev.clientY+12)+'px';
+    const hit=document.elementFromPoint(ev.clientX,ev.clientY);
+    const canvas=hit&&hit.closest?hit.closest('[data-timeline-day]'):null;
+    timelineClearDropLines(host);
+    drag.target=null;
+    if(!canvas) return;
+    const r=canvas.getBoundingClientRect();
+    const unit=Number(canvas.dataset.rangeUnit)||13;
+    const start=Number(canvas.dataset.rangeStart)||0;
+    const rows=Number(canvas.dataset.rangeRows)||1;
+    const y=Math.max(0,Math.min(r.height-1,ev.clientY-r.top));
+    const row=Math.max(0,Math.min(rows-1,Math.round(y/unit)));
+    const min=start+row*5;
+    const toDay=canvas.dataset.timelineDay;
+    const valid=timelineIntervalFree(toDay,min,drag.item.durationMin+(drag.item.pauseMin||0),toDay===drag.day?drag.idx:undefined);
+    const line=canvas.querySelector('[data-timeline-drop-line]');
+    if(line){
+      line.style.top=(row*unit)+'px';
+      const label=line.querySelector('.timeline-drop-time'); if(label) label.textContent=minToTime(min);
+      line.classList.add('show'); if(!valid) line.classList.add('invalid');
+    }
+    drag.target={day:toDay,min,valid};
+  },true);
+  const finish=ev=>{
+    if(hold&&!hold.active){ clearHold(); return; }
+    if(!drag) return;
+    ev.preventDefault(); ev.stopPropagation();
+    window._timelineSuppressClick=true;
+    setTimeout(()=>{ window._timelineSuppressClick=false; },80);
+    timelineClearDropLines(host);
+    drag.appt.classList.remove('dragging');
+    document.body.classList.remove('timeline-dragging');
+    if(drag.ghost&&drag.ghost.remove) drag.ghost.remove();
+    const target=drag.target;
+    const fromDay=drag.day,idx=drag.idx;
+    drag=null; hold=null;
+    if(target&&target.valid) plannerMoveAppointment(fromDay,idx,target.day,target.min);
+  };
+  host.addEventListener('pointerup',finish,true);
+  host.addEventListener('pointercancel',finish,true);
+  host.addEventListener('click',ev=>{
+    if(window._timelineSuppressClick){ ev.preventDefault(); ev.stopPropagation(); }
+  },true);
+}
 function renderQuickPlanner(){
   const host=document.getElementById('quickPlanner');
   if(!host) return;
@@ -3272,83 +3523,31 @@ function renderQuickPlanner(){
   const remaining=plannerRemainingStudents();
   if(!days.length){
     window._timelineComposer=null;
-    host.innerHTML='<div class="planner-empty"><strong>Sélectionnez d’abord un ou plusieurs jours.</strong>La ligne du temps apparaîtra ici dès qu’un jour d’entretien est choisi.</div>';
+    host.innerHTML='<div class="planner-empty"><strong>Sélectionnez d’abord un ou plusieurs jours.</strong>Les lignes du temps apparaîtront ici dès que des jours d’entretien sont choisis.</div>';
     return;
   }
-  if(!days.includes(window._plannerActiveDay)) window._plannerActiveDay=days[0];
-  const activeDay=window._plannerActiveDay;
-  const standard=normalizeDurationValue(state.config.durationMin)||20;
-  const items=plannerAssignedItems(activeDay);
-  const range=timelineRangeForDay(activeDay);
-  const height=range.rows*range.unit;
-  const tabs=days.map(d=>{ const n=plannerAssignedCount(d); return '<button type="button" class="planner-day-tab'+(d===activeDay?' active':'')+'" data-planner-day-tab="'+d+'">'+esc(plannerDateLabel(d,false))+'<span class="count">'+n+'</span></button>'; }).join('');
-  let lines='',labels='';
-  for(let i=0;i<=range.rows;i++){
-    const min=range.startMin+i*5;
-    const top=i*range.unit;
-    const major=((min-range.startMin)%20===0);
-    lines+='<span class="timeline-grid-line'+(major?' major':'')+'" style="top:'+top+'px"></span>';
-    if(major&&i<range.rows) labels+='<span class="timeline-time-label'+(i===0?' first':'')+'" style="top:'+top+'px">'+esc(minToTime(min))+'</span>';
-  }
-  const appts=items.map(item=>{
-    const stu=timelineStudentById(item.studentId);
-    const top=((item.startMin-range.startMin)/5)*range.unit+2;
-    const h=Math.max(24,(item.durationMin/5)*range.unit-4);
-    const custom=item.durationMin!==standard;
-    const pauseOn=!!item.pauseMin;
-    return '<div class="timeline-appt'+(custom?' custom-duration':'')+'" data-timeline-appt="'+item.idx+'" style="top:'+top+'px;height:'+h+'px">'
-      +'<div class="timeline-appt-content">'
-      +'<button type="button" class="timeline-appt-time" data-time-day="'+activeDay+'" data-time-index="'+item.idx+'" data-time-current="'+item.startMin+'" title="Modifier l’heure">'+esc(minToTime(item.startMin))+'</button>'
-      +'<select class="timeline-appt-student" data-timeline-student-day="'+activeDay+'" data-timeline-student-index="'+item.idx+'" aria-label="Élève">'+plannerStudentOptions(item.studentId,false)+'</select>'
-      +'<div class="timeline-appt-actions">'
-      +'<button type="button" class="timeline-action duration'+(custom?' custom':'')+'" data-adjust-day="'+activeDay+'" data-adjust-index="'+item.idx+'" title="Modifier la durée">'+item.durationMin+'&#39;</button>'
-      +'<button type="button" class="timeline-action pause'+(pauseOn?' on':'')+'" data-planner-pause-day="'+activeDay+'" data-planner-pause-index="'+item.idx+'" title="'+(pauseOn?'Modifier la pause':'Ajouter une pause après')+'">Ⅱ</button>'
-      +'<button type="button" class="timeline-action delete" data-planner-delete-day="'+activeDay+'" data-planner-delete-index="'+item.idx+'" title="Retirer le rendez-vous">×</button>'
-      +'</div></div></div>';
-  }).join('');
-  const pauses=items.filter(x=>x.pauseMin).map(item=>{
-    const start=item.startMin+item.durationMin;
-    const top=((start-range.startMin)/5)*range.unit;
-    const h=Math.max(10,(item.pauseMin/5)*range.unit);
-    return '<div class="timeline-pause" style="top:'+top+'px;height:'+h+'px">'
-      +'<div class="timeline-pause-pill" data-planner-pause-edit-day="'+activeDay+'" data-planner-pause-edit-index="'+item.idx+'"><span>Ⅱ '+item.pauseMin+'&#39;</span><button type="button" class="timeline-pause-remove" data-planner-pause-remove-day="'+activeDay+'" data-planner-pause-remove-index="'+item.idx+'" aria-label="Supprimer la pause">×</button></div>'
-      +'</div>';
-  }).join('');
-  let composer='';
-  const comp=window._timelineComposer;
-  if(comp&&comp.day===activeDay){
-    const selected=normalizeDurationValue(comp.durationMin)||standard;
-    const free=timelineIntervalFree(activeDay,comp.startMin,selected);
-    const next=timelineNextOccupiedStart(activeDay,comp.startMin);
-    const available=next!==null?Math.max(0,next-comp.startMin):null;
-    const warning=!free?'<div class="timeline-compose-warning">La durée choisie chevauche le prochain élément'+(available!==null&&available>0?' ; espace libre : '+available+' minutes':'')+'. Choisissez une durée plus courte ou une autre heure.</div>':'';
-    const prev=timelinePreviousAppointmentEndingAt(activeDay,comp.startMin);
-    const pauseChoices=prev?'<div class="timeline-compose-sep"></div><span class="timeline-compose-label">Ou insérer une pause ici</span><div class="timeline-pause-choices"><button type="button" class="timeline-pause-choice" data-timeline-add-pause="5">Ⅱ 5&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause="10">Ⅱ 10&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause="15">Ⅱ 15&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause-custom="1">Perso…</button></div>':'';
-    composer='<div class="timeline-composer" style="top:'+timelineComposerTop(comp.startMin,range)+'px" data-timeline-composer="1">'
-      +'<div class="timeline-composer-head"><div class="timeline-composer-title"><span>Nouveau rendez-vous</span><strong>'+esc(minToTime(comp.startMin))+'</strong></div><button type="button" class="timeline-composer-close" data-timeline-close="1" aria-label="Fermer">×</button></div>'
-      +'<span class="timeline-compose-label">Durée</span><div class="timeline-duration-set">'+timelineDurationButtons(selected)+'</div>'
-      +'<label class="timeline-compose-label" for="timelineStudent">Élève</label><select id="timelineStudent" class="timeline-student-select"'+(remaining.length?'':' disabled')+'>'+plannerStudentOptions('',true)+'</select>'
-      +'<p class="timeline-compose-help">Choisissez l’élève : le rendez-vous est ajouté immédiatement.</p>'+warning+pauseChoices+'</div>';
-  }
-  const agendaEnd=items.length?Math.max(...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0))):range.startMin;
-  host.innerHTML='<div class="planner-summary"><span><strong>'+totalAssigned+' rendez-vous</strong> · '+remaining.length+' élève'+(remaining.length===1?'':'s')+' encore à placer</span><span class="planner-keyhint">Cliquez dans la ligne du temps · précision de 5 minutes</span></div>'
-    +'<div class="planner-day-tabs">'+tabs+'</div>'
-    +'<div class="timeline-planner"><div class="timeline-planner-head"><h3>'+esc(plannerDateLabel(activeDay,true))+'</h3><span class="timeline-planner-meta">'+items.length+' rendez-vous'+(items.length?' · fin '+esc(minToTime(agendaEnd)):'')+'</span></div>'
-    +'<div class="timeline-stage"><div class="timeline-axis" style="height:'+height+'px">'+labels+'</div><div class="timeline-canvas" tabindex="0" data-timeline-day="'+activeDay+'" style="height:'+height+'px">'+lines+(items.length?'':'<span class="timeline-empty-note">Cliquez sur une heure pour placer le premier rendez-vous</span>')+appts+pauses+'<div class="timeline-hover-line" id="timelineHoverLine"><span class="timeline-hover-time" id="timelineHoverTime"></span></div>'+composer+'</div></div></div>';
+  const groups=plannerWeekGroups(days);
+  host.innerHTML='<div class="planner-summary"><span><strong>'+totalAssigned+' rendez-vous</strong> · '+remaining.length+' élève'+(remaining.length===1?'':'s')+' encore à placer</span><span class="planner-keyhint">Cliquez sur une heure · maintenir un rendez-vous pour le déplacer</span></div>'
+    +'<div class="timeline-weeks">'+groups.map(timelineWeekHtml).join('')+'</div>';
 
   host.onclick=(ev)=>{
-    const tab=ev.target.closest('[data-planner-day-tab]');
-    if(tab){ window._plannerActiveDay=tab.dataset.plannerDayTab; window._timelineComposer=null; renderQuickPlanner(); return; }
+    if(window._timelineSuppressClick) return;
     const close=ev.target.closest('[data-timeline-close]');
     if(close){ timelineCloseComposer(); return; }
     const dur=ev.target.closest('[data-timeline-duration]');
-    if(dur&&window._timelineComposer){ window._timelineComposer.durationMin=Number(dur.dataset.timelineDuration); renderQuickPlanner(); setTimeout(()=>{ const s=document.getElementById('timelineStudent'); if(s&&!s.disabled) s.focus(); },0); return; }
+    if(dur&&window._timelineComposer){ window._timelineComposer.durationMin=Number(dur.dataset.timelineDuration); renderQuickPlanner(); setTimeout(()=>{ const s=document.getElementById('timelineStudentSearch'); if(s) s.focus(); },20); return; }
     const custom=ev.target.closest('[data-timeline-duration-custom]');
-    if(custom&&window._timelineComposer){ const v=askCustomMinutes('duration',window._timelineComposer.durationMin||standard,120); if(v){ window._timelineComposer.durationMin=v; renderQuickPlanner(); } return; }
+    if(custom&&window._timelineComposer){ const standard=normalizeDurationValue(state.config.durationMin)||20; const v=askCustomMinutes('duration',window._timelineComposer.durationMin||standard,120); if(v){ window._timelineComposer.durationMin=v; renderQuickPlanner(); } return; }
+    const student=ev.target.closest('[data-timeline-student-id]');
+    if(student&&window._timelineComposer){
+      const sid=student.dataset.timelineStudentId;
+      timelineAddAppointment(window._timelineComposer.day,window._timelineComposer.startMin,normalizeDurationValue(window._timelineComposer.durationMin)||(normalizeDurationValue(state.config.durationMin)||20),sid);
+      return;
+    }
     const addPause=ev.target.closest('[data-timeline-add-pause]');
-    if(addPause&&window._timelineComposer){ timelineAddPauseAt(activeDay,window._timelineComposer.startMin,Number(addPause.dataset.timelineAddPause)); return; }
+    if(addPause&&window._timelineComposer){ timelineAddPauseAt(window._timelineComposer.day,window._timelineComposer.startMin,Number(addPause.dataset.timelineAddPause)); return; }
     const addPauseCustom=ev.target.closest('[data-timeline-add-pause-custom]');
-    if(addPauseCustom&&window._timelineComposer){ const v=askCustomMinutes('pause',plannerPreferredPause(),60); if(v) timelineAddPauseAt(activeDay,window._timelineComposer.startMin,v); return; }
+    if(addPauseCustom&&window._timelineComposer){ const v=askCustomMinutes('pause',plannerPreferredPause(),60); if(v) timelineAddPauseAt(window._timelineComposer.day,window._timelineComposer.startMin,v); return; }
     const timeBtn=ev.target.closest('button[data-time-day]');
     if(timeBtn){ ev.stopPropagation(); openTimelineTimePicker(timeBtn); return; }
     const adjust=ev.target.closest('[data-adjust-day]');
@@ -3377,20 +3576,18 @@ function renderQuickPlanner(){
     const canvas=ev.target.closest('[data-timeline-day]');
     if(canvas&&!ev.target.closest('.timeline-appt,.timeline-pause,.timeline-composer')){
       const r=canvas.getBoundingClientRect();
-      const y=Math.max(0,Math.min(r.height,ev.clientY-r.top));
-      const min=Math.min(range.endMin-5,range.startMin+Math.round(y/range.unit)*5);
-      if(timelinePointOccupied(activeDay,min)){ showToast('Cette heure est déjà occupée.'); return; }
-      timelineOpenComposer(activeDay,min,standard);
+      const unit=Number(canvas.dataset.rangeUnit)||13;
+      const rangeStart=Number(canvas.dataset.rangeStart)||0;
+      const rows=Number(canvas.dataset.rangeRows)||1;
+      const y=Math.max(0,Math.min(r.height-1,ev.clientY-r.top));
+      const row=Math.max(0,Math.min(rows-1,Math.round(y/unit)));
+      const min=rangeStart+row*5;
+      const day=canvas.dataset.timelineDay;
+      if(timelinePointOccupied(day,min)){ showToast('Cette heure est déjà occupée.'); return; }
+      timelineOpenComposer(day,min,normalizeDurationValue(state.config.durationMin)||20);
     }
   };
   host.onchange=(ev)=>{
-    if(ev.target.id==='timelineStudent'&&window._timelineComposer){
-      const sid=ev.target.value;
-      if(!sid) return;
-      const ok=timelineAddAppointment(activeDay,window._timelineComposer.startMin,normalizeDurationValue(window._timelineComposer.durationMin)||standard,sid);
-      if(!ok) ev.target.value='';
-      return;
-    }
     if(ev.target.matches('[data-timeline-student-day]')){
       const day=ev.target.dataset.timelineStudentDay, idx=parseInt(ev.target.dataset.timelineStudentIndex,10), sid=ev.target.value;
       if(!sid) return;
@@ -3399,20 +3596,40 @@ function renderQuickPlanner(){
       state.assignments[day+'__'+idx]=sid; saveState(); renderCalendar(); try{ scheduleRenderMails(null,260); }catch(e){} return;
     }
   };
-  const canvas=host.querySelector('[data-timeline-day]');
-  if(canvas){
+  host.oninput=(ev)=>{
+    if(ev.target.id!=='timelineStudentSearch') return;
+    const q=String(ev.target.value||'').trim().toLocaleLowerCase('fr-FR');
+    host.querySelectorAll('.timeline-student-option').forEach(btn=>{
+      btn.hidden=!!q&&!String(btn.dataset.studentSearch||'').includes(q);
+    });
+  };
+  host.onkeydown=(ev)=>{
+    if(ev.target.id==='timelineStudentSearch'&&ev.key==='Enter'){
+      const first=[...host.querySelectorAll('.timeline-student-option')].find(btn=>!btn.hidden);
+      if(first){ ev.preventDefault(); first.click(); }
+    }
+  };
+  host.querySelectorAll('[data-timeline-day]').forEach(canvas=>{
     canvas.onmousemove=(ev)=>{
-      if(ev.target.closest('.timeline-composer')) return;
+      const line=canvas.querySelector('[data-timeline-hover-line]');
+      if(!line) return;
+      if(ev.target.closest('.timeline-appt,.timeline-pause,.timeline-composer')||document.body.classList.contains('timeline-dragging')){ line.classList.remove('show'); return; }
       const r=canvas.getBoundingClientRect();
+      const unit=Number(canvas.dataset.rangeUnit)||13;
+      const rangeStart=Number(canvas.dataset.rangeStart)||0;
+      const rows=Number(canvas.dataset.rangeRows)||1;
       const y=Math.max(0,Math.min(r.height-1,ev.clientY-r.top));
-      const row=Math.max(0,Math.min(range.rows-1,Math.round(y/range.unit)));
-      const min=range.startMin+row*5;
-      const line=host.querySelector('#timelineHoverLine'), label=host.querySelector('#timelineHoverTime');
-      if(line&&label){ line.style.top=(row*range.unit)+'px'; label.textContent=minToTime(min); line.classList.add('show'); }
+      const row=Math.max(0,Math.min(rows-1,Math.round(y/unit)));
+      const min=rangeStart+row*5;
+      line.style.top=(row*unit)+'px';
+      const label=line.querySelector('.timeline-hover-time'); if(label) label.textContent=minToTime(min);
+      line.classList.add('show');
     };
-    canvas.onmouseleave=()=>{ const line=host.querySelector('#timelineHoverLine'); if(line) line.classList.remove('show'); };
-  }
+    canvas.onmouseleave=()=>{ const line=canvas.querySelector('[data-timeline-hover-line]'); if(line) line.classList.remove('show'); };
+  });
+  installTimelineDrag(host);
 }
+
 
 function renderCalendar(){
   initCfgInputs();
