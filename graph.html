@@ -240,6 +240,21 @@
   .timeline-drag-ghost{position:fixed;z-index:10000;pointer-events:none;display:flex;align-items:center;gap:8px;max-width:240px;padding:8px 10px;border:1px solid #9facdf;border-radius:10px;background:#fff;box-shadow:0 12px 30px rgba(31,41,55,.24);color:#344054;font-size:11px}.timeline-drag-ghost strong{color:#4a55a2;font-variant-numeric:tabular-nums}.timeline-drag-ghost span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:750}.timeline-dragging,.timeline-dragging *{cursor:grabbing!important}
   @media(max-width:1100px){.timeline-week-scroll{overflow-x:auto;overflow-y:hidden;padding-bottom:8px}.timeline-week-grid{min-width:1040px}.timeline-composer{max-width:310px}}
   @media(max-width:760px){.timeline-week-grid{grid-template-columns:56px repeat(var(--week-days),minmax(175px,1fr));min-width:calc(56px + (var(--week-days) * 175px))}.timeline-axis-head{width:56px}.timeline-appt-time{flex-basis:44px}.timeline-appt-student{font-size:10.75px;padding-left:6px!important}.timeline-composer{width:290px}.planner-summary{align-items:flex-start;flex-direction:column}.planner-keyhint{white-space:normal}}
+  /* v263 — espaces libres = pauses, actions cohérentes, plus de vue semaine doublée */
+  .timeline-appt-student{padding-right:58px!important}
+  .timeline-appt-actions{right:27px;gap:0;padding-left:6px;background:linear-gradient(90deg,rgba(238,240,255,0),#eef0ff 30%)}
+  .timeline-appt:hover .timeline-appt-actions,.timeline-appt:focus-within .timeline-appt-actions{background:linear-gradient(90deg,rgba(233,236,255,0),#e9ecff 30%)}
+  .timeline-action.pause,.timeline-action.delete{display:none!important}
+  .timeline-action.duration{min-width:31px;height:23px;padding:0 5px}
+  .timeline-pause{display:none!important}
+  .timeline-composer-close{display:grid;place-items:center;padding:0!important;line-height:1!important;font-family:Arial,sans-serif}
+  .timeline-composer-close:hover,.timeline-composer-close:focus{background:#eef0ff!important;color:#4a55a2!important;outline:none}
+  #quickPlanner.all-planned .timeline-canvas{cursor:default}
+  #quickPlanner.all-planned .timeline-hover-line,#quickPlanner.all-planned .timeline-empty-note{display:none!important}
+  .appt-adjust-popover.duration-only .pause-section{display:none!important}
+  .appt-adjust-popover.duration-only.is-last .pause-section{display:none!important}
+  .appt-delete{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#b43a2f;font-size:11.5px;font-weight:750;padding:3px 0;cursor:pointer;box-shadow:none}
+  .appt-delete:hover,.appt-delete:focus{background:transparent;color:#8f2f27;text-decoration:underline;outline:none}
 
   .week-preview-card{padding:0;overflow:hidden}.week-preview-card>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;cursor:pointer;font-size:15px;font-weight:800;color:#344054;background:#fff}.week-preview-card>summary::-webkit-details-marker{display:none}.week-preview-card>summary:after{content:"⌄";font-size:14px;color:#8a92a6;transition:transform .15s}.week-preview-card[open]>summary:after{transform:rotate(180deg)}.week-preview-card[open]>summary{border-bottom:1px solid var(--line);background:#fbfbfe}.week-preview-meta{margin-left:auto;color:#8a92a6;font-size:12px;font-weight:700}.week-preview-body{padding:12px 16px 16px;position:relative;z-index:1;overflow:hidden}.week-preview-body .banner{position:relative;z-index:12}.week-preview-body .weekblock{position:relative;z-index:1}.week-preview-body .schedule-scroll{isolation:isolate}.week-preview-body .block-time-btn.manual{color:#5b6478;background:rgba(15,23,42,.015);border-right-color:#e9ecf4}
   @media(max-width:1050px){.planner-entry{grid-template-columns:minmax(210px,1.5fr) minmax(165px,1fr) 112px minmax(250px,1.2fr)}.planner-add{grid-column:1/-1;justify-self:end}.planner-row{grid-template-columns:88px minmax(0,1fr) 60px 32px 32px}}
@@ -586,7 +601,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v262</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v263</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -694,18 +709,11 @@ Langues : FR, DE, EN, LU">?</span>
       <div class="card-head quick-planner-head">
         <div>
           <h2>Planifier les rendez-vous</h2>
-          <p class="hint">Tous les jours sélectionnés sont visibles en même temps. Cliquez sur une heure ; la liste des élèves s’ouvre immédiatement. Maintenez un rendez-vous pour le déplacer.</p>
+          <p class="hint">Tous les jours sélectionnés sont visibles en même temps. Cliquez sur une heure ; la liste des élèves s’ouvre immédiatement. Maintenez un rendez-vous pour le déplacer. Les espaces libres représentent simplement des pauses.</p>
         </div>
       </div>
       <div id="quickPlanner"></div>
     </div>
-    <details class="card week-preview-card" id="weekPreviewDetails">
-      <summary><span>Vue semaine</span><span class="week-preview-meta" id="weekPreviewMeta"></span></summary>
-      <div class="week-preview-body">
-        <div class="banner compact info" id="assignSummary"></div>
-        <div id="calendarGrid"></div>
-      </div>
-    </details>
   </section>
 
   <section class="panel" id="panel-mails">
@@ -876,7 +884,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 262;
+const APP_VERSION = 263;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2065,7 +2073,7 @@ function askCustomMinutes(kind,current,max){
   if(v>max) v=max;
   return v;
 }
-function openAppointmentAdjustPopover(anchor, day, idx, pauseOnly){
+function openAppointmentAdjustPopover(anchor, day, idx, pauseOnly, durationOnly, allowDelete){
   if(!anchor || anchor.disabled || !day || !Number.isFinite(idx)) return;
   closeTimelineTimePicker();
   closeAppointmentAdjustPopover();
@@ -2078,15 +2086,15 @@ function openAppointmentAdjustPopover(anchor, day, idx, pauseOnly){
   const pauses=pauseChoiceValues(currentPause);
   const durationButtons=durations.map(v=>'<button type="button" class="appt-choice duration'+(v===currentDuration?' active':'')+'" data-adjust-duration="'+v+'">'+v+"'</button>").join('')+'<button type="button" class="appt-choice duration custom-pick" data-adjust-duration-custom="1">Perso…</button>';
   const pauseButtons=pauses.map(v=>'<button type="button" class="appt-choice pause'+(v===currentPause?' active':'')+'" data-adjust-pause="'+v+'">'+(v===0?'Aucune':v+"'")+'</button>').join('')+'<button type="button" class="appt-choice pause custom-pick" data-adjust-pause-custom="1">Perso…</button>';
-  const custom=hasDurationOverrideForDay(day,idx)||currentPause>0||hasTimeOverrideForDay(day,idx);
+  const custom=durationOnly ? hasDurationOverrideForDay(day,idx) : (hasDurationOverrideForDay(day,idx)||currentPause>0||hasTimeOverrideForDay(day,idx));
   const pop=document.createElement('div');
   pop.id='apptAdjustPopover';
-  pop.className='appt-adjust-popover'+(isLast?' is-last':'')+(pauseOnly?' pause-only':'');
+  pop.className='appt-adjust-popover'+(isLast?' is-last':'')+(pauseOnly?' pause-only':'')+(durationOnly?' duration-only':'');
   pop.dataset.day=day; pop.dataset.index=String(idx);
-  pop.innerHTML='<div class="appt-adjust-title">'+(pauseOnly?'Ajouter une pause':'Adapter ce rendez-vous')+'</div>'
+  pop.innerHTML='<div class="appt-adjust-title">'+(pauseOnly?'Ajouter une pause':(durationOnly?'Modifier la durée':'Adapter ce rendez-vous'))+'</div>'
     +'<div class="appt-adjust-section duration-section"><span class="appt-adjust-label">Durée <small>standard : '+standard+'&#39;</small></span><div class="appt-choice-row">'+durationButtons+'</div></div>'
     +'<div class="appt-adjust-section pause-section"><span class="appt-adjust-label">Pause après le rendez-vous</span><div class="appt-choice-row">'+pauseButtons+'</div></div>'
-    +'<div class="appt-adjust-actions"><button type="button" class="appt-reset"'+(custom?'':' disabled')+'>↺ Réinitialiser</button><span class="appt-adjust-note">Modifications appliquées immédiatement</span></div>';
+    +'<div class="appt-adjust-actions"><button type="button" class="appt-reset"'+(custom?'':' disabled')+'>↺ Réinitialiser</button>'+(allowDelete?'<button type="button" class="appt-delete">Retirer le rendez-vous</button>':'<span class="appt-adjust-note">Modifications appliquées immédiatement</span>')+'</div>';
   document.body.appendChild(pop);
   positionPopoverNear(pop,anchor);
   if(pauseOnly){ const section=pop.querySelector('.pause-section'); if(section) section.scrollIntoView({block:'nearest'}); }
@@ -2100,8 +2108,19 @@ function openAppointmentAdjustPopover(anchor, day, idx, pauseOnly){
     if(pBtn){ const v=Number(pBtn.dataset.adjustPause); if(v){ setPauseAfterForDay(day,idx,v); state.config.pauseMin=[5,10,15].includes(v)?v:state.config.pauseMin; } else removePauseAfterForDay(day,idx); closeAppointmentAdjustPopover(); scheduleAdjustmentChanged(); return; }
     const pCustom=ev.target.closest('[data-adjust-pause-custom]');
     if(pCustom){ const v=askCustomMinutes('pause', currentPause, 60); if(v){ setPauseAfterForDay(day,idx,v); if([5,10,15].includes(v)) state.config.pauseMin=v; closeAppointmentAdjustPopover(); scheduleAdjustmentChanged(); } return; }
+    const delBtn=ev.target.closest('.appt-delete');
+    if(delBtn && allowDelete){
+      const list=plannerAssignedItems(day).filter(x=>x.idx!==idx);
+      closeAppointmentAdjustPopover();
+      plannerRebuildDay(day,list,'Rendez-vous retiré.');
+      return;
+    }
     const reset=ev.target.closest('.appt-reset');
-    if(reset && !reset.disabled){ removeDurationOverrideForDay(day,idx); removePauseAfterForDay(day,idx); removeTimeOverrideForDay(day,idx); closeAppointmentAdjustPopover(); scheduleAdjustmentChanged(); }
+    if(reset && !reset.disabled){
+      removeDurationOverrideForDay(day,idx);
+      if(!durationOnly){ removePauseAfterForDay(day,idx); removeTimeOverrideForDay(day,idx); }
+      closeAppointmentAdjustPopover(); scheduleAdjustmentChanged();
+    }
   };
 }
 if(!window.__appointmentAdjustCloseInstalled){
@@ -3124,6 +3143,35 @@ function plannerDateLabel(day, longForm){
   const opts=longForm ? {weekday:"long",day:"numeric",month:"long",year:"numeric"} : {weekday:"short",day:"numeric",month:"short"};
   return new Date(day+"T00:00:00").toLocaleDateString("fr-FR",opts);
 }
+function plannerConvertPausesToGapsV263(){
+  state.options=state.options||{};
+  if(state.options.plannerPausesConvertedV263) return;
+  const pauseMap=normalizePauseAfter(state.config.pauseAfter);
+  const hasPauses=Object.keys(pauseMap).some(day=>pauseMap[day]&&Object.keys(pauseMap[day]).length);
+  if(hasPauses){
+    const days=new Set((state.config.dates||[]).slice());
+    Object.keys(state.assignments||{}).forEach(k=>{ const m=String(k).match(/^(\d{4}-\d{2}-\d{2})__/); if(m) days.add(m[1]); });
+    const snapshots={};
+    days.forEach(day=>{ snapshots[day]=plannerAssignedItems(day).map(x=>({studentId:x.studentId,startMin:x.startMin,durationMin:x.durationMin,pauseMin:0})); });
+    const standard=normalizeDurationValue(state.config.durationMin)||20;
+    const durMap=normalizeDurationOverrides(state.config.durationOverrides);
+    const timeMap=normalizeTimeOverrides(state.config.timeOverrides);
+    days.forEach(day=>{
+      Object.keys(state.assignments||{}).forEach(k=>{ if(k.startsWith(day+'__')) delete state.assignments[k]; });
+      delete durMap[day]; delete timeMap[day];
+      (snapshots[day]||[]).forEach((it,i)=>{
+        state.assignments[day+'__'+i]=it.studentId;
+        (timeMap[day]=timeMap[day]||{})[String(i)]=it.startMin;
+        if(it.durationMin!==standard) (durMap[day]=durMap[day]||{})[String(i)]=it.durationMin;
+      });
+    });
+    state.config.durationOverrides=durMap;
+    state.config.timeOverrides=timeMap;
+    state.config.pauseAfter={};
+  }
+  state.options.plannerPausesConvertedV263=true;
+  saveState();
+}
 function plannerAssignedItems(day){
   if(!day) return [];
   return slotsForDate(day).filter(slot=>!!state.assignments[day+"__"+slot.idx]).map(slot=>({
@@ -3131,7 +3179,7 @@ function plannerAssignedItems(day){
     studentId:state.assignments[day+"__"+slot.idx],
     startMin:slot.startMin,
     durationMin:slot.durationMin,
-    pauseMin:pauseAfterMinForDay(day,slot.idx)||0
+    pauseMin:0
   })).sort((a,b)=>a.startMin-b.startMin || a.idx-b.idx);
 }
 function plannerAssignedCount(day){ return plannerAssignedItems(day).length; }
@@ -3156,7 +3204,7 @@ function plannerStudentOptions(currentId, onlyRemaining){
 function plannerNextTimeForDay(day){
   const items=plannerAssignedItems(day);
   if(!items.length) return timeToMin(state.config.start);
-  return Math.max(...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0)));
+  return Math.max(...items.map(x=>x.startMin+x.durationMin));
 }
 function plannerPreferredPause(){
   const p=Number(state.config.pauseMin);
@@ -3181,7 +3229,7 @@ function plannerRebuildDay(day, rawItems, message){
     studentId:x.studentId,
     startMin:Math.max(0,Math.min(23*60+59,Math.round(Number(x.startMin)||0))),
     durationMin:normalizeDurationValue(x.durationMin)||standard,
-    pauseMin:normalizePauseValue(x.pauseMin)||0,
+    pauseMin:0,
     _order:n
   })).sort((a,b)=>a.startMin-b.startMin || a._order-b._order);
   if(!plannerEnsureCapacity(items.length)){
@@ -3191,7 +3239,7 @@ function plannerRebuildDay(day, rawItems, message){
   let cursor=null, shifted=false;
   items.forEach(it=>{
     if(cursor!==null && it.startMin<cursor){ it.startMin=cursor; shifted=true; }
-    cursor=it.startMin+it.durationMin+it.pauseMin;
+    cursor=it.startMin+it.durationMin;
   });
   if(cursor!==null && cursor>24*60){
     alert("Le planning dépasserait minuit. Modifiez l’heure ou la durée.");
@@ -3205,7 +3253,6 @@ function plannerRebuildDay(day, rawItems, message){
     state.assignments[day+"__"+i]=it.studentId;
     (timeMap[day]=timeMap[day]||{})[String(i)]=it.startMin;
     if(it.durationMin!==standard) (durMap[day]=durMap[day]||{})[String(i)]=it.durationMin;
-    if(it.pauseMin) (pauseMap[day]=pauseMap[day]||{})[String(i)]=it.pauseMin;
   });
   state.config.durationOverrides=durMap;
   state.config.timeOverrides=timeMap;
@@ -3247,7 +3294,7 @@ function timelineRangeForDays(days){
   let end=Math.ceil(timeToMin(state.config.end)/5)*5;
   (days||[]).forEach(day=>{
     const items=plannerAssignedItems(day);
-    if(items.length) end=Math.max(end,...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0)));
+    if(items.length) end=Math.max(end,...items.map(x=>x.startMin+x.durationMin));
   });
   if(end<=start) end=start+60;
   end=Math.min(24*60,Math.ceil(end/5)*5);
@@ -3264,7 +3311,7 @@ function timelineDurationButtons(selected){
 function timelineIntervals(day,ignoreIdx){
   return plannerAssignedItems(day).filter(x=>x.idx!==ignoreIdx).map(x=>({
     start:x.startMin,
-    end:x.startMin+x.durationMin+(x.pauseMin||0),
+    end:x.startMin+x.durationMin,
     apptEnd:x.startMin+x.durationMin,
     item:x
   }));
@@ -3300,7 +3347,7 @@ function timelineCloseComposer(){ window._timelineComposer=null; renderQuickPlan
 function timelineAddAppointment(day,startMin,durationMin,studentId){
   if(!studentId){ showToast('Choisissez un élève.'); return false; }
   if(!timelineIntervalFree(day,startMin,durationMin)){
-    showToast('Cette durée chevauche déjà un autre rendez-vous ou une pause.');
+    showToast('Cette durée chevauche déjà un autre rendez-vous.');
     return false;
   }
   const items=plannerAssignedItems(day);
@@ -3342,25 +3389,15 @@ function timelineCanvasHtml(day,range,dayIndex,dayCount){
     const top=((item.startMin-range.startMin)/5)*range.unit+2;
     const h=Math.max(24,(item.durationMin/5)*range.unit-4);
     const custom=item.durationMin!==standard;
-    const pauseOn=!!item.pauseMin;
     return '<div class="timeline-appt'+(custom?' custom-duration':'')+'" data-timeline-appt="'+item.idx+'" data-timeline-appt-day="'+day+'" style="top:'+top+'px;height:'+h+'px" title="Cliquer pour choisir un autre élève · maintenir pour déplacer">'
       +'<div class="timeline-appt-content">'
       +'<button type="button" class="timeline-appt-time" data-time-day="'+day+'" data-time-index="'+item.idx+'" data-time-current="'+item.startMin+'" title="Modifier l’heure">'+esc(minToTime(item.startMin))+'</button>'
       +'<select class="timeline-appt-student" data-timeline-student-day="'+day+'" data-timeline-student-index="'+item.idx+'" aria-label="Élève">'+plannerStudentOptions(item.studentId,false)+'</select>'
       +'<div class="timeline-appt-actions">'
-      +'<button type="button" class="timeline-action duration'+(custom?' custom':'')+'" data-adjust-day="'+day+'" data-adjust-index="'+item.idx+'" title="Modifier la durée">'+item.durationMin+'&#39;</button>'
-      +'<button type="button" class="timeline-action pause'+(pauseOn?' on':'')+'" data-planner-pause-day="'+day+'" data-planner-pause-index="'+item.idx+'" title="'+(pauseOn?'Modifier la pause':'Ajouter une pause après')+'">Ⅱ</button>'
-      +'<button type="button" class="timeline-action delete" data-planner-delete-day="'+day+'" data-planner-delete-index="'+item.idx+'" title="Retirer le rendez-vous">×</button>'
+      +'<button type="button" class="timeline-action duration'+(custom?' custom':'')+'" data-adjust-day="'+day+'" data-adjust-index="'+item.idx+'" title="Modifier la durée ou retirer le rendez-vous">'+item.durationMin+'&#39;</button>'
       +'</div></div></div>';
   }).join('');
-  const pauses=items.filter(x=>x.pauseMin).map(item=>{
-    const start=item.startMin+item.durationMin;
-    const top=((start-range.startMin)/5)*range.unit;
-    const h=Math.max(10,(item.pauseMin/5)*range.unit);
-    return '<div class="timeline-pause" style="top:'+top+'px;height:'+h+'px">'
-      +'<div class="timeline-pause-pill" data-planner-pause-edit-day="'+day+'" data-planner-pause-edit-index="'+item.idx+'"><span>Ⅱ '+item.pauseMin+'&#39;</span><button type="button" class="timeline-pause-remove" data-planner-pause-remove-day="'+day+'" data-planner-pause-remove-index="'+item.idx+'" aria-label="Supprimer la pause">×</button></div>'
-      +'</div>';
-  }).join('');
+  const pauses='';
   let composer='';
   const comp=window._timelineComposer;
   if(comp&&comp.day===day){
@@ -3369,18 +3406,16 @@ function timelineCanvasHtml(day,range,dayIndex,dayCount){
     const next=timelineNextOccupiedStart(day,comp.startMin);
     const available=next!==null?Math.max(0,next-comp.startMin):null;
     const warning=!free?'<div class="timeline-compose-warning">La durée choisie chevauche le prochain élément'+(available!==null&&available>0?' ; espace libre : '+available+' minutes':'')+'. Choisissez une durée plus courte ou une autre heure.</div>':'';
-    const prev=timelinePreviousAppointmentEndingAt(day,comp.startMin);
-    const pauseChoices=prev?'<div class="timeline-compose-sep"></div><span class="timeline-compose-label">Ou insérer une pause ici</span><div class="timeline-pause-choices"><button type="button" class="timeline-pause-choice" data-timeline-add-pause="5">Ⅱ 5&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause="10">Ⅱ 10&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause="15">Ⅱ 15&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause-custom="1">Perso…</button></div>':'';
     const alignRight=dayIndex>=Math.ceil(dayCount/2);
     composer='<div class="timeline-composer'+(alignRight?' align-right':'')+'" style="top:'+timelineComposerTop(comp.startMin,range)+'px" data-timeline-composer="1">'
-      +'<div class="timeline-composer-head"><div class="timeline-composer-title"><span>Nouveau rendez-vous</span><strong>'+esc(minToTime(comp.startMin))+'</strong></div><button type="button" class="timeline-composer-close" data-timeline-close="1" aria-label="Fermer">×</button></div>'
+      +'<div class="timeline-composer-head"><div class="timeline-composer-title"><span>Nouveau rendez-vous</span><strong>'+esc(minToTime(comp.startMin))+'</strong></div><button type="button" class="timeline-composer-close" data-timeline-close="1" aria-label="Fermer">✕</button></div>'
       +'<span class="timeline-compose-label">Durée</span><div class="timeline-duration-set">'+timelineDurationButtons(selected)+'</div>'
       +'<label class="timeline-compose-label" for="timelineStudentSearch">Élève</label>'
       +'<input id="timelineStudentSearch" class="timeline-student-search" type="search" placeholder="Rechercher un élève…" autocomplete="off">'
       +'<div class="timeline-student-list" id="timelineStudentList">'+timelineStudentListHtml()+'</div>'
-      +'<p class="timeline-compose-help">La liste est déjà ouverte : cliquez simplement sur le nom.</p>'+warning+pauseChoices+'</div>';
+      +'<p class="timeline-compose-help">La liste est déjà ouverte : cliquez simplement sur le nom.</p>'+warning+'</div>';
   }
-  const agendaEnd=items.length?Math.max(...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0))):range.startMin;
+  const agendaEnd=items.length?Math.max(...items.map(x=>x.startMin+x.durationMin)):range.startMin;
   const meta=items.length+' rendez-vous'+(items.length?' · fin '+esc(minToTime(agendaEnd)):'');
   return '<div class="timeline-day-column">'
     +'<div class="timeline-day-head"><div><strong>'+esc(plannerDateLabel(day,false))+'</strong><span>'+meta+'</span></div><span class="timeline-day-count">'+items.length+'</span></div>'
@@ -3412,14 +3447,14 @@ function plannerMoveAppointment(fromDay,idx,toDay,startMin){
   const source=plannerAssignedItems(fromDay);
   const item=source.find(x=>x.idx===idx);
   if(!item) return false;
-  startMin=Math.max(0,Math.min(24*60-item.durationMin-(item.pauseMin||0),Math.round(startMin/5)*5));
-  const occupiedDuration=item.durationMin+(item.pauseMin||0);
+  startMin=Math.max(0,Math.min(24*60-item.durationMin,Math.round(startMin/5)*5));
+  const occupiedDuration=item.durationMin;
   if(!timelineIntervalFree(toDay,startMin,occupiedDuration,fromDay===toDay?idx:undefined)){
     showToast('Cette position chevauche déjà un rendez-vous ou une pause.');
     return false;
   }
   if(fromDay===toDay){
-    const next=source.map(x=>x.idx===idx?{studentId:x.studentId,startMin,durationMin:x.durationMin,pauseMin:x.pauseMin}:x);
+    const next=source.map(x=>x.idx===idx?{studentId:x.studentId,startMin,durationMin:x.durationMin,pauseMin:0}:x);
     return plannerRebuildDay(fromDay,next,'Rendez-vous déplacé à '+minToTime(startMin)+'.');
   }
   const target=plannerAssignedItems(toDay);
@@ -3485,7 +3520,7 @@ function installTimelineDrag(host){
     const row=Math.max(0,Math.min(rows-1,Math.round(y/unit)));
     const min=start+row*5;
     const toDay=canvas.dataset.timelineDay;
-    const valid=timelineIntervalFree(toDay,min,drag.item.durationMin+(drag.item.pauseMin||0),toDay===drag.day?drag.idx:undefined);
+    const valid=timelineIntervalFree(toDay,min,drag.item.durationMin,toDay===drag.day?drag.idx:undefined);
     const line=canvas.querySelector('[data-timeline-drop-line]');
     if(line){
       line.style.top=(row*unit)+'px';
@@ -3518,9 +3553,12 @@ function installTimelineDrag(host){
 function renderQuickPlanner(){
   const host=document.getElementById('quickPlanner');
   if(!host) return;
+  plannerConvertPausesToGapsV263();
   const days=(state.config.dates||[]).slice().sort();
   const totalAssigned=Object.values(state.assignments||{}).filter(Boolean).length;
   const remaining=plannerRemainingStudents();
+  host.classList.toggle('all-planned',remaining.length===0);
+  if(!remaining.length) window._timelineComposer=null;
   if(!days.length){
     window._timelineComposer=null;
     host.innerHTML='<div class="planner-empty"><strong>Sélectionnez d’abord un ou plusieurs jours.</strong>Les lignes du temps apparaîtront ici dès que des jours d’entretien sont choisis.</div>';
@@ -3544,37 +3582,13 @@ function renderQuickPlanner(){
       timelineAddAppointment(window._timelineComposer.day,window._timelineComposer.startMin,normalizeDurationValue(window._timelineComposer.durationMin)||(normalizeDurationValue(state.config.durationMin)||20),sid);
       return;
     }
-    const addPause=ev.target.closest('[data-timeline-add-pause]');
-    if(addPause&&window._timelineComposer){ timelineAddPauseAt(window._timelineComposer.day,window._timelineComposer.startMin,Number(addPause.dataset.timelineAddPause)); return; }
-    const addPauseCustom=ev.target.closest('[data-timeline-add-pause-custom]');
-    if(addPauseCustom&&window._timelineComposer){ const v=askCustomMinutes('pause',plannerPreferredPause(),60); if(v) timelineAddPauseAt(window._timelineComposer.day,window._timelineComposer.startMin,v); return; }
     const timeBtn=ev.target.closest('button[data-time-day]');
     if(timeBtn){ ev.stopPropagation(); openTimelineTimePicker(timeBtn); return; }
     const adjust=ev.target.closest('[data-adjust-day]');
-    if(adjust){ ev.stopPropagation(); openAppointmentAdjustPopover(adjust,adjust.dataset.adjustDay,parseInt(adjust.dataset.adjustIndex,10),false); return; }
-    const pauseEdit=ev.target.closest('[data-planner-pause-edit-day]');
-    if(pauseEdit){ ev.stopPropagation(); openAppointmentAdjustPopover(pauseEdit,pauseEdit.dataset.plannerPauseEditDay,parseInt(pauseEdit.dataset.plannerPauseEditIndex,10),true); return; }
-    const pauseBtn=ev.target.closest('[data-planner-pause-day]');
-    if(pauseBtn){
-      ev.stopPropagation();
-      const day=pauseBtn.dataset.plannerPauseDay, idx=parseInt(pauseBtn.dataset.plannerPauseIndex,10);
-      const existing=pauseAfterMinForDay(day,idx);
-      if(existing) openAppointmentAdjustPopover(pauseBtn,day,idx,true);
-      else { const v=plannerPreferredPause(); setPauseAfterForDay(day,idx,v); state.config.pauseMin=v; scheduleAdjustmentChanged(); showToast('Pause de '+v+' minutes ajoutée.'); }
-      return;
-    }
-    const pauseRemove=ev.target.closest('[data-planner-pause-remove-day]');
-    if(pauseRemove){ ev.stopPropagation(); removePauseAfterForDay(pauseRemove.dataset.plannerPauseRemoveDay,parseInt(pauseRemove.dataset.plannerPauseRemoveIndex,10)); scheduleAdjustmentChanged(); return; }
-    const del=ev.target.closest('[data-planner-delete-day]');
-    if(del){
-      ev.stopPropagation();
-      const day=del.dataset.plannerDeleteDay, idx=parseInt(del.dataset.plannerDeleteIndex,10);
-      const list=plannerAssignedItems(day).filter(x=>x.idx!==idx);
-      plannerRebuildDay(day,list,'Rendez-vous retiré.');
-      return;
-    }
+    if(adjust){ ev.stopPropagation(); openAppointmentAdjustPopover(adjust,adjust.dataset.adjustDay,parseInt(adjust.dataset.adjustIndex,10),false,true,true); return; }
     const canvas=ev.target.closest('[data-timeline-day]');
     if(canvas&&!ev.target.closest('.timeline-appt,.timeline-pause,.timeline-composer')){
+      if(!remaining.length) return;
       const r=canvas.getBoundingClientRect();
       const unit=Number(canvas.dataset.rangeUnit)||13;
       const rangeStart=Number(canvas.dataset.rangeStart)||0;
@@ -3613,7 +3627,7 @@ function renderQuickPlanner(){
     canvas.onmousemove=(ev)=>{
       const line=canvas.querySelector('[data-timeline-hover-line]');
       if(!line) return;
-      if(ev.target.closest('.timeline-appt,.timeline-pause,.timeline-composer')||document.body.classList.contains('timeline-dragging')){ line.classList.remove('show'); return; }
+      if(!remaining.length||ev.target.closest('.timeline-appt,.timeline-pause,.timeline-composer')||document.body.classList.contains('timeline-dragging')){ line.classList.remove('show'); return; }
       const r=canvas.getBoundingClientRect();
       const unit=Number(canvas.dataset.rangeUnit)||13;
       const rangeStart=Number(canvas.dataset.rangeStart)||0;
