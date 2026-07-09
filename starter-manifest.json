@@ -1,5 +1,5 @@
 {
-  "version": "v233",
+  "version": "v248",
   "files": [
     {
       "target": "server.py",
@@ -40,8 +40,8 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "546ff910383dcbd7da0276049d326829f2f3998df56f226c545f610e54a51ab5",
-      "size": 4
+      "sha256": "e73b14e6a30e28f42c98bb2d8e4e7a073afe52517d3c4fa9e8032b11b56eee18",
+      "size": 5
     },
     {
       "target": "cacert.pem",
