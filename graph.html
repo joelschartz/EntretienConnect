@@ -184,9 +184,9 @@
   .block-body{display:grid;grid-template-columns:58px repeat(var(--day-count), minmax(190px,1fr));align-items:stretch;background:#fff;overflow:visible;padding-bottom:18px}
   .block-axis,.block-day-col{display:grid;grid-template-rows:repeat(var(--rows), var(--slot-unit));position:relative;min-height:calc(var(--rows) * var(--slot-unit));box-sizing:border-box;overflow:visible}.block-axis{position:sticky;left:0;z-index:5;background:#fbfbfd;border-right:1px solid #edf0f5}.block-day-col{grid-template-columns:minmax(0,1fr);border-right:1px solid #eef1f6;background:#fff;overflow:visible}.block-day-col:last-child{border-right:none}
   .block-hour-label{grid-column:1;display:flex;align-items:flex-start;justify-content:center;border-top:1px solid #e8ebf2;color:#98a0b2;font-size:11px;font-weight:750;font-variant-numeric:tabular-nums;padding-top:3px;line-height:1;background:#fbfbfd}.block-hour-label:first-child{border-top:none}.block-hour-line{grid-column:1;border-top:1px dashed #eef1f7;pointer-events:none;z-index:0}
-  .block-appt{grid-column:1;position:relative;z-index:3;display:grid;grid-template-columns:62px minmax(0,1fr);align-items:stretch;gap:0;margin:3px var(--gutter);padding:0;border:1px solid #e4e8f1;border-radius:11px;background:#fff;box-sizing:border-box;overflow:visible;min-height:34px}.block-appt:hover{border-color:#ccd4e8;background:#fcfdff;z-index:30}.block-appt:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,124,240,.14);z-index:30}.block-appt.assigned{background:var(--accent-soft);border-color:#cdd5f6}.block-appt.past{opacity:.6;background:#fff;border-color:#e6e8ee}.block-appt select[data-key]{width:100%;min-width:0;height:100%;border:0;border-radius:0 10px 10px 0;padding:4px 26px 4px 11px;font-size:13px;box-shadow:none;background:transparent;color:var(--ink);cursor:pointer}.block-appt select[data-key]:hover,.block-appt select[data-key]:focus{background:rgba(255,255,255,.6);outline:none;box-shadow:none}.block-appt.assigned select[data-key]{font-weight:700}.block-appt.past select[data-key]{background:transparent!important;color:#a3a9b5!important;box-shadow:none!important;cursor:not-allowed;font-weight:500!important}
+  .block-appt{grid-column:1;position:relative;z-index:3;display:grid;grid-template-columns:62px minmax(0,1fr);align-items:stretch;gap:0;margin:3px var(--gutter);padding:0;border:1px solid #e4e8f1;border-radius:11px;background:#fff;box-sizing:border-box;overflow:visible;min-height:34px}.block-appt:hover{border-color:#ccd4e8;background:#fcfdff;z-index:30}.block-appt:focus-within{border-color:#c2cbe8;z-index:30}.block-appt.assigned{background:var(--accent-soft);border-color:#cdd5f6}.block-appt.past{opacity:.6;background:#fff;border-color:#e6e8ee}.block-appt select[data-key]{width:100%;min-width:0;height:100%;border:0;border-radius:0 10px 10px 0;padding:4px 26px 4px 11px;font-size:13px;box-shadow:none;background:transparent;color:var(--ink);cursor:pointer}.block-appt select[data-key]:hover,.block-appt select[data-key]:focus{background:rgba(255,255,255,.6);outline:none;box-shadow:none}.block-appt.assigned select[data-key]{font-weight:700}.block-appt.past select[data-key]{background:transparent!important;color:#a3a9b5!important;box-shadow:none!important;cursor:not-allowed;font-weight:500!important}
   .block-time-select{width:62px;min-width:62px;height:100%;border:0;border-right:1px solid #e9ecf4;border-radius:10px 0 0 10px;background:rgba(15,23,42,.015);color:#5b6478;font-size:12.5px;font-weight:750;font-variant-numeric:tabular-nums;cursor:pointer;text-align:center;padding:2px 4px;box-shadow:none;appearance:none;-webkit-appearance:none}.block-time-select:hover,.block-time-select:focus{background:rgba(108,124,240,.08);color:var(--accent-d);outline:none;box-shadow:none}.block-appt.assigned .block-time-select{color:#4a55a2;border-right-color:#d3d9f4;background:rgba(255,255,255,.35)}.block-time-select.manual{color:#7a4800;background:#fff7e8;border-right-color:#efd7aa}.block-appt.past .block-time-select{color:#a3a9b5;cursor:not-allowed;background:transparent;box-shadow:none}
-  .block-insert-pause{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);z-index:40;appearance:none;-webkit-appearance:none;border:1px solid #e2e6ef;background:#fff;color:#b6bcc9;border-radius:999px;min-width:22px;height:16px;padding:0 6px;font-weight:800;font-size:10px;line-height:14px;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.05);opacity:0;transition:opacity .12s}.block-appt:hover .block-insert-pause,.block-appt:focus-within .block-insert-pause{opacity:.85}.block-insert-pause:hover,.block-insert-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:#fff}.block-pause{grid-column:1;position:relative;z-index:24;justify-self:center;align-self:center;display:inline-flex;align-items:center;justify-content:center;gap:5px;max-width:calc(100% - var(--gutter)*2);height:17px;padding:0 4px 0 9px;border:1px solid #ecdcb6;border-radius:999px;background:#fdf6e6;color:#8f6620;font-size:10.5px;font-weight:750;letter-spacing:.01em;line-height:15px;box-shadow:none;cursor:pointer;white-space:nowrap}.block-pause:hover{background:#fbeece;border-color:#e3c789}.block-pause-remove{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border:0;background:transparent;color:#b58432;font-weight:800;font-size:12px;cursor:pointer;padding:0;margin:0;line-height:1;border-radius:999px}.block-pause-remove:hover{background:rgba(181,132,50,.16);color:#8f6620}.block-legend{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0;padding:8px 14px;color:#8a92a6;font-size:12px;border-bottom:1px solid #eef0f6;background:#fbfbfd}.block-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;color:#b6bcc9;font-weight:800}
+  .block-insert-pause{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);z-index:40;appearance:none;-webkit-appearance:none;border:1px solid #e2e6ef;background:#fff;color:#b6bcc9;border-radius:999px;min-width:22px;height:16px;padding:0 6px;font-weight:800;font-size:10px;line-height:14px;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.05);opacity:0;transition:opacity .12s}.block-appt:hover .block-insert-pause,.block-appt:focus-within .block-insert-pause{opacity:.85}.block-insert-pause:hover,.block-insert-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:#fff}.block-pause{grid-column:1;position:relative;z-index:24;align-self:stretch;display:flex;align-items:center;justify-content:center;gap:5px;margin:3px var(--gutter);min-height:20px;padding:0 6px 0 10px;border:1px solid #ecdcb6;border-radius:11px;background:#fdf6e6;color:#8f6620;font-size:11px;font-weight:750;letter-spacing:.01em;line-height:1.2;box-shadow:none;cursor:pointer;white-space:nowrap;overflow:hidden}.block-pause:hover{background:#fbeece;border-color:#e3c789}.block-pause-remove{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border:0;background:transparent;color:#b58432;font-weight:800;font-size:12px;cursor:pointer;padding:0;margin:0;line-height:1;border-radius:999px}.block-pause-remove:hover{background:rgba(181,132,50,.16);color:#8f6620}.block-legend{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0;padding:8px 14px;color:#8a92a6;font-size:12px;border-bottom:1px solid #eef0f6;background:#fbfbfd}.block-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;color:#b6bcc9;font-weight:800}
   .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:0 1px 3px rgba(28,28,45,.04)}.weekblock .schedule{border:0;border-radius:0}
   .weekblock .weekhead{font-weight:750;font-size:13.5px;letter-spacing:.01em;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid #e6e9f2;padding:11px 14px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
@@ -528,7 +528,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v248</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v249</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -807,7 +807,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 248;
+const APP_VERSION = 249;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1707,10 +1707,13 @@ function setPauseAfterForDay(day,i,min){
   dayMap[String(i)]=normalizePauseValue(min) || 5;
   state.config.pauseAfter=map;
 }
+function maxPauseMin(){ const step=5; const dur=Number(state.config.durationMin)||20; return Math.max(step, Math.floor((dur-step)/step)*step); }
 function incrementPauseAfterForDay(day,i){
   if(!day) return;
+  const step=5, maxPause=maxPauseMin();
   const current=pauseAfterMinForDay(day,i);
-  const next=current ? Math.min(60,current+5) : normalizePauseMin(state.config.pauseMin);
+  let next=current ? current+step : (normalizePauseMin(state.config.pauseMin)||step);
+  if(next>maxPause) next=maxPause; // pauses par pas de 5, jusqu'à la durée du rendez-vous moins 5
   setPauseAfterForDay(day,i,next);
 }
 function removePauseAfterForDay(day,i){
@@ -2922,6 +2925,10 @@ function renderCalendar(){
     return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="block-calendar" style="--day-count:'+days.length+'"><div class="block-head"><div class="block-corner">h</div>'+dayHeaders+'</div><div class="block-body"><div class="block-axis" style="--rows:'+bounds.rows+'">'+axis+'</div>'+dayCols+'</div></div></div></div>';
   }).join("");
   grid.innerHTML=html;
+  grid.onmousedown=(e)=>{
+    const a=document.activeElement;
+    if(a && a.tagName==="SELECT" && grid.contains(a) && a!==e.target && !(e.target.closest && e.target.closest("select"))) a.blur();
+  };
   grid.onchange=(e)=>{
     const timeSel=e.target.closest && e.target.closest('select[data-time-select-day]');
     if(timeSel){
