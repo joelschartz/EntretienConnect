@@ -182,11 +182,11 @@
   .block-head{display:grid;grid-template-columns:58px repeat(var(--day-count), minmax(190px,1fr));background:#f7f8fc;border-bottom:1px solid #e6e9f2}
   .block-corner,.block-day-head{padding:11px 12px;font-size:12.5px;font-weight:750;letter-spacing:.01em;color:#37405a;border-right:1px solid #eef0f6;white-space:nowrap}.block-corner{position:sticky;left:0;z-index:7;text-align:center;color:#8a92a6;font-weight:650;background:#f7f8fc}.block-day-head:last-child{border-right:none}
   .block-body{display:grid;grid-template-columns:58px repeat(var(--day-count), minmax(190px,1fr));align-items:stretch;background:#fff;overflow:visible;padding-bottom:18px}
-  .block-axis,.block-day-col{display:grid;grid-template-rows:repeat(var(--rows), var(--slot-unit));position:relative;min-height:calc(var(--rows) * var(--slot-unit));box-sizing:border-box;overflow:visible}.block-axis{position:sticky;left:0;z-index:5;background:#fbfbfd;border-right:1px solid #edf0f5}.block-day-col{grid-template-columns:minmax(0,1fr);border-right:1px solid #eef1f6;background:#fff;overflow:visible}.block-day-col:last-child{border-right:none}
+  .block-axis,.block-day-col{display:grid;position:relative;box-sizing:border-box;overflow:visible}.block-axis{position:sticky;left:0;z-index:5;background:#fbfbfd;border-right:1px solid #edf0f5}.block-day-col{grid-template-columns:minmax(0,1fr);border-right:1px solid #eef1f6;background:#fff;overflow:visible}.block-day-col:last-child{border-right:none}
   .block-hour-label{grid-column:1;display:flex;align-items:flex-start;justify-content:center;border-top:1px solid #e8ebf2;color:#98a0b2;font-size:11px;font-weight:750;font-variant-numeric:tabular-nums;padding-top:3px;line-height:1;background:#fbfbfd}.block-hour-label:first-child{border-top:none}.block-hour-line{grid-column:1;border-top:1px dashed #eef1f7;pointer-events:none;z-index:0}
-  .block-appt{grid-column:1;position:relative;z-index:3;display:grid;grid-template-columns:62px minmax(0,1fr);align-items:stretch;gap:0;margin:6px var(--gutter);padding:0;border:1px solid #e4e8f1;border-radius:11px;background:#fff;box-sizing:border-box;overflow:visible;min-height:34px}.block-appt:hover{border-color:#ccd4e8;background:#fcfdff;z-index:30}.block-appt:focus-within{border-color:#c2cbe8;z-index:30}.block-appt.assigned{background:var(--accent-soft);border-color:#cdd5f6}.block-appt.past{opacity:.6;background:#fff;border-color:#e6e8ee}.block-appt select[data-key]{width:100%;min-width:0;height:100%;border:0;border-radius:0 10px 10px 0;padding:4px 26px 4px 11px;font-size:13px;box-shadow:none;background:transparent;color:var(--ink);cursor:pointer}.block-appt select[data-key]:hover,.block-appt select[data-key]:focus{background:rgba(255,255,255,.6);outline:none;box-shadow:none}.block-appt.assigned select[data-key]{font-weight:700}.block-appt.past select[data-key]{background:transparent!important;color:#a3a9b5!important;box-shadow:none!important;cursor:not-allowed;font-weight:500!important}
+  .block-appt{grid-column:1;position:relative;z-index:3;display:grid;grid-template-columns:62px minmax(0,1fr);align-items:stretch;gap:0;margin:3px var(--gutter);padding:0;border:1px solid #e4e8f1;border-radius:11px;background:#fff;box-sizing:border-box;overflow:visible;min-height:34px}.block-appt:hover{border-color:#ccd4e8;background:#fcfdff;z-index:30}.block-appt:focus-within{border-color:#c2cbe8;z-index:30}.block-appt.assigned{background:var(--accent-soft);border-color:#cdd5f6}.block-appt.past{opacity:.6;background:#fff;border-color:#e6e8ee}.block-appt select[data-key]{width:100%;min-width:0;height:100%;border:0;border-radius:0 10px 10px 0;padding:4px 26px 4px 11px;font-size:13px;box-shadow:none;background:transparent;color:var(--ink);cursor:pointer}.block-appt select[data-key]:hover,.block-appt select[data-key]:focus{background:rgba(255,255,255,.6);outline:none;box-shadow:none}.block-appt.assigned select[data-key]{font-weight:700}.block-appt.past select[data-key]{background:transparent!important;color:#a3a9b5!important;box-shadow:none!important;cursor:not-allowed;font-weight:500!important}
   .block-time-select{width:62px;min-width:62px;height:100%;border:0;border-right:1px solid #e9ecf4;border-radius:10px 0 0 10px;background:rgba(15,23,42,.015);color:#5b6478;font-size:12.5px;font-weight:750;font-variant-numeric:tabular-nums;cursor:pointer;text-align:center;padding:2px 4px;box-shadow:none;appearance:none;-webkit-appearance:none}.block-time-select:hover,.block-time-select:focus{background:rgba(108,124,240,.08);color:var(--accent-d);outline:none;box-shadow:none}.block-appt.assigned .block-time-select{color:#4a55a2;border-right-color:#d3d9f4;background:rgba(255,255,255,.35)}.block-time-select.manual{color:#7a4800;background:#fff7e8;border-right-color:#efd7aa}.block-appt.past .block-time-select{color:#a3a9b5;cursor:not-allowed;background:transparent;box-shadow:none}
-  .block-insert-pause{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);z-index:40;appearance:none;-webkit-appearance:none;border:1px solid #e2e6ef;background:#fff;color:#b6bcc9;border-radius:999px;min-width:22px;height:16px;padding:0 6px;font-weight:800;font-size:10px;line-height:14px;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.05);opacity:0;transition:opacity .12s}.block-appt:hover .block-insert-pause,.block-appt:focus-within .block-insert-pause{opacity:.85}.block-insert-pause:hover,.block-insert-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:#fff}.block-pause{grid-column:1;position:relative;z-index:24;align-self:center;height:100%;display:flex;align-items:center;justify-content:center;gap:5px;margin:0 var(--gutter);min-height:22px;padding:0 6px 0 10px;border:1px solid #ecdcb6;border-radius:11px;background:#fdf6e6;color:#8f6620;font-size:11px;font-weight:750;letter-spacing:.01em;line-height:1.2;box-shadow:none;cursor:pointer;white-space:nowrap;overflow:hidden}.block-pause:hover{background:#fbeece;border-color:#e3c789}.block-pause-remove{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border:0;background:transparent;color:#b58432;font-weight:800;font-size:12px;cursor:pointer;padding:0;margin:0;line-height:1;border-radius:999px}.block-pause-remove:hover{background:rgba(181,132,50,.16);color:#8f6620}.block-legend{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0;padding:8px 14px;color:#8a92a6;font-size:12px;border-bottom:1px solid #eef0f6;background:#fbfbfd}.block-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;color:#b6bcc9;font-weight:800}
+  .block-insert-pause{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);z-index:40;appearance:none;-webkit-appearance:none;border:1px solid #e2e6ef;background:#fff;color:#b6bcc9;border-radius:999px;min-width:22px;height:16px;padding:0 6px;font-weight:800;font-size:10px;line-height:14px;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.05);opacity:0;transition:opacity .12s}.block-appt:hover .block-insert-pause,.block-appt:focus-within .block-insert-pause{opacity:.85}.block-insert-pause:hover,.block-insert-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:#fff}.block-pause{grid-column:1;position:relative;z-index:24;align-self:stretch;display:flex;align-items:center;justify-content:center;gap:5px;margin:3px var(--gutter);min-height:0;padding:0 6px 0 10px;border:1px solid #ecdcb6;border-radius:11px;background:#fdf6e6;color:#8f6620;font-size:11px;font-weight:750;letter-spacing:.01em;line-height:1.2;box-shadow:none;cursor:pointer;white-space:nowrap;overflow:hidden}.block-pause:hover{background:#fbeece;border-color:#e3c789}.block-pause-remove{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border:0;background:transparent;color:#b58432;font-weight:800;font-size:12px;cursor:pointer;padding:0;margin:0;line-height:1;border-radius:999px}.block-pause-remove:hover{background:rgba(181,132,50,.16);color:#8f6620}.block-legend{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0;padding:8px 14px;color:#8a92a6;font-size:12px;border-bottom:1px solid #eef0f6;background:#fbfbfd}.block-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;color:#b6bcc9;font-weight:800}
   .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:0 1px 3px rgba(28,28,45,.04)}.weekblock .schedule{border:0;border-radius:0}
   .weekblock .weekhead{font-weight:750;font-size:13.5px;letter-spacing:.01em;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid #e6e9f2;padding:11px 14px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
@@ -528,7 +528,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v250</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v251</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -807,7 +807,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 250;
+const APP_VERSION = 251;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2883,14 +2883,20 @@ function renderCalendar(){
     const monLbl=new Date(wk+"T00:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
     const daySlots={};
     days.forEach(d=>{ daySlots[d]=slotsForDate(d); });
-    const bounds=makeBlockTimelineBounds(days, daySlots);
-    const hours=blockHourLabels(bounds);
     const assignList=assignmentStudents();
     const assignEntries=Object.entries(state.assignments);
+    // v251: disposition compacte — chaque rendez-vous = une ligne de hauteur fixe (indépendante de la durée) ;
+    // les pauses = une ligne compacte réservée globalement pour garder les colonnes alignées.
+    const APPT_ROW=46, PAUSE_ROW=34;
+    const gPause=[]; for(let i=0;i<count;i++){ let m=0; days.forEach(d=>{ m=Math.max(m, pauseAfterMinForDay(d,i)||0); }); gPause[i]=m; }
+    const rowH=[]; for(let i=0;i<count;i++){ rowH.push(APPT_ROW); rowH.push((i<count-1 && gPause[i]>0) ? PAUSE_ROW : 0); }
+    const rowsCss=rowH.map(h=>h+'px').join(' ');
+    const apptRow=i=>2*i+1, pauseRow=i=>2*i+2;
+    const hourMarks=[]; { let last=null, ref=timeToMin(state.config.start); const dur=Number(state.config.durationMin)||0; for(let i=0;i<count;i++){ const h=Math.floor(ref/60)*60; if(h!==last){ hourMarks.push({min:h,row:apptRow(i)}); last=h; } ref+=dur+(gPause[i]||0); } }
     const dayHeaders=days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<div class="block-day-head">'+esc(lbl)+'</div>'; }).join("");
-    const axis=hours.map(h=>'<div class="block-hour-label" style="grid-row:'+h.row+' / span '+h.span+'">'+esc(minToTime(h.min))+'</div>').join("");
+    const axis=hourMarks.map(h=>'<div class="block-hour-label" style="grid-row:'+h.row+'">'+esc(minToTime(h.min))+'</div>').join("");
     const dayCols=days.map(d=>{
-      const hourLines=hours.map(h=>'<div class="block-hour-line" style="grid-row:'+h.row+' / span 1"></div>').join("");
+      const hourLines=hourMarks.map(h=>'<div class="block-hour-line" style="grid-row:'+h.row+' / span 1"></div>').join("");
       const items=(daySlots[d]||[]).map(slot=>{
         const i=slot.idx, key=d+"__"+i, sel=state.assignments[key]||"";
         const isPast=appointmentDateTime(d, slot.end) <= now;
@@ -2898,14 +2904,11 @@ function renderCalendar(){
         const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
         const manual=hasTimeOverrideForDay(d,i);
         const timeCls='block-time-select'+(manual?' manual':'');
-        const startRow=blockGridRow(slot.startMin,bounds);
-        const span=blockSpan(slot.startMin,slot.endMin);
-        const style='grid-row:'+startRow+' / span '+span;
         let insert='';
         if(i<count-1 && !isPast && !pauseAfterMinForDay(d,i)){
           insert='<button type="button" class="block-insert-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Ajouter une pause : +5 min après ce rendez-vous">Ⅱ</button>';
         }
-        return '<div class="'+cls.join(' ')+'" style="'+style+'">'
+        return '<div class="'+cls.join(' ')+'" style="grid-row:'+apptRow(i)+'">'
           +'<select class="'+timeCls+'" data-time-select-day="'+d+'" data-time-select-index="'+i+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous">'+timeSelectOptions(d,i,slot.startMin)+'</select>'
           +'<select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key,assignList,assignEntries)+'</select>'
           +insert
@@ -2915,14 +2918,12 @@ function renderCalendar(){
         if(slot.idx>=count-1) return '';
         const pause=pauseAfterMinForDay(d,slot.idx);
         if(!pause) return '';
-        const row=blockGridRow(slot.endMin,bounds);
-        const span=Math.max(1, Math.round(pause/5));
-        return '<div class="block-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+slot.idx+'" style="grid-row:'+row+' / span '+span+'" title="Pause après '+esc(minToTime(slot.startMin))+' — cliquer pour ajouter 5 min">Pause '+pause+' min <button type="button" class="block-pause-remove" data-pause-remove-day="'+d+'" data-pause-remove-index="'+slot.idx+'" aria-label="Supprimer la pause">×</button></div>';
+        return '<div class="block-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+slot.idx+'" style="grid-row:'+pauseRow(slot.idx)+'" title="Pause après '+esc(minToTime(slot.startMin))+' — cliquer pour ajouter 5 min">Pause '+pause+' min <button type="button" class="block-pause-remove" data-pause-remove-day="'+d+'" data-pause-remove-index="'+slot.idx+'" aria-label="Supprimer la pause">×</button></div>';
       }).join("");
-      return '<div class="block-day-col" style="--rows:'+bounds.rows+'">'+hourLines+items+pauses+'</div>';
+      return '<div class="block-day-col" style="grid-template-rows:'+rowsCss+'">'+hourLines+items+pauses+'</div>';
     }).join("");
     const legend='<div class="block-legend"><span class="mini-ii">Ⅱ</span><span>Pause : clic = +5 min</span><span>·</span><span>× = supprimer</span><span>·</span><span>Chaque jour = une colonne</span></div>';
-    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="block-calendar" style="--day-count:'+days.length+'"><div class="block-head"><div class="block-corner">h</div>'+dayHeaders+'</div><div class="block-body"><div class="block-axis" style="--rows:'+bounds.rows+'">'+axis+'</div>'+dayCols+'</div></div></div></div>';
+    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="block-calendar" style="--day-count:'+days.length+'"><div class="block-head"><div class="block-corner">h</div>'+dayHeaders+'</div><div class="block-body"><div class="block-axis" style="grid-template-rows:'+rowsCss+'">'+axis+'</div>'+dayCols+'</div></div></div></div>';
   }).join("");
   grid.innerHTML=html;
   grid.onmousedown=(e)=>{
