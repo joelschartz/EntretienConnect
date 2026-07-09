@@ -138,56 +138,10 @@
   .schedule th,.schedule td{border-right:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:middle}
   .schedule th:last-child,.schedule td:last-child{border-right:none}
   .schedule th{background:#f8f8fb;font-size:12px;white-space:nowrap;color:var(--ink)}
-  .schedule td.td-time,.schedule .th-time{white-space:nowrap;font-weight:750;font-variant-numeric:tabular-nums;background:#fbfbfe;position:sticky;left:0;z-index:1;width:92px;min-width:92px;max-width:92px;text-align:center;color:#667085}
+  .schedule td.td-time,.schedule .th-time{white-space:nowrap;font-weight:750;font-variant-numeric:tabular-nums;background:#fbfbfe;position:sticky;left:0;z-index:1;width:132px;min-width:132px;max-width:132px}
   .schedule select{min-width:145px;padding:7px 8px;border-radius:9px}
-  .schedule td.appt-cell{padding:5px 7px}.cell-time{font-size:11.5px;font-weight:800;color:#667085;font-variant-numeric:tabular-nums;margin:0 0 4px;white-space:nowrap}.schedule td.assigned{background:var(--accent-soft)}.schedule td.assigned .cell-time{color:#4a55a2}.schedule td.assigned select{border-color:var(--accent);font-weight:700;color:var(--ink);background:#fff}.schedule td.past{background:#fff;color:#98a2b3}.schedule td.past .cell-time{color:#98a2b3}.schedule td.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important;box-shadow:none!important}.schedule td.past.assigned{background:#fff}.schedule td.td-time.past-time{background:#fbfbfe;color:#98a2b3}
-  .schedule tr.pause-row td{padding:0 7px;background:#fff;border-right:1px solid var(--line);height:4px;line-height:1;vertical-align:middle}.schedule tr.pause-row td:last-child{border-right:none}.schedule tr.pause-row .pause-time{background:#fbfbfe;position:sticky;left:0;z-index:1;width:92px;min-width:92px;max-width:92px;text-align:center}.pause-slot{position:relative;display:flex;align-items:center;justify-content:center;min-height:4px;color:#98a2b3;font-size:11.5px;white-space:nowrap}.pause-insert,.pause-remove{appearance:none;-webkit-appearance:none;border:1px solid #e4e7ec;background:#fff;color:#667085;border-radius:999px;min-width:26px;height:18px;padding:0 8px;font-weight:850;font-size:12px;line-height:16px;cursor:pointer;box-shadow:none}.pause-slot.idle .pause-insert{position:absolute;top:-9px;opacity:.45;z-index:2}.pause-slot.idle .pause-insert:hover,.pause-slot.idle .pause-insert:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.schedule tr.pause-row.has-active td{height:28px}.pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}.pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}.pause-remove:hover{background:#fff3df;border-color:#dcae65}.pause-note{margin-top:8px}
-  .schedule-scroll{overflow-x:auto;overflow-y:visible;border-radius:0 0 14px 14px;background:#fff;padding-bottom:8px}
-  .schedule-grid{--day-count:1;min-width:calc(66px + (var(--day-count) * 205px));font-size:13px;background:#fff}
-  .schedule-head,.appt-grid-row,.pause-grid-row{display:grid;grid-template-columns:56px minmax(0,1fr)}
-  .rdv-head,.rdv-num,.pause-gutter{background:#fbfbfe;border-right:1px solid var(--line);position:sticky;left:0;z-index:3;text-align:center;color:#667085}
-  .rdv-head{padding:7px 6px;font-size:12px;font-weight:800;border-bottom:1px solid var(--line)}
-  .rdv-num{display:flex;align-items:center;justify-content:center;font-weight:800;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--line);min-height:42px}
-  .rdv-num.past-time{color:#98a2b3}
-  .days-head,.appt-blocks,.pause-days{display:grid;grid-template-columns:repeat(var(--day-count), minmax(170px, 1fr));min-width:0}
-  .day-head{background:#f8f8fb;font-size:12px;white-space:nowrap;color:var(--ink);font-weight:800;padding:7px 8px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .day-head:last-child{border-right:none}
-  .appt-blocks{align-items:stretch}
-  .timegroup{display:grid;grid-template-columns:92px minmax(0,1fr);min-width:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff}
-  .timegroup:last-child{border-right:none}
-  .block-time{display:flex;align-items:center;justify-content:center;padding:5px 6px;background:#fbfbfe;border-right:1px solid var(--line);font-weight:800;font-size:12px;color:#667085;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .timegroup.past-timegroup .block-time{color:#98a2b3}
-  .block-cells{display:grid;min-width:0}
-  .appt-cell{padding:5px 7px;border-right:1px solid var(--line);min-width:0;background:#fff}
-  .block-cells .appt-cell:last-child{border-right:none}
-  .appt-cell select{width:100%;min-width:0;padding:7px 8px;border-radius:9px}
-  .appt-cell.assigned{background:var(--accent-soft)}
-  .appt-cell.assigned select{border-color:var(--accent);font-weight:700;color:var(--ink);background:#fff}
-  .appt-cell.past{background:#fff;color:#98a2b3}
-  .appt-cell.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important;box-shadow:none!important}
-  .pause-grid-row{min-height:4px}
-  .pause-gutter{min-height:4px;line-height:1;background:#fbfbfe}
-  .pause-days{min-height:4px;background:#fff}
-  .schedule-grid .pause-day{position:relative;min-height:4px;border-right:1px solid var(--line);padding:0 7px;background:#fff}
-  .schedule-grid .pause-day:last-child{border-right:none}
-  .schedule-grid .pause-slot{position:relative;display:flex;align-items:center;justify-content:center;min-height:4px;color:#98a2b3;font-size:11.5px;white-space:nowrap}
-  .schedule-grid .pause-insert,.schedule-grid .pause-remove{appearance:none;-webkit-appearance:none;border:1px solid #e4e7ec;background:#fff;color:#667085;border-radius:999px;min-width:26px;height:18px;padding:0 8px;font-weight:850;font-size:12px;line-height:16px;cursor:pointer;box-shadow:none}
-  .schedule-grid .pause-slot.idle .pause-insert{position:absolute;top:-9px;opacity:.48;z-index:2}
-  .schedule-grid .pause-slot.idle .pause-insert:hover,.schedule-grid .pause-slot.idle .pause-insert:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
-  .pause-grid-row.has-active .pause-gutter,.pause-grid-row.has-active .pause-day{min-height:30px}
-  .schedule-grid .pause-slot.active{min-height:22px;margin:3px 0;border:1px dashed #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-weight:750;gap:8px}
-  .schedule-grid .pause-remove{height:19px;min-width:22px;padding:0 7px;color:#a4691a;border-color:#efd7aa;background:#fff}
-  .schedule-grid .pause-remove:hover{background:#fff3df;border-color:#dcae65}
-  .block-calendar{--slot-unit:9px;min-width:calc(48px + (var(--day-count) * 188px));background:#fff;color:var(--ink);padding-bottom:10px;overflow:visible}
-  .block-head{display:grid;grid-template-columns:48px repeat(var(--day-count), minmax(176px,1fr));background:#fafbfe;border-bottom:1px solid #e8ebf2}
-  .block-corner,.block-day-head{padding:8px 9px;font-size:12px;font-weight:850;color:var(--ink);border-right:1px solid #edf0f5;white-space:nowrap}.block-corner{position:sticky;left:0;z-index:7;text-align:center;color:#667085;background:#fafbfe}.block-day-head:last-child{border-right:none}
-  .block-body{display:grid;grid-template-columns:48px repeat(var(--day-count), minmax(176px,1fr));align-items:stretch;background:#fff;overflow:visible;padding-bottom:12px}
-  .block-axis,.block-day-col{display:grid;grid-template-rows:repeat(var(--rows), var(--slot-unit));position:relative;min-height:calc(var(--rows) * var(--slot-unit));box-sizing:border-box;overflow:visible}.block-axis{position:sticky;left:0;z-index:5;background:#fbfbfe;border-right:1px solid #edf0f5}.block-day-col{grid-template-columns:minmax(0,1fr);border-right:1px solid #f0f2f7;background:#fff;overflow:visible}.block-day-col:last-child{border-right:none}
-  .block-hour-label{grid-column:1;display:flex;align-items:flex-start;justify-content:center;border-top:1px solid #e8ebf2;color:#667085;font-size:11px;font-weight:850;font-variant-numeric:tabular-nums;padding-top:2px;line-height:1;background:#fbfbfe}.block-hour-label:first-child{border-top:none}.block-hour-line{grid-column:1;border-top:1px solid #f1f3f8;pointer-events:none;z-index:0}
-  .block-appt{grid-column:1;position:relative;z-index:2;display:grid;grid-template-columns:70px minmax(0,1fr);align-items:center;gap:6px;margin:2px 10px;padding:2px 4px;border:0;border-radius:11px;background:#fff;box-sizing:border-box;box-shadow:none;overflow:visible;min-height:31px}.block-appt:hover{background:#fbfbff}.block-appt.assigned{background:var(--accent-soft)}.block-appt.past{opacity:.62;background:#fff}.block-appt select[data-key]{width:100%;min-width:0;height:28px;border:0;border-radius:8px;padding:3px 8px;font-size:13px;box-shadow:none;background:transparent;color:var(--ink)}.block-appt select[data-key]:hover,.block-appt select[data-key]:focus{background:#fff;box-shadow:inset 0 0 0 1px #d9deea;outline:none}.block-appt.assigned select[data-key]{background:#fff;box-shadow:inset 0 0 0 1px var(--accent);font-weight:700}.block-appt.past select[data-key]{background:transparent!important;color:#98a2b3!important;box-shadow:none!important;cursor:not-allowed;font-weight:500!important}
-  .block-time-select{width:66px;min-width:66px;height:28px;border:0;border-radius:8px;background:transparent;color:#667085;font-size:12.5px;font-weight:850;font-variant-numeric:tabular-nums;cursor:pointer;text-align:center;padding:2px 18px 2px 4px;box-shadow:none;appearance:auto}.block-time-select:hover,.block-time-select:focus{background:#fff;box-shadow:inset 0 0 0 1px #d9deea;outline:none}.block-time-select.manual{color:#7a4800;background:#fff7e8;box-shadow:inset 0 0 0 1px #efd7aa}.block-appt.past .block-time-select{color:#98a2b3;cursor:not-allowed;background:transparent;box-shadow:none}
-  .block-insert-pause{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);z-index:20;appearance:none;-webkit-appearance:none;border:1px solid #e7eaf1;background:rgba(255,255,255,.96);color:#98a2b3;border-radius:999px;min-width:22px;height:17px;padding:0 6px;font-weight:850;font-size:10.5px;line-height:15px;cursor:pointer;box-shadow:0 1px 3px rgba(15,23,42,.05);opacity:.46}.block-insert-pause:hover,.block-insert-pause:focus{opacity:1;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.block-pause{grid-column:1;position:relative;z-index:18;justify-self:center;align-self:center;display:inline-flex;align-items:center;justify-content:center;gap:4px;max-width:122px;height:18px;padding:0 9px;border:1px solid #efd7aa;border-radius:999px;background:#fff7e8;color:#8a5a18;font-size:11px;font-weight:850;line-height:16px;box-shadow:0 1px 2px rgba(15,23,42,.04);cursor:pointer}.block-pause:hover{background:#fff3df;border-color:#e7bf7d}.block-pause-remove{border:0;background:transparent;color:#a4691a;font-weight:900;cursor:pointer;padding:0;margin:0 0 0 2px;line-height:1}.block-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0;padding:6px 12px;color:#667085;font-size:12.5px;border-bottom:1px solid #f1f3f8;background:#fff}.block-legend .mini-ii{border:1px solid #e4e7ec;border-radius:999px;padding:0 8px;background:#fff;font-weight:850}
-  .weekblock{margin-bottom:18px;border-radius:14px;overflow:visible;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
+  .schedule td.assigned{background:var(--accent-soft)}.schedule td.assigned select{border-color:var(--accent);font-weight:700;color:var(--ink);background:#fff}.schedule td.past{background:#fff;color:#98a2b3}.schedule td.past select{background:#fff!important;color:#98a2b3!important;border-color:#e4e7ec!important;cursor:not-allowed;font-weight:500!important;box-shadow:none!important}.schedule td.past.assigned{background:#fff}.schedule td.td-time.past-time{background:#fbfbfe;color:#98a2b3}
+  .weekblock{margin-bottom:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}.weekblock .schedule{border:0;border-radius:0}
   .weekblock .weekhead{font-weight:750;font-size:13px;color:#4a55a2;background:#f4f5fe;border-bottom:1px solid var(--line);padding:9px 12px}
   .acct{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--ok-soft);border:1px solid #bfe5d1;border-radius:14px}
   #mailTemplatePreview{display:none}
@@ -540,7 +494,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v245</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v236</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -637,9 +591,7 @@ Langues : FR, DE, EN, LU">?</span>
         <div><label>Début</label><input type="time" id="cfgStart"></div>
         <div><label>Fin</label><input type="time" id="cfgEnd"></div>
         <div><label>Durée par rendez-vous (min)</label><input type="number" id="cfgDur" min="5" max="120" step="5"></div>
-        <div><label>Pause à insérer</label><select id="cfgPause"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
       </div>
-      <p class="hint pause-note">Cliquez sur « Ⅱ » entre deux rendez-vous pour insérer une pause individuelle. Les rendez-vous restent alignés par heure ; seules les heures pleines sont indiquées à gauche. Cliquez sur l’heure d’un rendez-vous pour forcer un nouveau départ en pas de 5 minutes.</p>
     </div>
     <div class="card">
       <div class="card-head"><h2>Jours d’entretien</h2><span id="resetCalRow" style="display:none"><a href="#" id="resetCal" class="icon-btn" title="Réinitialiser le calendrier &amp; les rendez-vous">↺</a></span></div>
@@ -819,7 +771,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 245;
+const APP_VERSION = 236;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1276,7 +1228,7 @@ function defaultState(){
   return {
     appVersion: APP_VERSION,
     students: [],
-    config: { dates: [], start:"14:00", end:"18:00", durationMin:20, pauseMin:5, pauseAfter:{}, timeOverrides:{} },
+    config: { dates: [], start:"14:00", end:"18:00", durationMin:20 },
     assignments: {}, sent: [], reminderSent: [], subjectOverrides: {},
     reminderAttachments: {},
     ebOverrides: {},
@@ -1436,9 +1388,6 @@ function normalizeStateObject(s){
     // v13: Signatur-Logo als feste Auswahl: UNESCO / Eigenes Logo / Aucun logo.
     if((s.appVersion||0) < 13 && options.logoMode !== "custom"){ options.includeLogo = true; options.logoMode = "unesco"; }
     const config = Object.assign({}, d.config, s.config||{});
-    config.pauseMin = normalizePauseMin(config.pauseMin);
-    config.pauseAfter = normalizePauseAfter(config.pauseAfter);
-    config.timeOverrides = normalizeTimeOverrides(config.timeOverrides);
     if((s.appVersion||0) < 82 && config.start==="14:00" && config.end==="16:00" && Number(config.durationMin||20)===20){
       config.end="18:00";
     }
@@ -1576,7 +1525,7 @@ function setCalendarViewToToday(){
 }
 function clearWorkSession(){
   state.students=[];
-  state.config=Object.assign({}, state.config||{}, {dates:[], start:"14:00", end:"18:00", durationMin:20, pauseMin:5, pauseAfter:{}, timeOverrides:{}});
+  state.config=Object.assign({}, state.config||{}, {dates:[], start:"14:00", end:"18:00", durationMin:20});
   setCalendarViewToToday();
   state.assignments={};
   state.overrides={};
@@ -1654,216 +1603,9 @@ function updateNewSessionButton(){
   if(btn) btn.style.display = hasSentStatus ? "inline-block" : "none";
 }
 
-function timeToMin(t){ const [h,m]=String(t||"00:00").split(":").map(Number); return (Number(h)||0)*60+(Number(m)||0); }
-function minToTime(x){ x=Number(x)||0; return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0"); }
-function normalizePauseMin(v){ v=Number(v)||5; return [5,10,15].includes(v) ? v : 5; }
-function normalizePauseValue(v){ v=Number(v)||0; v=Math.round(v/5)*5; return (v>=5 && v<=60) ? v : 0; }
-const LEGACY_GLOBAL_PAUSE_KEY="__global";
-function normalizePauseAfter(raw){
-  const out={};
-  if(raw && typeof raw==="object"){
-    Object.keys(raw).forEach(k=>{
-      const v=raw[k];
-      if(/^\d+$/.test(String(k))){
-        const min=normalizePauseValue(v);
-        if(min){ (out[LEGACY_GLOBAL_PAUSE_KEY]=out[LEGACY_GLOBAL_PAUSE_KEY]||{})[String(parseInt(k,10))]=min; }
-        return;
-      }
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(String(k)) && k!==LEGACY_GLOBAL_PAUSE_KEY) return;
-      const dayMap={};
-      if(v && typeof v==="object"){
-        Object.keys(v).forEach(idxKey=>{
-          const idx=parseInt(idxKey,10), min=normalizePauseValue(v[idxKey]);
-          if(Number.isFinite(idx) && idx>=0) dayMap[String(idx)]=min;
-        });
-      }
-      if(Object.keys(dayMap).length) out[String(k)]=dayMap;
-    });
-  }
-  return out;
-}
-function normalizeTimeOverrides(raw){
-  const out={};
-  if(raw && typeof raw==="object"){
-    Object.keys(raw).forEach(day=>{
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(String(day))) return;
-      const src=raw[day], dayMap={};
-      if(src && typeof src==="object"){
-        Object.keys(src).forEach(idxKey=>{
-          const idx=parseInt(idxKey,10);
-          let min=Number(src[idxKey]);
-          if(typeof src[idxKey]==="string" && /^\d{1,2}:\d{2}$/.test(src[idxKey])) min=timeToMin(src[idxKey]);
-          if(Number.isFinite(idx) && idx>=0 && Number.isFinite(min)){
-            min=Math.max(0,Math.min(23*60+55,Math.round(min/5)*5));
-            dayMap[String(idx)]=min;
-          }
-        });
-      }
-      if(Object.keys(dayMap).length) out[String(day)]=dayMap;
-    });
-  }
-  return out;
-}
-function baseSlotCount(){ const a=timeToMin(state.config.start), b=timeToMin(state.config.end), d=Number(state.config.durationMin)||0; if(d<=0 || b<=a) return 0; return Math.floor((b-a)/d); }
-function dayPauseMap(day){
-  const map=normalizePauseAfter(state.config.pauseAfter);
-  return (day && map[day]) ? map[day] : (map[LEGACY_GLOBAL_PAUSE_KEY] || {});
-}
-function pauseAfterMinForDay(day,i){ const v=dayPauseMap(day)[String(i)]; return v ? normalizePauseValue(v) : 0; }
-function pauseAfterMin(i){ return pauseAfterMinForDay(null,i); }
-function setPauseAfterForDay(day,i,min){
-  if(!day) return;
-  const map=normalizePauseAfter(state.config.pauseAfter);
-  if(map[LEGACY_GLOBAL_PAUSE_KEY] && !map[day]) delete map[LEGACY_GLOBAL_PAUSE_KEY];
-  const dayMap=map[day]=map[day]||{};
-  dayMap[String(i)]=normalizePauseValue(min) || 5;
-  state.config.pauseAfter=map;
-}
-function incrementPauseAfterForDay(day,i){
-  if(!day) return;
-  const current=pauseAfterMinForDay(day,i);
-  const next=current ? Math.min(60,current+5) : normalizePauseMin(state.config.pauseMin);
-  setPauseAfterForDay(day,i,next);
-}
-function removePauseAfterForDay(day,i){
-  if(!day) return;
-  const map=normalizePauseAfter(state.config.pauseAfter);
-  if(map[day]){ delete map[day][String(i)]; if(!Object.keys(map[day]).length) delete map[day]; }
-  if(map[LEGACY_GLOBAL_PAUSE_KEY]){ delete map[LEGACY_GLOBAL_PAUSE_KEY][String(i)]; if(!Object.keys(map[LEGACY_GLOBAL_PAUSE_KEY]).length) delete map[LEGACY_GLOBAL_PAUSE_KEY]; }
-  state.config.pauseAfter=map;
-}
-function dayTimeOverrideMap(day){
-  const map=normalizeTimeOverrides(state.config.timeOverrides);
-  return (day && map[day]) ? map[day] : {};
-}
-function timeOverrideForDay(day,i){
-  const v=dayTimeOverrideMap(day)[String(i)];
-  return Number.isFinite(Number(v)) ? Number(v) : null;
-}
-function setTimeOverrideForDay(day,i,min){
-  if(!day) return;
-  const map=normalizeTimeOverrides(state.config.timeOverrides);
-  const dayMap=map[day]=map[day]||{};
-  dayMap[String(i)]=Math.max(0,Math.min(23*60+55,Math.round(Number(min)/5)*5));
-  state.config.timeOverrides=map;
-}
-function removeTimeOverrideForDay(day,i){
-  if(!day) return;
-  const map=normalizeTimeOverrides(state.config.timeOverrides);
-  if(map[day]){ delete map[day][String(i)]; if(!Object.keys(map[day]).length) delete map[day]; }
-  state.config.timeOverrides=map;
-}
-function hasTimeOverrideForDay(day,i){ return timeOverrideForDay(day,i)!==null; }
-function slotsForDate(day){
-  const a=timeToMin(state.config.start), d=Number(state.config.durationMin)||0, count=baseSlotCount(), out=[];
-  if(d<=0 || count<=0) return out;
-  let t=a;
-  for(let i=0;i<count;i++){
-    const ov=timeOverrideForDay(day,i);
-    if(ov!==null){
-      const prev=out.length ? out[out.length-1] : null;
-      t = prev ? Math.max(ov, prev.endMin) : ov;
-    }
-    const startMin=t, endMin=t+d;
-    out.push({start:minToTime(startMin), end:minToTime(endMin), startMin, endMin, idx:i});
-    if(i<count-1){
-      const pause=pauseAfterMinForDay(day,i);
-      // v245: pause = vraie coupure APRÈS le bloc de rendez-vous.
-      // Exemple avec durée 20 : 14:40–15:00, pause 5, puis 15:05.
-      t = endMin + pause;
-    }
-  }
-  return out;
-}
-function slots(){ return slotsForDate(null); }
-function timeSelectOptions(day, idx, currentMin){
-  const a=timeToMin(state.config.start), b=timeToMin(state.config.end), d=Number(state.config.durationMin)||20;
-  const current=Math.max(0,Math.min(23*60+55,Math.round(Number(currentMin)/5)*5));
-  const lo=Math.max(0, Math.min(a,current)-Math.max(60,d*2));
-  const hi=Math.min(23*60+55, Math.max(b,current)+Math.max(120,d*3));
-  const manual=hasTimeOverrideForDay(day,idx);
-  const opts=[];
-  if(manual) opts.push('<option value="auto">↺ auto</option>');
-  let hasCurrent=false;
-  for(let m=Math.floor(lo/5)*5; m<=Math.ceil(hi/5)*5; m+=5){
-    if(m<0 || m>23*60+55) continue;
-    const sel=current===m ? ' selected' : '';
-    if(current===m) hasCurrent=true;
-    opts.push('<option value="'+m+'"'+sel+'>'+minToTime(m)+'</option>');
-  }
-  if(!hasCurrent){ opts.push('<option value="'+current+'" selected>'+minToTime(current)+'</option>'); }
-  return opts.join("");
-}
-function makeBlockTimelineBounds(days, daySlots){
-  const vals=[];
-  const a=timeToMin(state.config.start), b=timeToMin(state.config.end);
-  if(Number.isFinite(a)) vals.push(a);
-  if(Number.isFinite(b)) vals.push(b);
-  days.forEach(d=>(daySlots[d]||[]).forEach(s=>{ vals.push(s.startMin); vals.push(s.endMin); const p=pauseAfterMinForDay(d,s.idx); if(p) vals.push(s.endMin+p); }));
-  const finite=vals.filter(Number.isFinite);
-  let min=finite.length ? Math.min(...finite) : a;
-  let max=finite.length ? Math.max(...finite) : b;
-  min=Math.max(0, Math.floor(min/60)*60);
-  max=Math.min(24*60, Math.ceil(max/60)*60);
-  if(max<=min) max=min+60;
-  const rows=Math.max(12, Math.ceil((max-min)/5));
-  return {startMin:min, endMin:max, rows};
-}
-function blockGridRow(min, bounds){
-  return Math.max(1, Math.round((Number(min)-bounds.startMin)/5)+1);
-}
-function blockSpan(startMin,endMin){
-  return Math.max(1, Math.round((Number(endMin)-Number(startMin))/5));
-}
-function blockHourLabels(bounds){
-  const out=[];
-  for(let h=bounds.startMin; h<=bounds.endMin; h+=60){
-    const row=blockGridRow(h,bounds);
-    if(row<=bounds.rows) out.push({min:h,row,span:Math.min(12, bounds.rows-row+1)});
-  }
-  return out;
-}
-function closeTimelineTimePicker(){
-  const old=document.getElementById("tlTimePopover");
-  if(old) old.remove();
-}
-function openTimelineTimePicker(btn){
-  if(!btn || btn.disabled) return;
-  const day=btn.dataset.timeDay;
-  const idx=parseInt(btn.dataset.timeIndex,10);
-  const current=Number(btn.dataset.timeCurrent);
-  if(!day || !Number.isFinite(idx)) return;
-  closeTimelineTimePicker();
-  const pop=document.createElement("div");
-  pop.id="tlTimePopover";
-  pop.className="tl-time-popover";
-  pop.innerHTML='<select aria-label="Choisir l’heure">'+timeSelectOptions(day,idx,current)+'</select>';
-  document.body.appendChild(pop);
-  const r=btn.getBoundingClientRect();
-  const popW=pop.offsetWidth || 120;
-  const left=Math.max(8, Math.min(window.scrollX+r.left, window.scrollX+document.documentElement.clientWidth-popW-8));
-  pop.style.left=left+"px";
-  pop.style.top=(window.scrollY+r.bottom+4)+"px";
-  const sel=pop.querySelector("select");
-  sel.focus();
-  sel.onchange=()=>{
-    if(sel.value==="auto") removeTimeOverrideForDay(day,idx);
-    else setTimeOverrideForDay(day,idx,Number(sel.value));
-    closeTimelineTimePicker();
-    scheduleChanged();
-  };
-}
-if(!window.__timelineTimePickerCloseInstalled){
-  window.__timelineTimePickerCloseInstalled=true;
-  document.addEventListener("click", function(ev){
-    const pop=document.getElementById("tlTimePopover");
-    if(!pop) return;
-    if(pop.contains(ev.target)) return;
-    if(ev.target.closest && ev.target.closest("button[data-time-day]")) return;
-    closeTimelineTimePicker();
-  }, true);
-  document.addEventListener("keydown", function(ev){ if(ev.key==="Escape") closeTimelineTimePicker(); }, true);
-}
+function timeToMin(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
+function minToTime(x){ return String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0"); }
+function slots(){ const a=timeToMin(state.config.start), b=timeToMin(state.config.end), d=Number(state.config.durationMin)||0; const out=[]; if(d>0){ for(let t=a;t+d<=b;t+=d) out.push({start:minToTime(t), end:minToTime(t+d)}); } return out; }
 function fillPlain(tpl,map){ return Object.keys(map).reduce((s,k)=>s.split("{"+k+"}").join(map[k]), tpl||""); }
 function fillHtml(tpl,map){ const safe={}; Object.keys(map).forEach(k=>safe[k]=escHtml(map[k])); return fillPlain(tpl||"", safe); }
 function sanitizeHtml(html){
@@ -2817,16 +2559,10 @@ document.getElementById("csvFile").onchange=e=>{
 };
 
 /* Calendar */
-const $start=document.getElementById("cfgStart"), $end=document.getElementById("cfgEnd"), $dur=document.getElementById("cfgDur"), $pause=document.getElementById("cfgPause");
-function initCfgInputs(){ $start.value=state.config.start; $end.value=state.config.end; $dur.value=state.config.durationMin; if($pause) $pause.value=normalizePauseMin(state.config.pauseMin); }
-let calendarRenderRaf=null;
-function requestCalendarRender(){
-  if(calendarRenderRaf) cancelAnimationFrame(calendarRenderRaf);
-  calendarRenderRaf=requestAnimationFrame(()=>{ calendarRenderRaf=null; renderCalendar(); });
-}
-function scheduleChanged(){ state.config.pauseMin=normalizePauseMin(state.config.pauseMin); state.config.pauseAfter=normalizePauseAfter(state.config.pauseAfter); state.config.timeOverrides=normalizeTimeOverrides(state.config.timeOverrides); saveState(); requestCalendarRender(); try{ scheduleRenderMails(null,260); }catch(e){} }
-$start.onchange=()=>{ state.config.start=$start.value; scheduleChanged(); }; $end.onchange=()=>{ state.config.end=$end.value; scheduleChanged(); }; $dur.onchange=()=>{ state.config.durationMin=Number($dur.value)||20; scheduleChanged(); }; if($pause){ $pause.onchange=()=>{ state.config.pauseMin=normalizePauseMin($pause.value); saveState(); }; }
-document.getElementById("resetCal").onclick=(e)=>{ if(e) e.preventDefault(); if(!confirm("Voulez-vous vraiment supprimer tous les jours sélectionnés et les rendez-vous attribués ?\n\nLes élèves, le modèle et la signature sont conservés.")) return; state.config.dates=[]; state.config.pauseMin=5; state.config.pauseAfter={}; state.config.timeOverrides={}; state.assignments={}; state.overrides={}; state.subjectOverrides={}; state.sent=[]; state.reminderSent=[]; setCalendarViewToToday(); try{ sentSet.clear(); reminderSentSet.clear(); excludedSet.clear(); excludedReminderSet.clear(); }catch(e){} saveState(); renderDateList(); renderCalendar(); renderMails(); };
+const $start=document.getElementById("cfgStart"), $end=document.getElementById("cfgEnd"), $dur=document.getElementById("cfgDur");
+function initCfgInputs(){ $start.value=state.config.start; $end.value=state.config.end; $dur.value=state.config.durationMin; }
+$start.onchange=()=>{ state.config.start=$start.value; saveState(); renderCalendar(); }; $end.onchange=()=>{ state.config.end=$end.value; saveState(); renderCalendar(); }; $dur.onchange=()=>{ state.config.durationMin=Number($dur.value)||20; saveState(); renderCalendar(); };
+document.getElementById("resetCal").onclick=(e)=>{ if(e) e.preventDefault(); if(!confirm("Voulez-vous vraiment supprimer tous les jours sélectionnés et les rendez-vous attribués ?\n\nLes élèves, le modèle et la signature sont conservés.")) return; state.config.dates=[]; state.assignments={}; state.overrides={}; state.subjectOverrides={}; state.sent=[]; state.reminderSent=[]; setCalendarViewToToday(); try{ sentSet.clear(); reminderSentSet.clear(); excludedSet.clear(); excludedReminderSet.clear(); }catch(e){} saveState(); renderDateList(); renderCalendar(); renderMails(); };
 let calView=(function(){ const t=new Date(); return {y:t.getFullYear(), m:t.getMonth()}; })();
 const MINICAL_CSS='<style>.minical{max-width:520px;margin:0 auto;border:0;border-radius:0;padding:2px 0;background:transparent}.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.cal-title{font-weight:650;font-size:16px}.cal-nav{background:#fff;color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:4px 13px;font-size:18px;font-weight:700;cursor:pointer}.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.cal-wd{text-align:center;font-size:12px;color:var(--muted);font-weight:600;padding:3px 0}.cal-day{text-align:center;padding:11px 0;border-radius:9px;cursor:pointer;font-size:15px;border:1px solid transparent;user-select:none}.cal-day:hover{background:var(--accent-soft)}.cal-day.sel{background:var(--accent);color:#fff;font-weight:700}.cal-day.sel:hover{background:var(--accent-d)}.cal-day.today{border-color:var(--accent)}.cal-day.empty{visibility:hidden;cursor:default}.cal-day.wknd{color:#c9ccd2;cursor:default}.cal-day.wknd:hover{background:transparent}.cal-day.past{color:#c9ccd2;background:transparent;border-color:transparent;cursor:not-allowed}.cal-day.past:hover{background:transparent}.cal-day.past.sel{background:transparent;color:#c9ccd2;font-weight:400}.minical .hint{white-space:nowrap}</style>';
 function localDateIso(dt){ dt=dt||new Date(); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); }
@@ -2845,17 +2581,16 @@ function renderDateList(){
   }
   host.innerHTML=MINICAL_CSS+'<div class="minical"><div class="cal-head"><button class="cal-nav" data-dir="-1">‹</button><span class="cal-title">'+title+'</span><button class="cal-nav" data-dir="1">›</button></div><div class="cal-grid">'+wd.map(w=>'<div class="cal-wd">'+w+'</div>').join("")+cells+'</div><div class="hint" style="margin-top:6px">'+countFr(state.config.dates.length,"jour sélectionné","jours sélectionnés")+'</div></div>';
   host.querySelectorAll(".cal-nav").forEach(b=>{ b.onclick=()=>{ calView.m+=(+b.dataset.dir); if(calView.m<0){calView.m=11;calView.y--;} if(calView.m>11){calView.m=0;calView.y++;} renderDateList(); }; });
-  host.querySelectorAll(".cal-day[data-d]").forEach(c=>{ c.onclick=()=>{ const ds=c.dataset.d; if(state.config.dates.includes(ds)){ state.config.dates=state.config.dates.filter(x=>x!==ds); Object.keys(state.assignments).forEach(k=>{ if(k.startsWith(ds+"__")) delete state.assignments[k]; }); state.config.pauseAfter=normalizePauseAfter(state.config.pauseAfter); if(state.config.pauseAfter[ds]) delete state.config.pauseAfter[ds]; state.config.timeOverrides=normalizeTimeOverrides(state.config.timeOverrides); if(state.config.timeOverrides[ds]) delete state.config.timeOverrides[ds]; } else { state.config.dates.push(ds); state.config.dates.sort(); } saveState(); renderDateList(); renderCalendar(); }; });
+  host.querySelectorAll(".cal-day[data-d]").forEach(c=>{ c.onclick=()=>{ const ds=c.dataset.d; if(state.config.dates.includes(ds)){ state.config.dates=state.config.dates.filter(x=>x!==ds); Object.keys(state.assignments).forEach(k=>{ if(k.startsWith(ds+"__")) delete state.assignments[k]; }); } else { state.config.dates.push(ds); state.config.dates.sort(); } saveState(); renderDateList(); renderCalendar(); }; });
   updateCalResetVisibility();
 }
 function updateCalResetVisibility(){ const row=document.getElementById("resetCalRow"); if(row) row.style.display = (state.config.dates && state.config.dates.length>0) ? "" : "none"; }
 function assignmentStudents(){ return state.students.filter(s=>(s.name||"").trim() || contactEmails(s).length); }
-function assignmentOptionsFor(key, studentsList, assignmentEntries){
+function assignmentOptionsFor(key){
   const current=state.assignments[key]||"";
-  const entries=assignmentEntries || Object.entries(state.assignments);
-  const already=new Set(entries.filter(([k,v])=>k!==key && v).map(([k,v])=>v));
+  const already=new Set(Object.entries(state.assignments).filter(([k,v])=>k!==key && v).map(([k,v])=>v));
   const opts=['<option value="">— libre —</option>'];
-  (studentsList || assignmentStudents()).forEach(st=>{
+  assignmentStudents().forEach(st=>{
     if(already.has(st.id) && st.id!==current) return;
     const selected=st.id===current ? ' selected' : '';
     opts.push(`<option value="${st.id}" title="${esc(st.name||"(sans nom)")}"${selected}>${esc(displayStudentName(st.name))}</option>`);
@@ -2864,11 +2599,8 @@ function assignmentOptionsFor(key, studentsList, assignmentEntries){
 }
 function renderCalendar(){
   initCfgInputs();
-  const mini=document.getElementById("miniCal");
-  if(mini && !mini.querySelector(".minical")) renderDateList();
-  const grid=document.getElementById("calendarGrid"), count=baseSlotCount();
-  if(!grid) return;
-  closeTimelineTimePicker();
+  renderDateList();
+  const grid=document.getElementById("calendarGrid"), sl=slots();
   if(state.config.dates.length===0){
     const students=assignmentStudents();
     const el=document.getElementById("assignSummary");
@@ -2881,96 +2613,38 @@ function renderCalendar(){
     grid.innerHTML="";
     return;
   }
-  if(count<=0){ grid.innerHTML='<div class="banner warn compact">Plage horaire non valable : vérifiez le début, la fin et la durée.</div>'; updateAssignSummary(); return; }
+  if(sl.length===0){ grid.innerHTML='<div class="banner warn compact">Plage horaire non valable : vérifiez le début, la fin et la durée.</div>'; updateAssignSummary(); return; }
   const weekKeyOf=ds=>{ const d=new Date(ds+"T00:00:00"); const wd=(d.getDay()+6)%7; d.setDate(d.getDate()-wd); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
   const groups={};
   state.config.dates.slice().sort().forEach(ds=>{ const wk=weekKeyOf(ds); (groups[wk]=groups[wk]||[]).push(ds); });
   const weekKeys=Object.keys(groups).sort();
-  const now=new Date();
-  const html=weekKeys.map(wk=>{
+  grid.innerHTML=weekKeys.map(wk=>{
     const days=groups[wk];
     const monLbl=new Date(wk+"T00:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
-    const daySlots={};
-    days.forEach(d=>{ daySlots[d]=slotsForDate(d); });
-    const bounds=makeBlockTimelineBounds(days, daySlots);
-    const hours=blockHourLabels(bounds);
-    const assignList=assignmentStudents();
-    const assignEntries=Object.entries(state.assignments);
-    const dayHeaders=days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<div class="block-day-head">'+esc(lbl)+'</div>'; }).join("");
-    const axis=hours.map(h=>'<div class="block-hour-label" style="grid-row:'+h.row+' / span '+h.span+'">'+esc(minToTime(h.min))+'</div>').join("");
-    const dayCols=days.map(d=>{
-      const hourLines=hours.map(h=>'<div class="block-hour-line" style="grid-row:'+h.row+' / span 1"></div>').join("");
-      const items=(daySlots[d]||[]).map(slot=>{
-        const i=slot.idx, key=d+"__"+i, sel=state.assignments[key]||"";
+    const head='<tr><th class="th-time">Heure</th>'+days.map(d=>{ const lbl=new Date(d+"T00:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); return '<th>'+lbl+'</th>'; }).join("")+'</tr>';
+    const now=new Date();
+    const bodyRows=sl.map((slot,i)=>{
+      const rowPastAll=days.every(d=>appointmentDateTime(d, slot.end) <= now);
+      const cells=days.map(d=>{
+        const key=d+"__"+i, sel=state.assignments[key]||"";
         const isPast=appointmentDateTime(d, slot.end) <= now;
-        const cls=["block-appt"]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
+        const cls=[]; if(sel) cls.push("assigned"); if(isPast) cls.push("past");
         const disabled=isPast ? ' disabled title="Rendez-vous passé"' : '';
-        const manual=hasTimeOverrideForDay(d,i);
-        const timeCls='block-time-select'+(manual?' manual':'');
-        const startRow=blockGridRow(slot.startMin,bounds);
-        const span=blockSpan(slot.startMin,slot.endMin);
-        const style='grid-row:'+startRow+' / span '+span;
-        let insert='';
-        if(i<count-1 && !isPast){
-          insert='<button type="button" class="block-insert-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+i+'" title="Pause : clic = +5 min après ce rendez-vous">Ⅱ</button>';
-        }
-        return '<div class="'+cls.join(' ')+'" style="'+style+'">'
-          +'<select class="'+timeCls+'" data-time-select-day="'+d+'" data-time-select-index="'+i+'"'+disabled+' title="Changer l’heure à partir de ce rendez-vous">'+timeSelectOptions(d,i,slot.startMin)+'</select>'
-          +'<select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key,assignList,assignEntries)+'</select>'
-          +insert
-          +'</div>';
+        return '<td'+(cls.length?' class="'+cls.join(' ')+""+'"':'')+'><select data-key="'+key+'"'+disabled+'>'+assignmentOptionsFor(key)+'</select></td>';
       }).join("");
-      const pauses=(daySlots[d]||[]).map(slot=>{
-        if(slot.idx>=count-1) return '';
-        const pause=pauseAfterMinForDay(d,slot.idx);
-        if(!pause) return '';
-        const row=blockGridRow(slot.endMin,bounds);
-        const span=Math.max(1, Math.round(pause/5));
-        return '<div class="block-pause" data-pause-add-day="'+d+'" data-pause-add-index="'+slot.idx+'" style="grid-row:'+row+' / span '+span+'" title="Pause après '+esc(minToTime(slot.startMin))+' — cliquer pour ajouter 5 min">Pause '+pause+' min <button type="button" class="block-pause-remove" data-pause-remove-day="'+d+'" data-pause-remove-index="'+slot.idx+'" aria-label="Supprimer la pause">×</button></div>';
-      }).join("");
-      return '<div class="block-day-col" style="--rows:'+bounds.rows+'">'+hourLines+items+pauses+'</div>';
+      return '<tr><td class="td-time'+(rowPastAll?' past-time':'')+'">'+slot.start+'–'+slot.end+'</td>'+cells+'</tr>';
     }).join("");
-    const legend='<div class="block-legend"><span class="mini-ii">Ⅱ</span><span>Pause : clic = +5 min</span><span>·</span><span>× = supprimer</span><span>·</span><span>Chaque jour = une colonne</span></div>';
-    return '<div class="weekblock"><div class="weekhead">Semaine du '+esc(monLbl)+'</div>'+legend+'<div class="schedule-scroll"><div class="block-calendar" style="--day-count:'+days.length+'"><div class="block-head"><div class="block-corner">h</div>'+dayHeaders+'</div><div class="block-body"><div class="block-axis" style="--rows:'+bounds.rows+'">'+axis+'</div>'+dayCols+'</div></div></div></div>';
+    return '<div class="weekblock"><div class="weekhead">Semaine du '+monLbl+'</div><div style="overflow-x:auto"><table class="schedule"><thead>'+head+'</thead><tbody>'+bodyRows+'</tbody></table></div></div>';
   }).join("");
-  grid.innerHTML=html;
-  grid.onchange=(e)=>{
-    const timeSel=e.target.closest && e.target.closest('select[data-time-select-day]');
-    if(timeSel){
-      const day=timeSel.dataset.timeSelectDay;
-      const idx=parseInt(timeSel.dataset.timeSelectIndex,10);
-      if(timeSel.value==="auto") removeTimeOverrideForDay(day,idx);
-      else setTimeOverrideForDay(day,idx,Number(timeSel.value));
-      scheduleChanged();
-      return;
-    }
-    const keySel=e.target.closest && e.target.closest('select[data-key]');
-    if(keySel){
-      const k=keySel.dataset.key;
-      if(keySel.value){ state.assignments[k]=keySel.value; }
+  grid.querySelectorAll("select[data-key]").forEach(sel=>{
+    sel.onchange=()=>{
+      const k=sel.dataset.key;
+      if(sel.value){ state.assignments[k]=sel.value; }
       else { delete state.assignments[k]; }
       saveState();
-      requestCalendarRender();
-      try{ scheduleRenderMails(null,260); }catch(err){}
-      return;
-    }
-  };
-  grid.onclick=(e)=>{
-    const rem=e.target.closest && e.target.closest('button[data-pause-remove-day]');
-    if(rem){
-      const i=parseInt(rem.dataset.pauseRemoveIndex,10);
-      removePauseAfterForDay(rem.dataset.pauseRemoveDay, i);
-      scheduleChanged();
-      return;
-    }
-    const add=e.target.closest && e.target.closest('button[data-pause-add-day]');
-    if(add){
-      const i=parseInt(add.dataset.pauseAddIndex,10);
-      incrementPauseAfterForDay(add.dataset.pauseAddDay, i);
-      scheduleChanged();
-      return;
-    }
-  };
+      renderCalendar();
+    };
+  });
   updateAssignSummary();
 }
 function updateAssignSummary(){
@@ -4004,9 +3678,9 @@ function buildMessages(){
 }
 function isMsgDone(m){ return (m && m.kind==="eb") ? ebSentSet.has(m.id) : sentSet.has(m.id); }
 function buildEbOnlyMessages(){
-  const msgs=[];
+  const sl=slots(), msgs=[];
   state.config.dates.forEach(d=>{
-    slotsForDate(d).forEach((s,i)=>{
+    sl.forEach((s,i)=>{
       if(appointmentDateTime(d, s.end) <= new Date()) return;
       const apptKey=d+"__"+i;
       const sid=state.assignments[apptKey]; if(!sid) return;
@@ -4035,10 +3709,10 @@ function buildEbOnlyMessages(){
   return msgs;
 }
 function buildEmailMessages(){
-  const msgs=[];
+  const sl=slots(), msgs=[];
   mailDefaultPreviewByOvk={};
   state.config.dates.forEach(d=>{
-    slotsForDate(d).forEach((s,i)=>{
+    sl.forEach((s,i)=>{
       if(appointmentDateTime(d, s.end) <= new Date()) return;
       const sid=state.assignments[d+"__"+i];
       if(!sid) return;
@@ -4080,9 +3754,9 @@ function appointmentDateTime(ds, hhmm){ return new Date(ds+"T"+hhmm+":00"); }
 function reminderDueAt(ds){ const d=new Date(ds+"T"+reminderTimeValue()+":00"); d.setDate(d.getDate()-reminderDaysBefore()); return d; }
 function reminderWindowOpen(ds, slot){ const now=new Date(); const due=reminderDueAt(ds); const end=appointmentDateTime(ds, slot.end); return now>=due && now<end; }
 function buildReminderMessages(onlyDue=true){
-  const msgs=[];
+  const sl=slots(), msgs=[];
   state.config.dates.forEach(d=>{
-    slotsForDate(d).forEach((s,i)=>{
+    sl.forEach((s,i)=>{
       if(onlyDue && !reminderWindowOpen(d,s)) return;
       const sid=state.assignments[d+"__"+i];
       if(!sid) return;
@@ -4122,15 +3796,15 @@ function buildReminderMessages(onlyDue=true){
 }
 function pendingDueReminderMessages(){ return buildReminderMessages(true).filter(m=>!reminderSentSet.has(m.id)); }
 function pastAssignedAppointmentsCount(){
-  const now=new Date(); let n=0;
-  state.config.dates.forEach(d=>slotsForDate(d).forEach((s,i)=>{ if(state.assignments[d+"__"+i] && appointmentDateTime(d,s.end)<=now) n++; }));
+  const now=new Date(); let n=0; const sl=slots();
+  state.config.dates.forEach(d=>sl.forEach((s,i)=>{ if(state.assignments[d+"__"+i] && appointmentDateTime(d,s.end)<=now) n++; }));
   return n;
 }
 function studentsWithoutFutureAppointments(){
   const activeStudents=(state.students||[]).filter(st=>st && (String(st.name||"").trim() || rawContactEmails(st).length));
   if(!activeStudents.length) return [];
-  const now=new Date(), assignedFuture=new Set();
-  (state.config.dates||[]).forEach(d=>slotsForDate(d).forEach((s,i)=>{
+  const now=new Date(), assignedFuture=new Set(), sl=slots();
+  (state.config.dates||[]).forEach(d=>sl.forEach((s,i)=>{
     const sid=state.assignments && state.assignments[d+"__"+i];
     if(sid && appointmentDateTime(d,s.end)>now) assignedFuture.add(sid);
   }));
@@ -4418,7 +4092,7 @@ function reminderEditedByMsg(m){
 function mailBannerHtml(){
   const assigned=Object.values(state.assignments).filter(Boolean).length;
   const missing=[];
-  state.config.dates.forEach(d=>slotsForDate(d).forEach((s,i)=>{
+  state.config.dates.forEach(d=>slots().forEach((s,i)=>{
     const sid=state.assignments[d+"__"+i];
     if(!sid) return;
     const stu=state.students.find(x=>x.id===sid);
@@ -5218,11 +4892,12 @@ function ebApplyRead(data){
 function buildEbItems(emailMsgs){
   if(!ebReady()) return {items:[], unmatched:[], skipped:0};
   const seen=new Set(), items=[], unmatched=[];
+  const sl=slots();
   (emailMsgs||[]).forEach(m=>{
     const parts=String(m.id).split("__"); const apptKey=parts[0]+"__"+parts[1];
     if(seen.has(apptKey)) return; seen.add(apptKey);
     if(ebSentSet.has(apptKey)) return;
-    const d=parts[0], i=Number(parts[1]); const slot=slotsForDate(d)[i]; if(!slot) return;
+    const d=parts[0], i=Number(parts[1]); const slot=sl[i]; if(!slot) return;
     const sid=state.assignments[apptKey]; const stu=state.students.find(x=>x.id===sid); if(!stu) return;
     const ebId=ebMatchedIdFor(stu);
     if(!ebId){ unmatched.push(stu.name||"(sans nom)"); return; }
