@@ -465,36 +465,70 @@
   .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
   .maintenance-modal input{width:100%;height:42px;border-radius:12px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
 
-  /* v236: Performance-Test gegen v220.
-     Das große Karten-Grading aus v234 ist deaktiviert, weil es beim Scrollen/Tippen
-     in manchen Browsern teure Repaints erzeugen kann. Die Modus-Erkennung bleibt
-     wie in der schnellen v220 über Badge und aktive Tabs sichtbar. */
-  .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid transparent;flex:0 0 auto;align-self:center;user-select:none}
+  /* v227: la couleur du mode ne sert plus qu'à l'orientation — un point coloré
+     dans le badge de la barre d'onglets + un fond très doux sur les cartes Envoi.
+     Boutons, cases, textes et bannières restent neutres pour ne pas entrer en
+     collision avec les couleurs de statut (jaune = avertissement, etc.). */
+  .mode-badge{display:none;align-items:center;gap:7px;margin-left:auto;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--muted);flex:0 0 auto;align-self:center;user-select:none}
   @media (max-width:900px){.mode-badge{font-size:11px;padding:5px 9px;gap:5px}}
-  .mode-badge .mode-dot{width:8px;height:8px;min-width:8px;border-radius:50%;background:currentColor}
+  .mode-badge .mode-dot{width:8px;height:8px;min-width:8px;border-radius:50%;background:var(--muted-2)}
   body.wf-eb .mode-badge,body.wf-email .mode-badge,body.wf-both .mode-badge{display:inline-flex}
-  body.wf-eb .mode-badge{background:var(--ok-soft);color:var(--ok);border-color:#bfe5d1}
-  body.wf-email .mode-badge{background:var(--accent-soft);color:#4a55a2;border-color:#dfe3fc}
-  body.wf-both .mode-badge{background:#faefda;color:#a4691a;border-color:#ecd5a8}
-  /* Onglet e-Bichelchen actif : toujours vert (comme la carte du Démarrage) */
-  .template-tab.active[data-template-mode="ebichelchen"],.preview-tab.active[data-preview-kind="eb"]{background:var(--ok);border-color:var(--ok);color:#fff}
-  .template-tab.active[data-template-mode="ebichelchen"]:hover,.preview-tab.active[data-preview-kind="eb"]:hover{background:#27795a;border-color:#27795a}
-  /* Mode complet : les onglets e-mail/rappel actifs prennent l'ambre du mode ;
-     en mode e-mail seul, ils gardent le bleu standard de l'app. */
-  body.wf-both .template-tab.active[data-template-mode="confirmation"],
-  body.wf-both .template-tab.active[data-template-mode="reminder"],
-  body.wf-both .preview-tab.active[data-preview-kind="email"],
-  body.wf-both .preview-tab.active[data-preview-kind="reminder"]{background:#c98a2e;border-color:#c98a2e;color:#fff}
-  body.wf-both .template-tab.active[data-template-mode="confirmation"]:hover,
-  body.wf-both .template-tab.active[data-template-mode="reminder"]:hover,
-  body.wf-both .preview-tab.active[data-preview-kind="email"]:hover,
-  body.wf-both .preview-tab.active[data-preview-kind="reminder"]:hover{background:#b57a24;border-color:#b57a24}
-  body.wf-both .template-tab.active .rt-check:checked:after{border-left-color:#c98a2e;border-bottom-color:#c98a2e}
+  body.wf-eb .mode-badge .mode-dot{background:var(--ok)}
+  body.wf-email .mode-badge .mode-dot{background:var(--accent)}
+  body.wf-both .mode-badge .mode-dot{background:#c98a2e}
+
+  /* v233: Envoi nutzt exakt die dezente, unselektierte Démarrage-Abstufung.
+     Dadurch bleibt der Modus sichtbar, ohne die Fenster dunkel oder eingerahmt wirken
+     zu lassen. Editor- und Vorschau-Inhalte bleiben weiß. */
+  body.wf-eb{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f2faf6 100%); }
+  body.wf-email{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#f2f4fe 100%); }
+  body.wf-both{ --mode-panel-bg:linear-gradient(180deg,#ffffff 0%,#fdf6ee 100%); }
+  body.wf-eb #panel-mails .template-card,
+  body.wf-email #panel-mails .template-card,
+  body.wf-both #panel-mails .template-card,
+  body.wf-eb #panel-mails .preview-card,
+  body.wf-email #panel-mails .preview-card,
+  body.wf-both #panel-mails .preview-card{
+    background:var(--mode-panel-bg);
+    border:1px solid rgba(28,28,45,.06);
+    box-shadow:var(--shadow-sm);
+  }
+  body.wf-eb #panel-mails .mail-template-head,
+  body.wf-email #panel-mails .mail-template-head,
+  body.wf-both #panel-mails .mail-template-head,
+  body.wf-eb #panel-mails .preview-head,
+  body.wf-email #panel-mails .preview-head,
+  body.wf-both #panel-mails .preview-head{
+    background:transparent;
+  }
+  body.wf-eb #panel-mails .template-compose-shell,
+  body.wf-email #panel-mails .template-compose-shell,
+  body.wf-both #panel-mails .template-compose-shell,
+  body.wf-eb #panel-mails .mailitem,
+  body.wf-email #panel-mails .mailitem,
+  body.wf-both #panel-mails .mailitem,
+  body.wf-eb #panel-mails .mailhead,
+  body.wf-email #panel-mails .mailhead,
+  body.wf-both #panel-mails .mailhead,
+  body.wf-eb #panel-mails .mail-compose-shell,
+  body.wf-email #panel-mails .mail-compose-shell,
+  body.wf-both #panel-mails .mail-compose-shell,
+  body.wf-eb #panel-mails .mailbody-head,
+  body.wf-email #panel-mails .mailbody-head,
+  body.wf-both #panel-mails .mailbody-head,
+  body.wf-eb #panel-mails .mail-editor,
+  body.wf-email #panel-mails .mail-editor,
+  body.wf-both #panel-mails .mail-editor,
+  body.wf-eb #panel-mails #tplBodyEditor,
+  body.wf-email #panel-mails #tplBodyEditor,
+  body.wf-both #panel-mails #tplBodyEditor{
+    background:#fff;
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v236</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v233</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -771,7 +805,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 236;
+const APP_VERSION = 220;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2409,7 +2443,7 @@ function renderStudents(){
       const langSel=tr.querySelector(".st-l"+(idx+1));
       if(inp){
         inp.onfocus=()=>{ inp.classList.remove("email-invalid"); inp.title=""; const box=document.getElementById("studentEmailWarnings"); if(box) box.innerHTML=""; };
-        inp.oninput=e=>{ st[key]=e.target.value; saveState(); inp.classList.remove("email-invalid"); inp.title=""; scheduleRenderMails(); };
+        inp.oninput=e=>{ st[key]=e.target.value; saveState(); inp.classList.remove("email-invalid"); inp.title=""; renderMails(); };
         inp.onblur=()=>{ touchedStudentEmailFields.add(studentEmailFieldKey(id, idx+1)); studentDuplicateValidationActive=true; maybePruneEmptyStudentAfterBlur(id); validateStudentEmailsUI(); renderMails(); };
       }
       if(langSel) langSel.onchange=e=>{ st["lang"+(idx+1)]=normalizeLang(e.target.value); if(idx===0 && emailEnabled() && ebichelchenEnabled()) st.langEb=st.lang1; saveState(); renderMails(); };
@@ -2678,7 +2712,7 @@ function updateAssignSummary(){
 }
 
 /* Rich editor */
-let activeEditor=null, savedRange=null, toolbarBusy=false, toolbarStateTimer=null, richToolbarDocClickWired=false;
+let activeEditor=null, savedRange=null, toolbarBusy=false, toolbarStateTimer=null;
 let suppressTemplateCommit=false;
 function editorFromNode(node){
   if(!node) return null;
@@ -3034,7 +3068,7 @@ function commitEditor(editor){
       tpl.bodyHtml=simpleHtmlFromPlainText(txt);
       tpl.body=txt;
       renderTemplatePreview();
-      saveState(); scheduleRenderMails(currentOpenPreviewId()); updateTplResetVisibility();
+      saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility();
       return;
     }
     sanitizePastedImages(editor);
@@ -3053,7 +3087,7 @@ function commitEditor(editor){
       if(typeof showToast==="function") showToast("Logo retiré — ↺ sous l’éditeur pour le rétablir.");
     }
     renderTemplatePreview(); renderLogoPreview();
-    saveState(); scheduleRenderMails(currentOpenPreviewId()); updateTplResetVisibility();
+    saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility();
   } else if(editor.classList && editor.classList.contains("mail-editor")){
     const ovk=editor.dataset.ovk;
     if(ovk){
@@ -3097,7 +3131,7 @@ function wireRichEditor(id){
     else if(e.inputType==="historyRedo") markEditorRedo(el);
     else if(String(e.inputType||"").startsWith("insert") || String(e.inputType||"").startsWith("delete") || String(e.inputType||"").startsWith("format")) markEditorChanged(el);
   });
-  el.addEventListener("input",()=>{ commitEditor(el); scheduleToolbarStateUpdate(el); });
+  el.addEventListener("input",()=>{ commitEditor(el); scheduleToolbarStateUpdate(el); setTimeout(()=>updateToolbarState(el),0); });
   el.addEventListener("paste",e=>{ setTimeout(()=>{ commitEditor(el); scheduleToolbarStateUpdate(el); updateToolbarState(el); },0); });
 }
 function bindRichToolbars(){
@@ -3180,18 +3214,14 @@ function bindRichToolbars(){
       if(ctrl.tagName==="SELECT" || ctrl.type==="color") ctrl.addEventListener("change",run); else ctrl.addEventListener("click",run);
     });
   });
-  if(!richToolbarDocClickWired){
-    richToolbarDocClickWired=true;
-    document.addEventListener("click", e=>{
-      document.querySelectorAll(".ot-more.open").forEach(m=>{
-        const tb=m.closest(".rich-toolbar");
-        if(tb && !tb.contains(e.target)) m.classList.remove("open");
-      });
-      document.querySelectorAll(".color-picker.open").forEach(p=>{
-        if(!p.contains(e.target)) p.classList.remove("open");
-      });
+  document.addEventListener("click", e=>{
+    document.querySelectorAll(".ot-more.open").forEach(m=>{
+      if(!m.closest(".rich-toolbar").contains(e.target)) m.classList.remove("open");
     });
-  }
+    document.querySelectorAll(".color-picker.open").forEach(p=>{
+      if(!p.contains(e.target)) p.classList.remove("open");
+    });
+  });
 }
 
 /* Signature/logo/template binding */
@@ -3244,21 +3274,13 @@ function renderLogoPreview(){
     else st.textContent=(state.template.logo && state.template.logo.dataUrl) ? "" : "Chargement du logo UNESCO.";
   }
 }
-let mailRenderRaf = null, mailRenderTimer = null, mailRenderOpenId = undefined;
-function scheduleRenderMails(openId, delay){
-  if(openId!==undefined) mailRenderOpenId=openId;
-  const wait = (delay===0 ? 0 : (delay || 120));
-  if(mailRenderTimer) clearTimeout(mailRenderTimer);
-  mailRenderTimer = setTimeout(()=>{
-    mailRenderTimer = null;
-    if(mailRenderRaf) cancelAnimationFrame(mailRenderRaf);
-    mailRenderRaf = requestAnimationFrame(()=>{
-      const keepOpen = mailRenderOpenId;
-      mailRenderOpenId = undefined;
-      mailRenderRaf = null;
-      renderMails(keepOpen);
-    });
-  }, wait);
+let mailRenderRaf = null;
+function scheduleRenderMails(openId){
+  if(mailRenderRaf) cancelAnimationFrame(mailRenderRaf);
+  mailRenderRaf = requestAnimationFrame(()=>{
+    mailRenderRaf = null;
+    renderMails(openId);
+  });
 }
 function updateTemplateSignatureView(body, renderTemplateCollapseState){
   renderTemplateCollapseState();
@@ -3329,7 +3351,7 @@ function bindSettings(){
   const reminderTime=document.getElementById("reminderTime");
   const currentTpl=()=>templateDataForMode(currentTemplateMode(), currentTemplateLang());
   su.value=currentTpl().subject; forceTemplateEditorHtml(composeEditorHtml(currentTemplateMode(), currentTemplateLang()));
-  su.oninput=()=>{ const tpl=currentTpl(); tpl.subject=su.value; saveState(); scheduleRenderMails(currentOpenPreviewId()); updateTplResetVisibility(); };
+  su.oninput=()=>{ const tpl=currentTpl(); tpl.subject=su.value; saveState(); renderMails(currentOpenPreviewId()); updateTplResetVisibility(); };
   // Robuste, direkte Reaktion auf jede Änderung im Editor (unabhängig vom Commit-Pfad):
   body.addEventListener("input", updateTplResetVisibility);
   body.addEventListener("keyup", updateTplResetVisibility);
@@ -4675,7 +4697,7 @@ function applyChannelVisibility(){
     if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
     hint.innerHTML=bits.join("");
   }
-  // v236: refléter le mode partout — classe sur <body> (mode rapide sans grand grading)
+  // v224: refléter le mode partout — classe sur <body> (couleurs claires des fenêtres Envoi)
   // + badge de mode nommé dans la barre d'onglets collante.
   try{
     const mode=workflowMode();
@@ -5234,12 +5256,7 @@ bootEntretienConnect();
     setTimeout(updateEbResetVisibility, 0);
     return r;
   };
-  document.addEventListener("input", function(ev){
-    var t=ev && ev.target;
-    if(t && (t.id==="tplSubject" || t.id==="tplBodyEditor" || (t.closest && t.closest("#tplBodyEditor")))){
-      setTimeout(updateEbResetVisibility, 50);
-    }
-  }, true);
+  document.addEventListener("input", function(){ setTimeout(updateEbResetVisibility, 50); }, true);
   document.addEventListener("click", function(ev){
     var t = ev.target && ev.target.closest ? ev.target.closest("button") : null;
     if(t && /réinitialiser|reinitialiser|standard|zurücksetzen/i.test(t.textContent||"")){
@@ -5340,10 +5357,8 @@ bootEntretienConnect();
     setTimeout(ecEnhanceEbStudentLanguages, 0);
     return r;
   };
-  // v234: Keine globalen input/change-Listener mehr. Die Sprachfelder werden beim
-  // Rendern der Schülerliste und über ihre eigenen onchange-Handler aktualisiert.
-  // Die alten globalen Listener liefen bei jedem Tastendruck in der App mit und machten
-  // die Oberfläche mit der Zeit spürbar träger.
+  document.addEventListener("input", function(){ setTimeout(ecEnhanceEbStudentLanguages, 80); }, true);
+  document.addEventListener("change", function(){ setTimeout(ecEnhanceEbStudentLanguages, 80); }, true);
   setTimeout(ecEnhanceEbStudentLanguages, 500);
 })();
 </script>
