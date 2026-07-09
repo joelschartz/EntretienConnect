@@ -192,20 +192,22 @@
   .block-calendar.compact-5 .block-appt select[data-key]{padding-left:8px;padding-right:16px;font-size:12.5px}
   .block-calendar.compact-5 .block-time-btn{font-size:11.25px}
   .block-calendar.compact-5 .block-adjust-btn{font-size:10.5px;min-width:32px;padding:0 5px}
-  /* v260 — saisie rapide : l’agenda sert à éditer, la semaine à contrôler */
+  /* v261 — saisie directe sur une ligne du temps, avec accrochage à 5 minutes */
   .quick-planner-card{overflow:visible}
   .quick-planner-head{align-items:flex-start}.quick-planner-head h2{margin-bottom:2px}.quick-planner-head .hint{margin:3px 0 0;max-width:920px}
-  .planner-entry{display:grid;grid-template-columns:minmax(220px,1.65fr) minmax(170px,.95fr) 118px minmax(270px,1.3fr) auto;gap:10px;align-items:end;padding:13px;border:1px solid #e4e7f0;border-radius:14px;background:#fafbfe}
-  .planner-field{min-width:0}.planner-field label{display:block;margin:0 0 6px;font-size:11.5px;font-weight:800;color:#667085}.planner-field select,.planner-field input{height:38px;margin:0;padding-top:7px;padding-bottom:7px;border-radius:10px;background:#fff}
-  .planner-duration-set{display:flex;gap:5px;align-items:center;min-height:38px;flex-wrap:nowrap}.planner-duration-btn{appearance:none;-webkit-appearance:none;height:34px;min-width:44px;padding:0 9px;border:1px solid #dde2ec;border-radius:9px;background:#fff;color:#475467;font-size:12px;font-weight:800;cursor:pointer;box-shadow:none;white-space:nowrap}.planner-duration-btn:hover{border-color:#b9c2e7;background:#f7f8ff}.planner-duration-btn.active{border-color:var(--accent);background:var(--accent-soft);color:#4a55a2}.planner-duration-btn.custom-active{min-width:52px}
-  .planner-add{height:38px;min-width:105px;padding:0 17px;border-radius:10px;white-space:nowrap}.planner-add:disabled{opacity:.45;cursor:not-allowed}
-  .planner-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 1px 9px;color:#667085;font-size:12.5px}.planner-summary strong{color:#344054}.planner-keyhint{color:#98a2b3;font-size:11.5px;white-space:nowrap}
-  .planner-day-tabs{display:flex;gap:6px;align-items:center;overflow-x:auto;padding:1px 1px 9px;scrollbar-width:thin}.planner-day-tab{appearance:none;-webkit-appearance:none;border:1px solid #e2e6ef;border-radius:999px;background:#fff;color:#667085;padding:6px 11px;font-size:11.5px;font-weight:800;white-space:nowrap;cursor:pointer;box-shadow:none}.planner-day-tab:hover{border-color:#c9d0e6;background:#fafbff}.planner-day-tab.active{border-color:#cfd5f6;background:var(--accent-soft);color:#4a55a2}.planner-day-tab .count{display:inline-flex;min-width:18px;height:18px;align-items:center;justify-content:center;margin-left:5px;padding:0 5px;border-radius:999px;background:rgba(108,124,240,.11);font-size:10px}
-  .planner-agenda{border:1px solid #e3e7ef;border-radius:14px;background:#fff;overflow:hidden}.planner-agenda-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:#f7f8fc;border-bottom:1px solid #e8ebf2}.planner-agenda-head h3{margin:0;font-size:13px;color:#37405a}.planner-agenda-meta{font-size:11.5px;color:#7d8699;white-space:nowrap}
-  .planner-list{display:grid}.planner-row{display:grid;grid-template-columns:92px minmax(0,1fr) 62px 34px 34px;gap:7px;align-items:center;min-height:46px;padding:5px 9px;border-bottom:1px solid #edf0f5;background:#fff}.planner-row:last-child{border-bottom:0}.planner-row:hover{background:#fcfdff}.planner-row input[type="time"],.planner-row select{height:34px;margin:0;border-radius:8px;padding-top:5px;padding-bottom:5px;font-size:12.5px;background:#fff}.planner-row input[type="time"]{font-variant-numeric:tabular-nums;font-weight:750;padding-left:7px;padding-right:5px}.planner-row select{min-width:0;padding-left:8px;padding-right:22px;text-overflow:ellipsis}
-  .planner-row.assigned select{font-weight:700}.planner-row-duration,.planner-icon-btn{appearance:none;-webkit-appearance:none;height:30px;border:1px solid #e0e4ed;border-radius:8px;background:#fff;color:#5f687c;font-size:11.5px;font-weight:850;cursor:pointer;box-shadow:none}.planner-row-duration:hover,.planner-icon-btn:hover{border-color:#c7cfee;background:#f7f8ff;color:#4a55a2}.planner-row-duration.custom{border-color:#d5d9f5;background:#eef0ff;color:#4a55a2}.planner-icon-btn{width:30px;padding:0;display:grid;place-items:center}.planner-icon-btn.pause-on{border-color:#ead3a3;background:#fff7e8;color:#98671a}.planner-icon-btn.delete{border-color:transparent;background:transparent;color:#a2a9b7;font-size:15px}.planner-icon-btn.delete:hover{background:#fff1ef;color:#b43a2f;border-color:#f2d2ce}
-  .planner-pause-row{grid-template-columns:92px minmax(0,1fr) 62px 34px 34px;min-height:34px;padding-top:3px;padding-bottom:3px;background:#fffaf0;color:#8a5a18}.planner-pause-row:hover{background:#fff7e8}.planner-pause-time{font-variant-numeric:tabular-nums;font-size:11.5px;font-weight:750;color:#a17025;padding-left:8px}.planner-pause-label{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;min-width:0}.planner-pause-label .glyph{font-size:12px;letter-spacing:-.08em}.planner-pause-row .planner-row-duration{border-color:#ecd8ad;background:#fff;color:#8a5a18}.planner-pause-spacer{width:30px;height:1px}
-  .planner-empty{padding:22px 16px;text-align:center;color:#8a92a6;font-size:13px}.planner-empty strong{display:block;color:#5e677a;margin-bottom:4px}
+  .planner-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 1px 10px;color:#667085;font-size:12.5px}.planner-summary strong{color:#344054}.planner-keyhint{color:#98a2b3;font-size:11.5px;white-space:nowrap}
+  .planner-day-tabs{display:flex;gap:6px;align-items:center;overflow-x:auto;padding:1px 1px 10px;scrollbar-width:thin}.planner-day-tab{appearance:none;-webkit-appearance:none;border:1px solid #e2e6ef;border-radius:999px;background:#fff;color:#667085;padding:7px 12px;font-size:11.5px;font-weight:800;white-space:nowrap;cursor:pointer;box-shadow:none}.planner-day-tab:hover{border-color:#c9d0e6;background:#fafbff}.planner-day-tab.active{border-color:#cfd5f6;background:var(--accent-soft);color:#4a55a2}.planner-day-tab .count{display:inline-flex;min-width:18px;height:18px;align-items:center;justify-content:center;margin-left:5px;padding:0 5px;border-radius:999px;background:rgba(108,124,240,.11);font-size:10px}
+  .timeline-planner{border:1px solid #e3e7ef;border-radius:15px;background:#fff;overflow:hidden;position:relative;isolation:isolate}.timeline-planner-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 13px;background:#f7f8fc;border-bottom:1px solid #e8ebf2}.timeline-planner-head h3{margin:0;font-size:13px;color:#37405a}.timeline-planner-meta{font-size:11.5px;color:#7d8699;white-space:nowrap}
+  .timeline-stage{display:grid;grid-template-columns:72px minmax(0,1fr);position:relative;background:#fff}.timeline-axis{position:relative;background:#fbfbfd;border-right:1px solid #edf0f5;z-index:2}.timeline-canvas{position:relative;min-width:0;background:#fff;cursor:crosshair;overflow:visible;z-index:1}.timeline-canvas:focus{outline:none}
+  .timeline-grid-line{position:absolute;left:0;right:0;border-top:1px solid #f2f4f8;pointer-events:none;z-index:0}.timeline-grid-line.major{border-top-color:#e4e8f0}.timeline-time-label{position:absolute;right:10px;transform:translateY(-50%);color:#8e97aa;font-size:11px;font-weight:750;font-variant-numeric:tabular-nums;line-height:1;pointer-events:none}.timeline-time-label.first{transform:none;top:5px!important}
+  .timeline-hover-line{position:absolute;left:0;right:0;height:1px;background:var(--accent);pointer-events:none;z-index:18;opacity:0;transition:opacity .06s}.timeline-hover-line.show{opacity:.85}.timeline-hover-time{position:absolute;left:8px;top:0;transform:translateY(-50%);padding:3px 7px;border-radius:999px;background:var(--accent);color:#fff;font-size:10.5px;font-weight:850;font-variant-numeric:tabular-nums;box-shadow:0 2px 7px rgba(73,83,170,.22)}
+  .timeline-empty-note{position:absolute;left:50%;top:26px;transform:translateX(-50%);z-index:1;color:#98a2b3;font-size:12px;pointer-events:none;white-space:nowrap}
+  .timeline-appt{position:absolute;left:14px;right:14px;min-height:24px;border:1px solid #cdd5f6;border-radius:10px;background:#eef0ff;box-shadow:0 1px 2px rgba(31,41,55,.035);overflow:hidden;z-index:5}.timeline-appt:hover,.timeline-appt:focus-within{border-color:#aeb9f1;background:#e9ecff;z-index:12}.timeline-appt.custom-duration{border-color:#bfc7f3}.timeline-appt-content{display:flex;align-items:center;height:100%;min-height:24px;position:relative}.timeline-appt-time{appearance:none;-webkit-appearance:none;align-self:stretch;flex:0 0 70px;border:0;border-right:1px solid rgba(112,124,203,.18);background:rgba(255,255,255,.26);color:#4a55a2;font-size:12px;font-weight:850;font-variant-numeric:tabular-nums;padding:0 8px;cursor:pointer;box-shadow:none}.timeline-appt-time:hover,.timeline-appt-time:focus{background:rgba(255,255,255,.58);outline:none}.timeline-appt-student{height:100%;min-width:0;flex:1;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important;margin:0!important;padding:4px 112px 4px 13px!important;color:#252b36;font-size:13px;font-weight:800;text-overflow:ellipsis;cursor:pointer}.timeline-appt-student:focus{outline:none;background:rgba(255,255,255,.34)!important}.timeline-appt-actions{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:flex;gap:4px;align-items:center;padding-left:16px;background:linear-gradient(90deg,rgba(238,240,255,0),#eef0ff 18%);opacity:0;pointer-events:none;transition:opacity .12s}.timeline-appt:hover .timeline-appt-actions,.timeline-appt:focus-within .timeline-appt-actions,.timeline-appt.custom-duration .timeline-appt-actions{opacity:1;pointer-events:auto}.timeline-appt:hover .timeline-appt-actions,.timeline-appt:focus-within .timeline-appt-actions{background:linear-gradient(90deg,rgba(233,236,255,0),#e9ecff 18%)}
+  .timeline-action{appearance:none;-webkit-appearance:none;height:27px;min-width:30px;border:1px solid rgba(113,125,194,.22);border-radius:8px;background:rgba(255,255,255,.82);color:#58617a;font-size:11px;font-weight:850;padding:0 7px;cursor:pointer;box-shadow:none}.timeline-action:hover,.timeline-action:focus{border-color:#9facdf;color:#4a55a2;background:#fff;outline:none}.timeline-action.duration.custom{color:#4a55a2;border-color:#aeb8ec}.timeline-action.pause.on{color:#93631b;border-color:#e4ca94;background:#fff8e9}.timeline-action.delete{min-width:27px;padding:0;color:#9aa2b1;border-color:transparent;background:transparent;font-size:15px}.timeline-action.delete:hover{color:#b43a2f;background:#fff1ef;border-color:#f0d1cd}
+  .timeline-pause{position:absolute;left:14px;right:14px;z-index:8;display:flex;align-items:center;justify-content:center;pointer-events:auto}.timeline-pause-pill{display:flex;align-items:center;gap:6px;height:18px;padding:0 8px;border:1px solid #ecd8ad;border-radius:999px;background:#fff7e8;color:#8a5a18;font-size:10px;font-weight:850;box-shadow:0 1px 2px rgba(80,55,10,.04);cursor:pointer}.timeline-pause-pill:hover{background:#fff2d8;border-color:#dfbd77}.timeline-pause-remove{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#a6782b;font-size:12px;font-weight:850;line-height:1;padding:0;cursor:pointer}
+  .timeline-composer{position:absolute;left:22px;width:min(330px,calc(100% - 44px));z-index:30;border:1px solid #d9dfef;border-radius:14px;background:#fff;box-shadow:0 16px 42px rgba(31,41,55,.22);padding:12px;cursor:default}.timeline-composer-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.timeline-composer-title{display:flex;align-items:baseline;gap:8px;color:#344054;font-size:12.5px;font-weight:800}.timeline-composer-title strong{font-size:15px;color:#4a55a2;font-variant-numeric:tabular-nums}.timeline-composer-close{appearance:none;-webkit-appearance:none;width:25px;height:25px;border:0;border-radius:999px;background:transparent;color:#98a2b3;font-size:17px;cursor:pointer;box-shadow:none}.timeline-composer-close:hover{background:#f1f3f7;color:#667085}.timeline-compose-label{display:block;margin:7px 0 5px;color:#667085;font-size:10.5px;font-weight:800}.timeline-duration-set{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.timeline-duration-btn{appearance:none;-webkit-appearance:none;height:30px;min-width:42px;padding:0 8px;border:1px solid #dde2ec;border-radius:8px;background:#fff;color:#475467;font-size:11.5px;font-weight:800;cursor:pointer;box-shadow:none}.timeline-duration-btn:hover{border-color:#b9c2e7;background:#f7f8ff}.timeline-duration-btn.active{border-color:var(--accent);background:var(--accent-soft);color:#4a55a2}.timeline-student-select{height:37px!important;margin:0!important;border-radius:9px!important;background:#fff!important;padding-top:6px!important;padding-bottom:6px!important}.timeline-compose-help{margin:7px 1px 0;color:#98a2b3;font-size:10.5px;line-height:1.35}.timeline-compose-warning{margin:8px 0 0;padding:7px 8px;border:1px solid #efd8aa;border-radius:8px;background:#fff8e8;color:#8a5a18;font-size:10.5px;line-height:1.35}.timeline-compose-sep{height:1px;background:#edf0f5;margin:10px 0}.timeline-pause-choices{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.timeline-pause-choice{appearance:none;-webkit-appearance:none;height:29px;border:1px solid #ead5a9;border-radius:8px;background:#fffaf0;color:#8a5a18;font-size:11px;font-weight:800;padding:0 8px;cursor:pointer;box-shadow:none}.timeline-pause-choice:hover{background:#fff2d8;border-color:#dfbd77}
+  .planner-empty{padding:24px 16px;text-align:center;color:#8a92a6;font-size:13px}.planner-empty strong{display:block;color:#5e677a;margin-bottom:4px}
+  @media(max-width:760px){.planner-summary{align-items:flex-start;flex-direction:column}.planner-keyhint{white-space:normal}.timeline-stage{grid-template-columns:60px minmax(0,1fr)}.timeline-time-label{right:7px}.timeline-appt{left:8px;right:8px}.timeline-appt-time{flex-basis:58px;font-size:11px;padding:0 5px}.timeline-appt-student{font-size:12px;padding-left:9px!important;padding-right:96px!important}.timeline-composer{left:10px;width:calc(100% - 20px)}}
   .week-preview-card{padding:0;overflow:hidden}.week-preview-card>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;cursor:pointer;font-size:15px;font-weight:800;color:#344054;background:#fff}.week-preview-card>summary::-webkit-details-marker{display:none}.week-preview-card>summary:after{content:"⌄";font-size:14px;color:#8a92a6;transition:transform .15s}.week-preview-card[open]>summary:after{transform:rotate(180deg)}.week-preview-card[open]>summary{border-bottom:1px solid var(--line);background:#fbfbfe}.week-preview-meta{margin-left:auto;color:#8a92a6;font-size:12px;font-weight:700}.week-preview-body{padding:12px 16px 16px;position:relative;z-index:1;overflow:hidden}.week-preview-body .banner{position:relative;z-index:12}.week-preview-body .weekblock{position:relative;z-index:1}.week-preview-body .schedule-scroll{isolation:isolate}.week-preview-body .block-time-btn.manual{color:#5b6478;background:rgba(15,23,42,.015);border-right-color:#e9ecf4}
   @media(max-width:1050px){.planner-entry{grid-template-columns:minmax(210px,1.5fr) minmax(165px,1fr) 112px minmax(250px,1.2fr)}.planner-add{grid-column:1/-1;justify-self:end}.planner-row{grid-template-columns:88px minmax(0,1fr) 60px 32px 32px}}
   @media(max-width:760px){.planner-entry{grid-template-columns:1fr 1fr}.planner-field.student{grid-column:1/-1}.planner-field.duration{grid-column:1/-1}.planner-add{grid-column:1/-1;width:100%}.planner-summary{align-items:flex-start;flex-direction:column}.planner-row,.planner-pause-row{grid-template-columns:84px minmax(0,1fr) 58px 30px 30px;gap:5px;padding-left:6px;padding-right:6px}.planner-keyhint{display:none}}
@@ -551,7 +553,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v260</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v261</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -649,7 +651,7 @@ Langues : FR, DE, EN, LU">?</span>
         <div><label>Fin</label><input type="time" id="cfgEnd"></div>
         <div><label>Durée standard (min)</label><input type="number" id="cfgDur" min="5" max="120" step="5"></div>
       </div>
-      <p class="hint pause-note">Définissez ici la plage générale et la durée standard. Dans la saisie rapide, vous ne modifiez ensuite que les exceptions et les pauses.</p>
+      <p class="hint pause-note">Définissez ici la plage visible et la durée standard. Dans le planning, cliquez ensuite directement sur l’heure souhaitée ; seules les durées exceptionnelles doivent être modifiées.</p>
     </div>
     <div class="card">
       <div class="card-head"><h2>Jours d’entretien</h2><span id="resetCalRow" style="display:none"><a href="#" id="resetCal" class="icon-btn" title="Réinitialiser le calendrier &amp; les rendez-vous">↺</a></span></div>
@@ -658,8 +660,8 @@ Langues : FR, DE, EN, LU">?</span>
     <div class="card quick-planner-card">
       <div class="card-head quick-planner-head">
         <div>
-          <h2>Saisie rapide des rendez-vous</h2>
-          <p class="hint">Choisissez l’élève, le jour et l’heure. La durée standard est déjà sélectionnée ; après l’ajout, l’heure suivante est proposée automatiquement.</p>
+          <h2>Planifier les rendez-vous</h2>
+          <p class="hint">Choisissez un jour, puis cliquez directement sur l’heure souhaitée. La ligne suit la souris par pas de 5 minutes.</p>
         </div>
       </div>
       <div id="quickPlanner"></div>
@@ -841,7 +843,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 256;
+const APP_VERSION = 261;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3081,7 +3083,7 @@ function assignmentOptionsFor(key, studentsList, assignmentEntries){
   });
   return opts.join("");
 }
-/* v260 — Tagesplan-Builder / saisie rapide */
+/* v261 — planification directe sur une ligne du temps */
 window._plannerActiveDay=window._plannerActiveDay||"";
 window._plannerEntryDuration=window._plannerEntryDuration||0;
 function plannerDateLabel(day, longForm){
@@ -3190,123 +3192,226 @@ function plannerDurationButtons(selected){
   return unique.map(v=>'<button type="button" class="planner-duration-btn'+(v===selected?' active':'')+(v===selected&&!([standard,standard+5,standard+10,standard+15].includes(v))?' custom-active':'')+'" data-planner-duration="'+v+'">'+v+'&#39;</button>').join('')
     +'<button type="button" class="planner-duration-btn" data-planner-duration-custom="1">Perso…</button>';
 }
+window._timelineComposer=window._timelineComposer||null;
+function timelineRangeForDay(day){
+  const items=plannerAssignedItems(day);
+  let start=Math.floor(timeToMin(state.config.start)/5)*5;
+  let end=Math.ceil(timeToMin(state.config.end)/5)*5;
+  if(items.length) end=Math.max(end,...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0)));
+  if(end<=start) end=start+60;
+  end=Math.min(24*60,Math.ceil(end/5)*5);
+  return {startMin:start,endMin:end,rows:Math.max(12,Math.round((end-start)/5)),unit:13};
+}
+function timelineStudentById(id){ return assignmentStudents().find(s=>s.id===id)||null; }
+function timelineDurationButtons(selected){
+  const standard=normalizeDurationValue(state.config.durationMin)||20;
+  const vals=[standard,standard+5,standard+10].filter(v=>v<=120);
+  if(selected&&!vals.includes(selected)) vals.push(selected);
+  return [...new Set(vals)].sort((a,b)=>a-b).map(v=>'<button type="button" class="timeline-duration-btn'+(v===selected?' active':'')+'" data-timeline-duration="'+v+'">'+v+'&#39;</button>').join('')
+    +'<button type="button" class="timeline-duration-btn" data-timeline-duration-custom="1">Perso…</button>';
+}
+function timelineIntervals(day,ignoreIdx){
+  return plannerAssignedItems(day).filter(x=>x.idx!==ignoreIdx).map(x=>({
+    start:x.startMin,
+    end:x.startMin+x.durationMin+(x.pauseMin||0),
+    apptEnd:x.startMin+x.durationMin,
+    item:x
+  }));
+}
+function timelineIntervalFree(day,startMin,durationMin,ignoreIdx){
+  const end=startMin+durationMin;
+  return !timelineIntervals(day,ignoreIdx).some(x=>startMin<x.end&&end>x.start);
+}
+function timelinePointOccupied(day,min){
+  return timelineIntervals(day).some(x=>min>=x.start&&min<x.end);
+}
+function timelineNextOccupiedStart(day,min){
+  const vals=timelineIntervals(day).filter(x=>x.start>=min).map(x=>x.start);
+  return vals.length?Math.min(...vals):null;
+}
+function timelinePreviousAppointmentEndingAt(day,min){
+  return plannerAssignedItems(day).find(x=>x.startMin+x.durationMin===min)||null;
+}
+function timelineComposerTop(startMin,range){
+  const raw=((startMin-range.startMin)/5)*range.unit-10;
+  const max=Math.max(8,range.rows*range.unit-310);
+  return Math.max(8,Math.min(raw,max));
+}
+function timelineOpenComposer(day,startMin,durationMin){
+  window._timelineComposer={day,startMin,durationMin:normalizeDurationValue(durationMin)||(normalizeDurationValue(state.config.durationMin)||20)};
+  renderQuickPlanner();
+  setTimeout(()=>{ const s=document.getElementById('timelineStudent'); if(s&&!s.disabled) s.focus(); },0);
+}
+function timelineCloseComposer(){ window._timelineComposer=null; renderQuickPlanner(); }
+function timelineAddAppointment(day,startMin,durationMin,studentId){
+  if(!studentId){ showToast('Choisissez un élève.'); return false; }
+  if(!timelineIntervalFree(day,startMin,durationMin)){
+    showToast('Cette durée chevauche déjà un autre rendez-vous ou une pause.');
+    return false;
+  }
+  const items=plannerAssignedItems(day);
+  items.push({studentId,startMin,durationMin,pauseMin:0});
+  window._timelineComposer=null;
+  return plannerRebuildDay(day,items,'Rendez-vous ajouté à '+minToTime(startMin)+'.');
+}
+function timelineAddPauseAt(day,startMin,pauseMin){
+  const prev=timelinePreviousAppointmentEndingAt(day,startMin);
+  if(!prev){ showToast('Ajoutez la pause juste après un rendez-vous.'); return false; }
+  setPauseAfterForDay(day,prev.idx,pauseMin);
+  state.config.pauseMin=pauseMin;
+  window._timelineComposer=null;
+  scheduleAdjustmentChanged();
+  showToast('Pause de '+pauseMin+' minutes ajoutée.');
+  return true;
+}
 function renderQuickPlanner(){
-  const host=document.getElementById("quickPlanner");
+  const host=document.getElementById('quickPlanner');
   if(!host) return;
   const days=(state.config.dates||[]).slice().sort();
   const totalAssigned=Object.values(state.assignments||{}).filter(Boolean).length;
   const remaining=plannerRemainingStudents();
-  const meta=document.getElementById("weekPreviewMeta");
-  if(meta) meta.textContent=totalAssigned+" rendez-vous"+(remaining.length?" · "+remaining.length+" à placer":"");
   if(!days.length){
-    host.innerHTML='<div class="planner-empty"><strong>Sélectionnez d’abord un ou plusieurs jours.</strong>La saisie rapide apparaîtra ici dès qu’un jour d’entretien est choisi.</div>';
+    window._timelineComposer=null;
+    host.innerHTML='<div class="planner-empty"><strong>Sélectionnez d’abord un ou plusieurs jours.</strong>La ligne du temps apparaîtra ici dès qu’un jour d’entretien est choisi.</div>';
     return;
   }
   if(!days.includes(window._plannerActiveDay)) window._plannerActiveDay=days[0];
   const activeDay=window._plannerActiveDay;
   const standard=normalizeDurationValue(state.config.durationMin)||20;
-  let entryDuration=normalizeDurationValue(window._plannerEntryDuration)||standard;
-  window._plannerEntryDuration=entryDuration;
-  const nextTime=Math.min(23*60+59,plannerNextTimeForDay(activeDay));
-  const dayOptions=days.map(d=>'<option value="'+d+'"'+(d===activeDay?' selected':'')+'>'+esc(plannerDateLabel(d,false))+'</option>').join('');
-  const tabs=days.map(d=>{ const n=plannerAssignedCount(d); return '<button type="button" class="planner-day-tab'+(d===activeDay?' active':'')+'" data-planner-day-tab="'+d+'">'+esc(plannerDateLabel(d,false))+'<span class="count">'+n+'</span></button>'; }).join('');
   const items=plannerAssignedItems(activeDay);
-  const agendaEnd=items.length?Math.max(...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0))):timeToMin(state.config.start);
-  const rows=items.map(item=>{
-    const key=activeDay+"__"+item.idx;
+  const range=timelineRangeForDay(activeDay);
+  const height=range.rows*range.unit;
+  const tabs=days.map(d=>{ const n=plannerAssignedCount(d); return '<button type="button" class="planner-day-tab'+(d===activeDay?' active':'')+'" data-planner-day-tab="'+d+'">'+esc(plannerDateLabel(d,false))+'<span class="count">'+n+'</span></button>'; }).join('');
+  let lines='',labels='';
+  for(let i=0;i<=range.rows;i++){
+    const min=range.startMin+i*5;
+    const top=i*range.unit;
+    const major=((min-range.startMin)%20===0);
+    lines+='<span class="timeline-grid-line'+(major?' major':'')+'" style="top:'+top+'px"></span>';
+    if(major&&i<range.rows) labels+='<span class="timeline-time-label'+(i===0?' first':'')+'" style="top:'+top+'px">'+esc(minToTime(min))+'</span>';
+  }
+  const appts=items.map(item=>{
+    const stu=timelineStudentById(item.studentId);
+    const top=((item.startMin-range.startMin)/5)*range.unit+2;
+    const h=Math.max(24,(item.durationMin/5)*range.unit-4);
     const custom=item.durationMin!==standard;
     const pauseOn=!!item.pauseMin;
-    const appt='<div class="planner-row assigned" data-planner-row="'+item.idx+'">'
-      +'<input type="time" step="60" value="'+esc(minToTime(item.startMin))+'" data-planner-time-day="'+activeDay+'" data-planner-time-index="'+item.idx+'" aria-label="Heure du rendez-vous">'
-      +'<select data-planner-student-day="'+activeDay+'" data-planner-student-index="'+item.idx+'" aria-label="Élève">'+plannerStudentOptions(item.studentId,false)+'</select>'
-      +'<button type="button" class="planner-row-duration'+(custom?' custom':'')+'" data-adjust-day="'+activeDay+'" data-adjust-index="'+item.idx+'" title="Modifier la durée ou la pause">'+item.durationMin+'&#39;</button>'
-      +'<button type="button" class="planner-icon-btn'+(pauseOn?' pause-on':'')+'" data-planner-pause-day="'+activeDay+'" data-planner-pause-index="'+item.idx+'" title="'+(pauseOn?'Modifier la pause':'Ajouter une pause après ce rendez-vous')+'">Ⅱ</button>'
-      +'<button type="button" class="planner-icon-btn delete" data-planner-delete-day="'+activeDay+'" data-planner-delete-index="'+item.idx+'" title="Retirer ce rendez-vous">×</button>'
-      +'</div>';
-    if(!item.pauseMin) return appt;
-    const pauseStart=item.startMin+item.durationMin;
-    const pause='<div class="planner-row planner-pause-row">'
-      +'<span class="planner-pause-time">'+esc(minToTime(pauseStart))+'</span>'
-      +'<span class="planner-pause-label"><span class="glyph">Ⅱ</span> Pause</span>'
-      +'<button type="button" class="planner-row-duration" data-planner-pause-edit-day="'+activeDay+'" data-planner-pause-edit-index="'+item.idx+'" title="Modifier la durée de la pause">'+item.pauseMin+'&#39;</button>'
-      +'<span class="planner-pause-spacer"></span>'
-      +'<button type="button" class="planner-icon-btn delete" data-planner-pause-remove-day="'+activeDay+'" data-planner-pause-remove-index="'+item.idx+'" title="Supprimer la pause">×</button>'
-      +'</div>';
-    return appt+pause;
+    return '<div class="timeline-appt'+(custom?' custom-duration':'')+'" data-timeline-appt="'+item.idx+'" style="top:'+top+'px;height:'+h+'px">'
+      +'<div class="timeline-appt-content">'
+      +'<button type="button" class="timeline-appt-time" data-time-day="'+activeDay+'" data-time-index="'+item.idx+'" data-time-current="'+item.startMin+'" title="Modifier l’heure">'+esc(minToTime(item.startMin))+'</button>'
+      +'<select class="timeline-appt-student" data-timeline-student-day="'+activeDay+'" data-timeline-student-index="'+item.idx+'" aria-label="Élève">'+plannerStudentOptions(item.studentId,false)+'</select>'
+      +'<div class="timeline-appt-actions">'
+      +'<button type="button" class="timeline-action duration'+(custom?' custom':'')+'" data-adjust-day="'+activeDay+'" data-adjust-index="'+item.idx+'" title="Modifier la durée">'+item.durationMin+'&#39;</button>'
+      +'<button type="button" class="timeline-action pause'+(pauseOn?' on':'')+'" data-planner-pause-day="'+activeDay+'" data-planner-pause-index="'+item.idx+'" title="'+(pauseOn?'Modifier la pause':'Ajouter une pause après')+'">Ⅱ</button>'
+      +'<button type="button" class="timeline-action delete" data-planner-delete-day="'+activeDay+'" data-planner-delete-index="'+item.idx+'" title="Retirer le rendez-vous">×</button>'
+      +'</div></div></div>';
   }).join('');
-  const noStudent=remaining.length===0;
-  host.innerHTML='<div class="planner-entry">'
-    +'<div class="planner-field student"><label for="plannerStudent">Élève</label><select id="plannerStudent"'+(noStudent?' disabled':'')+'>'+plannerStudentOptions('',true)+'</select></div>'
-    +'<div class="planner-field"><label for="plannerDay">Jour</label><select id="plannerDay">'+dayOptions+'</select></div>'
-    +'<div class="planner-field"><label for="plannerTime">Heure</label><input id="plannerTime" type="time" step="60" value="'+esc(minToTime(nextTime))+'"></div>'
-    +'<div class="planner-field duration"><label>Durée</label><div class="planner-duration-set">'+plannerDurationButtons(entryDuration)+'</div></div>'
-    +'<button type="button" class="planner-add" id="plannerAdd"'+(noStudent?' disabled':'')+'>Ajouter</button>'
-    +'</div>'
-    +'<div class="planner-summary"><span><strong>'+totalAssigned+' rendez-vous</strong> · '+remaining.length+' élève'+(remaining.length===1?'':'s')+' encore à placer</span><span class="planner-keyhint">Entrée ↵ pour ajouter · la prochaine heure est proposée automatiquement</span></div>'
+  const pauses=items.filter(x=>x.pauseMin).map(item=>{
+    const start=item.startMin+item.durationMin;
+    const top=((start-range.startMin)/5)*range.unit;
+    const h=Math.max(10,(item.pauseMin/5)*range.unit);
+    return '<div class="timeline-pause" style="top:'+top+'px;height:'+h+'px">'
+      +'<div class="timeline-pause-pill" data-planner-pause-edit-day="'+activeDay+'" data-planner-pause-edit-index="'+item.idx+'"><span>Ⅱ '+item.pauseMin+'&#39;</span><button type="button" class="timeline-pause-remove" data-planner-pause-remove-day="'+activeDay+'" data-planner-pause-remove-index="'+item.idx+'" aria-label="Supprimer la pause">×</button></div>'
+      +'</div>';
+  }).join('');
+  let composer='';
+  const comp=window._timelineComposer;
+  if(comp&&comp.day===activeDay){
+    const selected=normalizeDurationValue(comp.durationMin)||standard;
+    const free=timelineIntervalFree(activeDay,comp.startMin,selected);
+    const next=timelineNextOccupiedStart(activeDay,comp.startMin);
+    const available=next!==null?Math.max(0,next-comp.startMin):null;
+    const warning=!free?'<div class="timeline-compose-warning">La durée choisie chevauche le prochain élément'+(available!==null&&available>0?' ; espace libre : '+available+' minutes':'')+'. Choisissez une durée plus courte ou une autre heure.</div>':'';
+    const prev=timelinePreviousAppointmentEndingAt(activeDay,comp.startMin);
+    const pauseChoices=prev?'<div class="timeline-compose-sep"></div><span class="timeline-compose-label">Ou insérer une pause ici</span><div class="timeline-pause-choices"><button type="button" class="timeline-pause-choice" data-timeline-add-pause="5">Ⅱ 5&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause="10">Ⅱ 10&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause="15">Ⅱ 15&#39;</button><button type="button" class="timeline-pause-choice" data-timeline-add-pause-custom="1">Perso…</button></div>':'';
+    composer='<div class="timeline-composer" style="top:'+timelineComposerTop(comp.startMin,range)+'px" data-timeline-composer="1">'
+      +'<div class="timeline-composer-head"><div class="timeline-composer-title"><span>Nouveau rendez-vous</span><strong>'+esc(minToTime(comp.startMin))+'</strong></div><button type="button" class="timeline-composer-close" data-timeline-close="1" aria-label="Fermer">×</button></div>'
+      +'<span class="timeline-compose-label">Durée</span><div class="timeline-duration-set">'+timelineDurationButtons(selected)+'</div>'
+      +'<label class="timeline-compose-label" for="timelineStudent">Élève</label><select id="timelineStudent" class="timeline-student-select"'+(remaining.length?'':' disabled')+'>'+plannerStudentOptions('',true)+'</select>'
+      +'<p class="timeline-compose-help">Choisissez l’élève : le rendez-vous est ajouté immédiatement.</p>'+warning+pauseChoices+'</div>';
+  }
+  const agendaEnd=items.length?Math.max(...items.map(x=>x.startMin+x.durationMin+(x.pauseMin||0))):range.startMin;
+  host.innerHTML='<div class="planner-summary"><span><strong>'+totalAssigned+' rendez-vous</strong> · '+remaining.length+' élève'+(remaining.length===1?'':'s')+' encore à placer</span><span class="planner-keyhint">Cliquez dans la ligne du temps · précision de 5 minutes</span></div>'
     +'<div class="planner-day-tabs">'+tabs+'</div>'
-    +'<div class="planner-agenda"><div class="planner-agenda-head"><h3>'+esc(plannerDateLabel(activeDay,true))+'</h3><span class="planner-agenda-meta">'+items.length+' rendez-vous'+(items.length?' · fin '+esc(minToTime(agendaEnd)):'')+'</span></div>'
-    +(rows?'<div class="planner-list">'+rows+'</div>':'<div class="planner-empty"><strong>Aucun rendez-vous ce jour.</strong>Ajoutez le premier rendez-vous avec la ligne ci-dessus.</div>')
-    +'</div>';
+    +'<div class="timeline-planner"><div class="timeline-planner-head"><h3>'+esc(plannerDateLabel(activeDay,true))+'</h3><span class="timeline-planner-meta">'+items.length+' rendez-vous'+(items.length?' · fin '+esc(minToTime(agendaEnd)):'')+'</span></div>'
+    +'<div class="timeline-stage"><div class="timeline-axis" style="height:'+height+'px">'+labels+'</div><div class="timeline-canvas" tabindex="0" data-timeline-day="'+activeDay+'" style="height:'+height+'px">'+lines+(items.length?'':'<span class="timeline-empty-note">Cliquez sur une heure pour placer le premier rendez-vous</span>')+appts+pauses+'<div class="timeline-hover-line" id="timelineHoverLine"><span class="timeline-hover-time" id="timelineHoverTime"></span></div>'+composer+'</div></div></div>';
 
   host.onclick=(ev)=>{
-    const dur=ev.target.closest('[data-planner-duration]');
-    if(dur){ window._plannerEntryDuration=Number(dur.dataset.plannerDuration); host.querySelectorAll('[data-planner-duration]').forEach(b=>b.classList.toggle('active',Number(b.dataset.plannerDuration)===window._plannerEntryDuration)); return; }
-    const custom=ev.target.closest('[data-planner-duration-custom]');
-    if(custom){ const v=askCustomMinutes('duration',window._plannerEntryDuration||standard,120); if(v){ window._plannerEntryDuration=v; renderQuickPlanner(); } return; }
     const tab=ev.target.closest('[data-planner-day-tab]');
-    if(tab){ window._plannerActiveDay=tab.dataset.plannerDayTab; renderQuickPlanner(); return; }
-    const add=ev.target.closest('#plannerAdd');
-    if(add){
-      const stu=host.querySelector('#plannerStudent'), daySel=host.querySelector('#plannerDay'), time=host.querySelector('#plannerTime');
-      const sid=stu&&stu.value, day=daySel&&daySel.value, start=time?timeToMin(time.value):NaN;
-      if(!sid){ showToast("Choisissez un élève."); return; }
-      if(!day||!Number.isFinite(start)){ showToast("Choisissez un jour et une heure."); return; }
-      const items=plannerAssignedItems(day);
-      items.push({studentId:sid,startMin:start,durationMin:normalizeDurationValue(window._plannerEntryDuration)||standard,pauseMin:0});
-      window._plannerActiveDay=day; window._plannerEntryDuration=standard;
-      const added=plannerRebuildDay(day,items,"Rendez-vous ajouté.");
-      if(added) setTimeout(()=>{ const next=document.getElementById("plannerStudent"); if(next&&!next.disabled) next.focus(); },0);
-      return;
-    }
+    if(tab){ window._plannerActiveDay=tab.dataset.plannerDayTab; window._timelineComposer=null; renderQuickPlanner(); return; }
+    const close=ev.target.closest('[data-timeline-close]');
+    if(close){ timelineCloseComposer(); return; }
+    const dur=ev.target.closest('[data-timeline-duration]');
+    if(dur&&window._timelineComposer){ window._timelineComposer.durationMin=Number(dur.dataset.timelineDuration); renderQuickPlanner(); setTimeout(()=>{ const s=document.getElementById('timelineStudent'); if(s&&!s.disabled) s.focus(); },0); return; }
+    const custom=ev.target.closest('[data-timeline-duration-custom]');
+    if(custom&&window._timelineComposer){ const v=askCustomMinutes('duration',window._timelineComposer.durationMin||standard,120); if(v){ window._timelineComposer.durationMin=v; renderQuickPlanner(); } return; }
+    const addPause=ev.target.closest('[data-timeline-add-pause]');
+    if(addPause&&window._timelineComposer){ timelineAddPauseAt(activeDay,window._timelineComposer.startMin,Number(addPause.dataset.timelineAddPause)); return; }
+    const addPauseCustom=ev.target.closest('[data-timeline-add-pause-custom]');
+    if(addPauseCustom&&window._timelineComposer){ const v=askCustomMinutes('pause',plannerPreferredPause(),60); if(v) timelineAddPauseAt(activeDay,window._timelineComposer.startMin,v); return; }
+    const timeBtn=ev.target.closest('button[data-time-day]');
+    if(timeBtn){ ev.stopPropagation(); openTimelineTimePicker(timeBtn); return; }
     const adjust=ev.target.closest('[data-adjust-day]');
     if(adjust){ ev.stopPropagation(); openAppointmentAdjustPopover(adjust,adjust.dataset.adjustDay,parseInt(adjust.dataset.adjustIndex,10),false); return; }
     const pauseEdit=ev.target.closest('[data-planner-pause-edit-day]');
     if(pauseEdit){ ev.stopPropagation(); openAppointmentAdjustPopover(pauseEdit,pauseEdit.dataset.plannerPauseEditDay,parseInt(pauseEdit.dataset.plannerPauseEditIndex,10),true); return; }
     const pauseBtn=ev.target.closest('[data-planner-pause-day]');
     if(pauseBtn){
+      ev.stopPropagation();
       const day=pauseBtn.dataset.plannerPauseDay, idx=parseInt(pauseBtn.dataset.plannerPauseIndex,10);
       const existing=pauseAfterMinForDay(day,idx);
-      if(existing){ openAppointmentAdjustPopover(pauseBtn,day,idx,true); }
-      else { const v=plannerPreferredPause(); setPauseAfterForDay(day,idx,v); state.config.pauseMin=v; scheduleAdjustmentChanged(); showToast("Pause de "+v+" minutes ajoutée."); }
+      if(existing) openAppointmentAdjustPopover(pauseBtn,day,idx,true);
+      else { const v=plannerPreferredPause(); setPauseAfterForDay(day,idx,v); state.config.pauseMin=v; scheduleAdjustmentChanged(); showToast('Pause de '+v+' minutes ajoutée.'); }
       return;
     }
     const pauseRemove=ev.target.closest('[data-planner-pause-remove-day]');
-    if(pauseRemove){ removePauseAfterForDay(pauseRemove.dataset.plannerPauseRemoveDay,parseInt(pauseRemove.dataset.plannerPauseRemoveIndex,10)); scheduleAdjustmentChanged(); return; }
+    if(pauseRemove){ ev.stopPropagation(); removePauseAfterForDay(pauseRemove.dataset.plannerPauseRemoveDay,parseInt(pauseRemove.dataset.plannerPauseRemoveIndex,10)); scheduleAdjustmentChanged(); return; }
     const del=ev.target.closest('[data-planner-delete-day]');
     if(del){
+      ev.stopPropagation();
       const day=del.dataset.plannerDeleteDay, idx=parseInt(del.dataset.plannerDeleteIndex,10);
-      const items=plannerAssignedItems(day).filter(x=>x.idx!==idx);
-      plannerRebuildDay(day,items,"Rendez-vous retiré.");
+      const list=plannerAssignedItems(day).filter(x=>x.idx!==idx);
+      plannerRebuildDay(day,list,'Rendez-vous retiré.');
       return;
+    }
+    const canvas=ev.target.closest('[data-timeline-day]');
+    if(canvas&&!ev.target.closest('.timeline-appt,.timeline-pause,.timeline-composer')){
+      const r=canvas.getBoundingClientRect();
+      const y=Math.max(0,Math.min(r.height,ev.clientY-r.top));
+      const min=Math.min(range.endMin-5,range.startMin+Math.round(y/range.unit)*5);
+      if(timelinePointOccupied(activeDay,min)){ showToast('Cette heure est déjà occupée.'); return; }
+      timelineOpenComposer(activeDay,min,standard);
     }
   };
   host.onchange=(ev)=>{
-    if(ev.target.id==='plannerDay'){ window._plannerActiveDay=ev.target.value; renderQuickPlanner(); return; }
-    if(ev.target.matches('[data-planner-time-day]')){
-      const day=ev.target.dataset.plannerTimeDay, idx=parseInt(ev.target.dataset.plannerTimeIndex,10), value=timeToMin(ev.target.value);
-      const items=plannerAssignedItems(day); const hit=items.find(x=>x.idx===idx); if(hit){ hit.startMin=value; plannerRebuildDay(day,items); } return;
-    }
-    if(ev.target.matches('[data-planner-student-day]')){
-      const day=ev.target.dataset.plannerStudentDay, idx=parseInt(ev.target.dataset.plannerStudentIndex,10), sid=ev.target.value;
+    if(ev.target.id==='timelineStudent'&&window._timelineComposer){
+      const sid=ev.target.value;
       if(!sid) return;
-      const used=Object.entries(state.assignments).find(([k,v])=>v===sid && k!==day+'__'+idx);
-      if(used){ showToast("Cet élève est déjà planifié."); renderQuickPlanner(); return; }
+      const ok=timelineAddAppointment(activeDay,window._timelineComposer.startMin,normalizeDurationValue(window._timelineComposer.durationMin)||standard,sid);
+      if(!ok) ev.target.value='';
+      return;
+    }
+    if(ev.target.matches('[data-timeline-student-day]')){
+      const day=ev.target.dataset.timelineStudentDay, idx=parseInt(ev.target.dataset.timelineStudentIndex,10), sid=ev.target.value;
+      if(!sid) return;
+      const used=Object.entries(state.assignments).find(([k,v])=>v===sid&&k!==day+'__'+idx);
+      if(used){ showToast('Cet élève est déjà planifié.'); renderQuickPlanner(); return; }
       state.assignments[day+'__'+idx]=sid; saveState(); renderCalendar(); try{ scheduleRenderMails(null,260); }catch(e){} return;
     }
   };
-  host.onkeydown=(ev)=>{
-    if(ev.key==='Enter' && ev.target.closest('.planner-entry')){ ev.preventDefault(); const b=host.querySelector('#plannerAdd'); if(b&&!b.disabled) b.click(); }
-  };
+  const canvas=host.querySelector('[data-timeline-day]');
+  if(canvas){
+    canvas.onmousemove=(ev)=>{
+      if(ev.target.closest('.timeline-composer')) return;
+      const r=canvas.getBoundingClientRect();
+      const y=Math.max(0,Math.min(r.height-1,ev.clientY-r.top));
+      const row=Math.max(0,Math.min(range.rows-1,Math.round(y/range.unit)));
+      const min=range.startMin+row*5;
+      const line=host.querySelector('#timelineHoverLine'), label=host.querySelector('#timelineHoverTime');
+      if(line&&label){ line.style.top=(row*range.unit)+'px'; label.textContent=minToTime(min); line.classList.add('show'); }
+    };
+    canvas.onmouseleave=()=>{ const line=host.querySelector('#timelineHoverLine'); if(line) line.classList.remove('show'); };
+  }
 }
 
 function renderCalendar(){
