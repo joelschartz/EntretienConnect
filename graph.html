@@ -279,6 +279,18 @@
   .timeline-appt.dragging .timeline-action{pointer-events:none}
   .timeline-drag-ghost{font-family:inherit;font-size:13px}
   @media(max-width:760px){.timeline-composer{width:330px;max-width:calc(100vw - 20px)}.timeline-appt-content{grid-template-columns:48px minmax(0,1fr) auto}.timeline-appt-time{font-size:12.5px}.timeline-appt-student-name{font-size:13px;padding-left:7px}.timeline-action.duration{min-width:40px;font-size:12.5px}}
+  /* v265 — actions iconiques, ligne de dépôt sous le pointeur et conflit visuel */
+  .timeline-appt-time:hover,.timeline-appt-time:focus{background:rgba(255,255,255,.26)!important;color:#4a55a2!important;outline:none!important}
+  .appt-adjust-actions{min-height:34px}
+  .appt-icon-action{appearance:none;-webkit-appearance:none;width:32px;height:32px;min-width:32px;padding:0;border:0;border-radius:999px;background:transparent;display:inline-flex;align-items:center;justify-content:center;box-shadow:none;line-height:1;cursor:pointer;transition:background .12s,color .12s,opacity .12s}
+  .appt-icon-action.reset{color:#8b94a6;font-size:20px;font-weight:650}
+  .appt-icon-action.reset:hover,.appt-icon-action.reset:focus{background:var(--accent-soft);color:#4a55a2;outline:none;text-decoration:none}
+  .appt-icon-action.delete{color:#98a2b3;font-size:21px;font-weight:500}
+  .appt-icon-action.delete:hover,.appt-icon-action.delete:focus{background:var(--err-soft);color:var(--err);outline:none;text-decoration:none}
+  .appt-icon-action:disabled{opacity:.34;cursor:default;background:transparent!important;color:#98a2b3!important}
+  .timeline-drop-line.composer-invalid{z-index:28}
+  .timeline-drop-line.invalid-pulse{animation:timelineInvalidPulse .42s ease}
+  @keyframes timelineInvalidPulse{0%,100%{opacity:.88}45%{opacity:1;box-shadow:0 0 0 3px rgba(196,71,58,.14)}}
 
   .week-preview-card{padding:0;overflow:hidden}.week-preview-card>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;cursor:pointer;font-size:15px;font-weight:800;color:#344054;background:#fff}.week-preview-card>summary::-webkit-details-marker{display:none}.week-preview-card>summary:after{content:"⌄";font-size:14px;color:#8a92a6;transition:transform .15s}.week-preview-card[open]>summary:after{transform:rotate(180deg)}.week-preview-card[open]>summary{border-bottom:1px solid var(--line);background:#fbfbfe}.week-preview-meta{margin-left:auto;color:#8a92a6;font-size:12px;font-weight:700}.week-preview-body{padding:12px 16px 16px;position:relative;z-index:1;overflow:hidden}.week-preview-body .banner{position:relative;z-index:12}.week-preview-body .weekblock{position:relative;z-index:1}.week-preview-body .schedule-scroll{isolation:isolate}.week-preview-body .block-time-btn.manual{color:#5b6478;background:rgba(15,23,42,.015);border-right-color:#e9ecf4}
   @media(max-width:1050px){.planner-entry{grid-template-columns:minmax(210px,1.5fr) minmax(165px,1fr) 112px minmax(250px,1.2fr)}.planner-add{grid-column:1/-1;justify-self:end}.planner-row{grid-template-columns:88px minmax(0,1fr) 60px 32px 32px}}
@@ -625,7 +637,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v264</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v265</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -908,7 +920,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 264;
+const APP_VERSION = 265;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2118,7 +2130,7 @@ function openAppointmentAdjustPopover(anchor, day, idx, pauseOnly, durationOnly,
   pop.innerHTML='<div class="appt-adjust-title">'+(pauseOnly?'Ajouter une pause':(durationOnly?'Modifier la durée':'Adapter ce rendez-vous'))+'</div>'
     +'<div class="appt-adjust-section duration-section"><span class="appt-adjust-label">Durée <small>standard : '+standard+'&#39;</small></span><div class="appt-choice-row">'+durationButtons+'</div></div>'
     +'<div class="appt-adjust-section pause-section"><span class="appt-adjust-label">Pause après le rendez-vous</span><div class="appt-choice-row">'+pauseButtons+'</div></div>'
-    +'<div class="appt-adjust-actions"><button type="button" class="appt-reset"'+(custom?'':' disabled')+'>↺ Réinitialiser</button>'+(allowDelete?'<button type="button" class="appt-delete">Retirer le rendez-vous</button>':'<span class="appt-adjust-note">Modifications appliquées immédiatement</span>')+'</div>';
+    +'<div class="appt-adjust-actions"><button type="button" class="appt-reset appt-icon-action reset" title="Réinitialiser la durée" aria-label="Réinitialiser la durée"'+(custom?'':' disabled')+'>↺</button>'+(allowDelete?'<button type="button" class="appt-delete appt-icon-action delete" title="Retirer le rendez-vous" aria-label="Retirer le rendez-vous">×</button>':'<span class="appt-adjust-note">Modifications appliquées immédiatement</span>')+'</div>';
   document.body.appendChild(pop);
   positionPopoverNear(pop,anchor);
   if(pauseOnly){ const section=pop.querySelector('.pause-section'); if(section) section.scrollIntoView({block:'nearest'}); }
@@ -3368,10 +3380,23 @@ function timelineOpenComposer(day,startMin,durationMin){
   },20);
 }
 function timelineCloseComposer(){ window._timelineComposer=null; renderQuickPlanner(); }
+function timelineSignalInvalidPlacement(day,startMin){
+  const canvas=document.querySelector('[data-timeline-day="'+day+'"]');
+  if(!canvas) return;
+  const line=canvas.querySelector('[data-timeline-drop-line]');
+  if(!line) return;
+  const unit=Number(canvas.dataset.rangeUnit)||13;
+  const rangeStart=Number(canvas.dataset.rangeStart)||0;
+  const row=Math.max(0,Math.round((startMin-rangeStart)/5));
+  line.style.top=(row*unit)+'px';
+  const label=line.querySelector('.timeline-drop-time'); if(label) label.textContent=minToTime(startMin);
+  line.classList.add('show','invalid','composer-invalid','invalid-pulse');
+  setTimeout(()=>line.classList.remove('invalid-pulse'),460);
+}
 function timelineAddAppointment(day,startMin,durationMin,studentId){
   if(!studentId){ showToast('Choisissez un élève.'); return false; }
   if(!timelineIntervalFree(day,startMin,durationMin)){
-    showToast('Cette durée chevauche déjà un autre rendez-vous.');
+    timelineSignalInvalidPlacement(day,startMin);
     return false;
   }
   const items=plannerAssignedItems(day);
@@ -3424,21 +3449,27 @@ function timelineCanvasHtml(day,range,dayIndex,dayCount){
   }).join('');
   const pauses='';
   let composer='';
+  let composerInvalid=false;
+  let composerLineTop=0;
+  let composerLineTime='';
   const comp=window._timelineComposer;
   if(comp&&comp.day===day){
     const selected=normalizeDurationValue(comp.durationMin)||standard;
     const free=timelineIntervalFree(day,comp.startMin,selected);
-    const next=timelineNextOccupiedStart(day,comp.startMin);
-    const available=next!==null?Math.max(0,next-comp.startMin):null;
-    const warning=!free?'<div class="timeline-compose-warning">La durée choisie chevauche le prochain élément'+(available!==null&&available>0?' ; espace libre : '+available+' minutes':'')+'. Choisissez une durée plus courte ou une autre heure.</div>':'';
+    composerInvalid=!free;
+    composerLineTop=Math.max(0,Math.round((comp.startMin-range.startMin)/5))*range.unit;
+    composerLineTime=minToTime(comp.startMin);
     const alignRight=dayIndex>=Math.ceil(dayCount/2);
-    composer='<div class="timeline-composer'+(alignRight?' align-right':'')+'" style="top:'+timelineComposerTop(comp.startMin,range)+'px" data-timeline-composer="1">'
+    const baseComposerTop=timelineComposerTop(comp.startMin,range);
+    const maxComposerTop=Math.max(8,range.rows*range.unit-330);
+    const visualComposerTop=composerInvalid?Math.min(maxComposerTop,baseComposerTop+18):baseComposerTop;
+    composer='<div class="timeline-composer'+(alignRight?' align-right':'')+'" style="top:'+visualComposerTop+'px" data-timeline-composer="1">'
       +'<div class="timeline-composer-head"><div class="timeline-composer-title"><span>Nouveau rendez-vous</span><strong>'+esc(minToTime(comp.startMin))+'</strong></div><button type="button" class="timeline-composer-close" data-timeline-close="1" aria-label="Fermer">✕</button></div>'
       +'<span class="timeline-compose-label">Durée</span><div class="timeline-duration-set">'+timelineDurationButtons(selected)+'</div>'
       +'<label class="timeline-compose-label" for="timelineStudentSearch">Élève</label>'
       +'<input id="timelineStudentSearch" class="timeline-student-search" type="search" placeholder="Rechercher un élève…" autocomplete="off">'
       +'<div class="timeline-student-list" id="timelineStudentList">'+timelineStudentListHtml()+'</div>'
-      +'<p class="timeline-compose-help">La liste est déjà ouverte : cliquez simplement sur le nom.</p>'+warning+'</div>';
+      +'<p class="timeline-compose-help">La liste est déjà ouverte : cliquez simplement sur le nom.</p></div>';
   }
   const agendaEnd=items.length?Math.max(...items.map(x=>x.startMin+x.durationMin)):range.startMin;
   const meta=items.length+' rendez-vous'+(items.length?' · fin '+esc(minToTime(agendaEnd)):'');
@@ -3447,7 +3478,7 @@ function timelineCanvasHtml(day,range,dayIndex,dayCount){
     +'<div class="timeline-canvas" tabindex="0" data-timeline-day="'+day+'" data-range-start="'+range.startMin+'" data-range-unit="'+range.unit+'" data-range-rows="'+range.rows+'" style="height:'+(range.rows*range.unit)+'px">'
     +lines+(items.length?'':'<span class="timeline-empty-note">Cliquez sur une heure</span>')+appts+pauses
     +'<div class="timeline-hover-line" data-timeline-hover-line="'+day+'"><span class="timeline-hover-time"></span></div>'
-    +'<div class="timeline-drop-line" data-timeline-drop-line="'+day+'"><span class="timeline-drop-time"></span></div>'
+    +'<div class="timeline-drop-line'+(composerInvalid?' show invalid composer-invalid':'')+'" data-timeline-drop-line="'+day+'"'+(composerInvalid?' style="top:'+composerLineTop+'px"':'')+'><span class="timeline-drop-time">'+(composerInvalid?esc(composerLineTime):'')+'</span></div>'
     +composer+'</div></div>';
 }
 function timelineWeekHtml(group){
@@ -3505,11 +3536,6 @@ function installTimelineDrag(host){
     const item=plannerAssignedItems(pending.day).find(x=>x.idx===pending.idx);
     if(!item){ clearPending(); return false; }
     const canvas=pending.appt.closest('[data-timeline-day]');
-    const unit=canvas ? (Number(canvas.dataset.rangeUnit)||13) : 13;
-    const ar=pending.appt.getBoundingClientRect();
-    const offsetPx=Math.max(0,Math.min(ar.height-1,pending.startY-ar.top));
-    const maxOffset=Math.max(0,item.durationMin-5);
-    const grabOffsetMin=Math.max(0,Math.min(maxOffset,Math.round(offsetPx/unit)*5));
     pending.appt.classList.add('dragging');
     document.body.classList.add('timeline-dragging');
     timelineClearHoverLines(host);
@@ -3517,7 +3543,7 @@ function installTimelineDrag(host){
     ghost.className='timeline-drag-ghost';
     ghost.innerHTML='<strong>'+esc(minToTime(item.startMin))+'</strong><span>'+esc(displayStudentName((timelineStudentById(item.studentId)||{}).name||''))+'</span>';
     document.body.appendChild(ghost);
-    drag={...pending,item,ghost,target:null,grabOffsetMin};
+    drag={...pending,item,ghost,target:null};
     ghost.style.left=(ev.clientX+12)+'px'; ghost.style.top=(ev.clientY+12)+'px';
     return true;
   };
@@ -3549,10 +3575,10 @@ function installTimelineDrag(host){
     const rows=Number(canvas.dataset.rangeRows)||1;
     const y=Math.max(0,Math.min(r.height-1,ev.clientY-r.top));
     const pointerRow=Math.max(0,Math.min(rows-1,Math.round(y/unit)));
-    let min=start+pointerRow*5-drag.grabOffsetMin;
+    let min=start+pointerRow*5;
     const maxStart=start+Math.max(0,rows-1)*5;
     min=Math.max(start,Math.min(maxStart,Math.round(min/5)*5));
-    const targetRow=Math.max(0,Math.round((min-start)/5));
+    const targetRow=pointerRow;
     const toDay=canvas.dataset.timelineDay;
     const valid=timelineIntervalFree(toDay,min,drag.item.durationMin,toDay===drag.day?drag.idx:undefined);
     const line=canvas.querySelector('[data-timeline-drop-line]');
