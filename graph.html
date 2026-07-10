@@ -968,11 +968,71 @@
     .setup-connection-body{min-height:0}
   }
 
+
+
+  /* v277 — connexions compactes uniquement dans la carte sélectionnée */
+  .setup-mode-grid{align-items:start!important}
+  .setup-mode-card{
+    min-height:132px!important;
+    padding:20px!important;
+    gap:12px!important;
+    overflow:visible!important
+  }
+  .setup-mode-card.active{background:#f7f8ff!important}
+  .setup-mode-connect-slot{
+    display:none!important;
+    width:100%;
+    min-height:0!important;
+    margin-top:10px!important;
+    padding:0!important;
+    border:0!important;
+    flex:0 0 auto!important;
+    align-items:flex-start!important;
+    cursor:default
+  }
+  .setup-mode-card.active .setup-mode-connect-slot{display:flex!important}
+  .setup-mode-connect-slot .setup-status-stack{
+    display:flex!important;
+    flex-direction:column;
+    align-items:flex-start;
+    width:auto!important;
+    max-width:100%;
+    gap:7px!important
+  }
+  .setup-mode-connect-slot .setup-status-row{
+    box-sizing:border-box;
+    width:max-content!important;
+    max-width:100%;
+    min-height:42px!important;
+    padding:8px 10px!important;
+    border-radius:11px!important;
+    background:#fff!important;
+    flex-wrap:nowrap!important;
+    gap:8px!important
+  }
+  .setup-mode-connect-slot .status-main{flex:0 1 auto!important;max-width:290px}
+  .setup-mode-connect-slot .setup-service-title{gap:6px!important}
+  .setup-mode-connect-slot .setup-service-title b{font-size:13.5px!important}
+  .setup-mode-connect-slot .setup-connected-label,
+  .setup-mode-connect-slot .setup-pending-label{font-size:11.5px!important}
+  .setup-mode-connect-slot .status-detail{font-size:11.5px!important;max-width:270px}
+  .setup-mode-connect-slot .ghost.sm{height:31px;padding:0 10px;flex:0 0 auto}
+  .setup-mode-connect-slot .setup-status-panel{
+    width:auto!important;max-width:100%;margin-top:7px!important;
+    padding:8px 9px!important;border-radius:10px!important;background:#fff!important
+  }
+  #setupStatusGrid{display:none!important}
+  @media(max-width:900px){
+    .setup-mode-card{min-height:118px!important}
+    .setup-mode-connect-slot .setup-status-row{width:100%!important}
+    .setup-mode-connect-slot .setup-status-stack{width:100%!important}
+  }
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v276</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v277</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1012,14 +1072,17 @@
         <div class="setup-mode-card" data-mode="ebichelchen">
           <span class="setup-chip ok">Le plus rapide</span>
           <h3>Uniquement e-Bichelchen</h3>
+          <div class="setup-mode-connect-slot" data-connect-slot="ebichelchen"></div>
         </div>
         <div class="setup-mode-card" data-mode="email">
           <span class="setup-chip">Classique</span>
           <h3>Uniquement e-mail</h3>
+          <div class="setup-mode-connect-slot" data-connect-slot="email"></div>
         </div>
         <div class="setup-mode-card" data-mode="both">
           <span class="setup-chip warn">Complet</span>
           <h3>e-Bichelchen + e-mail</h3>
+          <div class="setup-mode-connect-slot" data-connect-slot="both"></div>
         </div>
       </div>
       <div id="setupCurrent" class="setup-current"></div>
@@ -1252,7 +1315,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 276;
+const APP_VERSION = 277;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3005,27 +3068,19 @@ function renderSetup(){
       btn.disabled=!!isActive;
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
     }
+    const slot=card.querySelector(".setup-mode-connect-slot");
+    if(slot) slot.innerHTML=isActive ? setupConnectionSlotHtml(card.dataset.mode,true) : "";
   }); }
   if(current) current.innerHTML=setupProgressHtml();
   if(change) change.style.display="none";
   if(navHint) navHint.style.display="none";
   if(reminderChoice){ reminderChoice.style.display="none"; reminderChoice.innerHTML=""; }
-  if(status){
-    if(mode){
-      const oneService=mode!=="both";
-      status.innerHTML='<div class="setup-connection-panel">'
-        +'<div class="setup-connection-head"><strong>'+(mode==="both"?'Connexions':'Connexion')+'</strong><span>'+esc(modeLabel(mode))+'</span></div>'
-        +'<div class="setup-connection-body'+(oneService?' single':'')+'">'+setupConnectionSlotHtml(mode,true)+'</div>'
-        +'</div>';
-    }else{
-      status.innerHTML="";
-    }
-    document.querySelectorAll('[data-setup-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
-    document.querySelectorAll('[data-setup-ms-connect]').forEach(btn=>{
-      btn.onclick=()=>startMicrosoftLogin(btn.dataset.loginBox,btn.id);
-    });
-    document.querySelectorAll('[data-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
-  }
+  if(status) status.innerHTML="";
+  document.querySelectorAll('[data-setup-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
+  document.querySelectorAll('[data-setup-ms-connect]').forEach(btn=>{
+    btn.onclick=()=>startMicrosoftLogin(btn.dataset.loginBox,btn.id);
+  });
+  document.querySelectorAll('[data-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
 }
 function bindSetup(){
   // v186: l'export/import JSON des modèles a été retiré (code mort depuis le retrait des
