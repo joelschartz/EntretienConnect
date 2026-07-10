@@ -1,5 +1,5 @@
 {
-  "version": "v266",
+  "version": "v267",
   "files": [
     {
       "target": "index.html",
@@ -10,8 +10,8 @@
     {
       "target": "graph.html",
       "url": "graph.html",
-      "sha256": "e592cfe44e1693fd378a222986fadaa8dafdd745057f7b4c0a0177451b96db11",
-      "size": 449507
+      "sha256": "ddce61d2a0378188bb3bbd599582671961952dedc1891b7f07677b78cd8b351b",
+      "size": 453087
     },
     {
       "target": "schullogo.png",
