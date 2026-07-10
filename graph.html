@@ -368,6 +368,14 @@
   .timeline-student-list{max-height:230px;gap:4px}.timeline-student-option{min-height:43px;font-size:15px;padding:9px 12px}
   .timeline-student-empty,.timeline-compose-help,.timeline-compose-warning{font-size:12.5px}
   .timeline-composer-close{width:29px;height:29px;font-size:19px}
+  /* v269 — Blockvarianten auf die v268-Typografie eingenordet; siehe APPT_TIER_MIN_HEIGHT */
+  .timeline-appt{left:4px;right:4px}
+  .timeline-appt-content{padding:4px 8px 4px 9px}
+  .timeline-appt.two-line .timeline-appt-meta{height:18px;line-height:18px}
+  .timeline-appt.two-line .timeline-appt-student-name{line-height:21px}
+  .timeline-appt.dense .timeline-appt-content{padding:2px 7px 2px 8px}
+  .timeline-appt.compact .timeline-appt-time{line-height:16px}
+  .timeline-appt.compact .timeline-appt-student-name{line-height:16px}
   @media(max-width:760px){
     .timeline-week-grid{grid-template-columns:58px repeat(var(--week-days),minmax(176px,1fr));min-width:calc(58px + (var(--week-days) * 176px))}
     .timeline-appt-content{padding:3px 7px 3px 8px}
@@ -723,7 +731,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v268</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v269</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1006,7 +1014,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 268;
+const APP_VERSION = 269;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3422,6 +3430,19 @@ function timelineRangeForDays(days){
   end=Math.min(24*60,Math.ceil(end/5)*5);
   return {startMin:start,endMin:end,rows:Math.max(12,Math.round((end-start)/5)),unit:15};
 }
+// Mindesthöhe (px), die eine Blockvariante braucht, damit nichts abgeschnitten wird.
+// Direkt aus der Typografie in .timeline-appt-* abgeleitet, jeweils Innenabstand + Meta-Zeile + Namenszeile(n):
+//   dense   = 4 + 16 + 18       = 38
+//   roomy   = 8 + 20 + 21       = 49
+//   twoLine = 8 + 18 + 2 * 21   = 68
+// Wer dort die Schriftgröße oder oben unit ändert, passt nur diese drei Zahlen an.
+const APPT_TIER_MIN_HEIGHT = { dense:38, roomy:49, twoLine:68 };
+function timelineApptTier(h){
+  if(h < APPT_TIER_MIN_HEIGHT.dense)   return 'compact';   // eine Zeile, Dauer erst beim Überfahren
+  if(h < APPT_TIER_MIN_HEIGHT.roomy)   return 'dense';     // zwei Zeilen, enger gesetzt
+  if(h < APPT_TIER_MIN_HEIGHT.twoLine) return 'roomy';     // zwei Zeilen, Name einzeilig
+  return 'two-line';                                       // Name darf umbrechen
+}
 function timelineStudentById(id){ return assignmentStudents().find(s=>s.id===id)||null; }
 function timelineDurationButtons(selected){
   const standard=normalizeDurationValue(state.config.durationMin)||20;
@@ -3524,9 +3545,10 @@ function timelineCanvasHtml(day,range,dayIndex,dayCount){
     const top=((item.startMin-range.startMin)/5)*range.unit+2;
     const h=Math.max(24,(item.durationMin/5)*range.unit-4);
     const custom=item.durationMin!==standard;
-    const compact=h<30;          // <=10 min : une seule ligne
-    const dense=!compact&&h<40;  // 15 min : deux lignes serrées
-    const twoLine=!compact&&h>=58; // 25 min et plus : le nom peut passer sur deux lignes
+    const tier=timelineApptTier(h);
+    const compact=tier==='compact';
+    const dense=tier==='dense';
+    const twoLine=tier==='two-line';
     const studentName=displayStudentName((stu||{}).name||'(sans nom)');
     const fullName=(stu||{}).name||'(sans nom)';
     const apptTitle=fullName+' · '+minToTime(item.startMin)+' · '+item.durationMin+" min";
