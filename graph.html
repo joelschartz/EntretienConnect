@@ -288,6 +288,17 @@
   .appt-icon-action.delete{color:#98a2b3;font-size:21px;font-weight:500}
   .appt-icon-action.delete:hover,.appt-icon-action.delete:focus{background:var(--err-soft);color:var(--err);outline:none;text-decoration:none}
   .appt-icon-action:disabled{opacity:.34;cursor:default;background:transparent!important;color:#98a2b3!important}
+  /* v266 — actions de rendez-vous seulement au survol : durée puis suppression */
+  .timeline-appt-content{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);align-items:stretch}
+  .timeline-appt-student-name{padding-right:10px!important;position:relative!important;z-index:1!important}
+  .timeline-appt-actions{position:absolute!important;right:0!important;top:50%!important;transform:translateY(-50%)!important;display:flex!important;align-items:center!important;gap:6px!important;justify-content:flex-end!important;min-width:96px!important;padding:2px 6px 2px 14px!important;background:#e9ecff!important;box-shadow:-16px 0 16px 4px #e9ecff!important;opacity:0!important;pointer-events:none!important;transition:opacity .12s ease!important;z-index:20!important;border-radius:0 8px 8px 0}
+  .timeline-appt.custom-duration .timeline-appt-actions{opacity:0!important;pointer-events:none!important}
+  .timeline-appt:hover .timeline-appt-actions,.timeline-appt:focus-within .timeline-appt-actions,.timeline-appt.custom-duration:hover .timeline-appt-actions,.timeline-appt.custom-duration:focus-within .timeline-appt-actions{opacity:1!important;pointer-events:auto!important;background:#e9ecff!important;box-shadow:-16px 0 16px 4px #e9ecff!important}
+  .timeline-action.duration{display:inline-flex!important;align-items:center;justify-content:center;height:30px!important;min-width:44px!important;padding:0 8px!important;border-radius:9px!important;font-size:13px!important;font-weight:800!important;background:rgba(255,255,255,.94)!important}
+  .timeline-action.delete{display:inline-flex!important;align-items:center;justify-content:center;width:30px!important;height:30px!important;min-width:30px!important;padding:0!important;border:0!important;border-radius:999px!important;background:transparent!important;color:#98a2b3!important;font-size:21px!important;font-weight:500!important;line-height:1!important}
+  .timeline-action.delete:hover,.timeline-action.delete:focus{background:var(--err-soft)!important;color:var(--err)!important;outline:none!important}
+  .timeline-appt.dragging .timeline-appt-actions{opacity:0!important;pointer-events:none!important}
+  @media(max-width:760px){.timeline-appt-content{grid-template-columns:48px minmax(0,1fr)}.timeline-appt-actions{gap:4px!important;padding-left:16px!important}.timeline-action.duration{min-width:40px!important;font-size:12.5px!important}.timeline-action.delete{width:29px!important;height:29px!important;min-width:29px!important}}
   .timeline-drop-line.composer-invalid{z-index:28}
   .timeline-drop-line.invalid-pulse{animation:timelineInvalidPulse .42s ease}
   @keyframes timelineInvalidPulse{0%,100%{opacity:.88}45%{opacity:1;box-shadow:0 0 0 3px rgba(196,71,58,.14)}}
@@ -637,7 +648,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v265</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v266</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -920,7 +931,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 265;
+const APP_VERSION = 266;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2130,7 +2141,7 @@ function openAppointmentAdjustPopover(anchor, day, idx, pauseOnly, durationOnly,
   pop.innerHTML='<div class="appt-adjust-title">'+(pauseOnly?'Ajouter une pause':(durationOnly?'Modifier la durée':'Adapter ce rendez-vous'))+'</div>'
     +'<div class="appt-adjust-section duration-section"><span class="appt-adjust-label">Durée <small>standard : '+standard+'&#39;</small></span><div class="appt-choice-row">'+durationButtons+'</div></div>'
     +'<div class="appt-adjust-section pause-section"><span class="appt-adjust-label">Pause après le rendez-vous</span><div class="appt-choice-row">'+pauseButtons+'</div></div>'
-    +'<div class="appt-adjust-actions"><button type="button" class="appt-reset appt-icon-action reset" title="Réinitialiser la durée" aria-label="Réinitialiser la durée"'+(custom?'':' disabled')+'>↺</button>'+(allowDelete?'<button type="button" class="appt-delete appt-icon-action delete" title="Retirer le rendez-vous" aria-label="Retirer le rendez-vous">×</button>':'<span class="appt-adjust-note">Modifications appliquées immédiatement</span>')+'</div>';
+    +'<div class="appt-adjust-actions"><button type="button" class="appt-reset appt-icon-action reset" title="Réinitialiser la durée" aria-label="Réinitialiser la durée"'+(custom?'':' disabled')+'>↺</button><span class="appt-adjust-note">Modifications appliquées immédiatement</span></div>';
   document.body.appendChild(pop);
   positionPopoverNear(pop,anchor);
   if(pauseOnly){ const section=pop.querySelector('.pause-section'); if(section) section.scrollIntoView({block:'nearest'}); }
@@ -3444,7 +3455,8 @@ function timelineCanvasHtml(day,range,dayIndex,dayCount){
       +'<span class="timeline-appt-time">'+esc(minToTime(item.startMin))+'</span>'
       +'<span class="timeline-appt-student-name" title="'+esc((stu||{}).name||'')+'">'+esc(studentName)+'</span>'
       +'<div class="timeline-appt-actions">'
-      +'<button type="button" class="timeline-action duration'+(custom?' custom':'')+'" data-adjust-day="'+day+'" data-adjust-index="'+item.idx+'" title="Modifier la durée ou retirer le rendez-vous">'+item.durationMin+'&#39;</button>'
+      +'<button type="button" class="timeline-action duration'+(custom?' custom':'')+'" data-adjust-day="'+day+'" data-adjust-index="'+item.idx+'" title="Modifier la durée">'+item.durationMin+'&#39;</button>'
+      +'<button type="button" class="timeline-action delete" data-timeline-delete-day="'+day+'" data-timeline-delete-index="'+item.idx+'" title="Retirer le rendez-vous" aria-label="Retirer le rendez-vous">×</button>'
       +'</div></div></div>';
   }).join('');
   const pauses='';
@@ -3643,8 +3655,16 @@ function renderQuickPlanner(){
     }
     const timeBtn=ev.target.closest('button[data-time-day]');
     if(timeBtn){ ev.stopPropagation(); openTimelineTimePicker(timeBtn); return; }
+    const del=ev.target.closest('[data-timeline-delete-day]');
+    if(del){
+      ev.stopPropagation();
+      const day=del.dataset.timelineDeleteDay, idx=parseInt(del.dataset.timelineDeleteIndex,10);
+      const list=plannerAssignedItems(day).filter(x=>x.idx!==idx);
+      plannerRebuildDay(day,list,'Rendez-vous retiré.');
+      return;
+    }
     const adjust=ev.target.closest('[data-adjust-day]');
-    if(adjust){ ev.stopPropagation(); openAppointmentAdjustPopover(adjust,adjust.dataset.adjustDay,parseInt(adjust.dataset.adjustIndex,10),false,true,true); return; }
+    if(adjust){ ev.stopPropagation(); openAppointmentAdjustPopover(adjust,adjust.dataset.adjustDay,parseInt(adjust.dataset.adjustIndex,10),false,true,false); return; }
     const canvas=ev.target.closest('[data-timeline-day]');
     if(canvas&&!ev.target.closest('.timeline-appt,.timeline-pause,.timeline-composer')){
       if(!remaining.length) return;
