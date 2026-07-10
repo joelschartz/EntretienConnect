@@ -892,11 +892,87 @@
     .setup-mode-card{min-height:220px}
     .setup-mode-connect-slot{min-height:86px}
   }
+
+
+  /* v276 — choix du mode calme, une seule zone de connexion contextuelle */
+  .setup-mode-grid{align-items:stretch!important}
+  .setup-mode-card{
+    min-height:132px!important;
+    padding:20px!important;
+    gap:12px!important;
+    border:1px solid var(--line)!important;
+    background:#fff!important;
+    box-shadow:none!important;
+    transform:none!important;
+    overflow:hidden
+  }
+  .setup-mode-card:hover{
+    border-color:var(--line)!important;
+    background:#fafbfc!important;
+    box-shadow:none!important;
+    transform:none!important
+  }
+  .setup-mode-card.active{
+    border-color:var(--line)!important;
+    background:#f7f8ff!important;
+    box-shadow:none!important;
+    transform:none!important
+  }
+  .setup-mode-card.active:after{
+    top:18px!important;right:18px!important;
+    width:23px!important;height:23px!important;
+    font-size:14px!important;font-weight:850!important;
+    box-shadow:none!important
+  }
+  .setup-mode-card.active .setup-chip{padding-right:9px!important}
+  .setup-mode-card h3{margin-top:2px!important;font-size:16px!important;line-height:1.3!important}
+  .setup-mode-connect-slot{display:none!important}
+  #setupStatusGrid{
+    display:block!important;
+    margin-top:16px!important;
+    min-height:0
+  }
+  #setupStatusGrid:empty{display:none!important}
+  .setup-connection-panel{
+    box-sizing:border-box;
+    min-height:142px;
+    padding:14px 16px 16px;
+    border:1px solid var(--line);
+    border-radius:16px;
+    background:#f8f9fb
+  }
+  .setup-connection-head{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    min-height:24px;margin-bottom:10px
+  }
+  .setup-connection-head strong{font-size:13.5px;color:var(--ink-2);font-weight:800}
+  .setup-connection-head span{font-size:12px;color:var(--muted-3);font-weight:700}
+  .setup-connection-body{min-height:86px;display:flex;align-items:center}
+  .setup-connection-body .setup-status-stack{width:100%;display:grid;gap:8px}
+  .setup-connection-body.single .setup-status-stack{align-content:center}
+  .setup-connection-panel .setup-status-row{
+    min-height:48px;padding:10px 12px;border-radius:12px;
+    background:#fff;gap:10px;flex-wrap:nowrap
+  }
+  .setup-connection-panel .status-dot{display:none}
+  .setup-connection-panel .setup-service-title{display:flex;align-items:baseline;gap:7px;min-width:0}
+  .setup-connection-panel .setup-service-title b{font-size:14px;white-space:nowrap}
+  .setup-connection-panel .setup-connected-label,
+  .setup-connection-panel .setup-pending-label{font-size:12px;white-space:nowrap}
+  .setup-connection-panel .status-detail{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .setup-connection-panel .ghost.sm{flex:0 0 auto}
+  .setup-connection-panel .setup-status-panel{width:100%;margin-top:8px;background:#fff}
+  @media(max-width:900px){
+    .setup-mode-card{min-height:112px!important}
+    .setup-connection-panel{min-height:0}
+    .setup-connection-body{min-height:0}
+  }
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v275</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v276</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -936,17 +1012,14 @@
         <div class="setup-mode-card" data-mode="ebichelchen">
           <span class="setup-chip ok">Le plus rapide</span>
           <h3>Uniquement e-Bichelchen</h3>
-          <div class="setup-mode-connect-slot" data-setup-connect-slot="ebichelchen"></div>
         </div>
         <div class="setup-mode-card" data-mode="email">
           <span class="setup-chip">Classique</span>
           <h3>Uniquement e-mail</h3>
-          <div class="setup-mode-connect-slot" data-setup-connect-slot="email"></div>
         </div>
         <div class="setup-mode-card" data-mode="both">
           <span class="setup-chip warn">Complet</span>
           <h3>e-Bichelchen + e-mail</h3>
-          <div class="setup-mode-connect-slot" data-setup-connect-slot="both"></div>
         </div>
       </div>
       <div id="setupCurrent" class="setup-current"></div>
@@ -1179,7 +1252,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 275;
+const APP_VERSION = 276;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2938,13 +3011,15 @@ function renderSetup(){
   if(navHint) navHint.style.display="none";
   if(reminderChoice){ reminderChoice.style.display="none"; reminderChoice.innerHTML=""; }
   if(status){
-    if(grid){
-      grid.querySelectorAll('[data-setup-connect-slot]').forEach(slot=>{
-        const cardMode=slot.dataset.setupConnectSlot||"";
-        slot.innerHTML=setupConnectionSlotHtml(cardMode,cardMode===mode);
-      });
+    if(mode){
+      const oneService=mode!=="both";
+      status.innerHTML='<div class="setup-connection-panel">'
+        +'<div class="setup-connection-head"><strong>'+(mode==="both"?'Connexions':'Connexion')+'</strong><span>'+esc(modeLabel(mode))+'</span></div>'
+        +'<div class="setup-connection-body'+(oneService?' single':'')+'">'+setupConnectionSlotHtml(mode,true)+'</div>'
+        +'</div>';
+    }else{
+      status.innerHTML="";
     }
-    status.innerHTML="";
     document.querySelectorAll('[data-setup-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
     document.querySelectorAll('[data-setup-ms-connect]').forEach(btn=>{
       btn.onclick=()=>startMicrosoftLogin(btn.dataset.loginBox,btn.id);
