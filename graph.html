@@ -719,11 +719,98 @@
   body.wf-email .mode-badge .mode-dot{background:var(--accent)}
   body.wf-both .mode-badge .mode-dot{background:#c98a2e}
   /* v248 : onglets Envoi toujours bleus (design v233) — plus d'override vert (e-Bichelchen) ni ambre (mode complet) */
+
+  /* v273 — popover kompakter, native Scrollliste, neutrale Modus-Punkte */
+  body.wf-eb .mode-badge .mode-dot,
+  body.wf-email .mode-badge .mode-dot,
+  body.wf-both .mode-badge .mode-dot{background:#b8bec9}
+
+  .timeline-composer{
+    width:296px;
+    max-width:min(296px,calc(100vw - 24px));
+    padding:11px;
+    border-radius:13px;
+    box-shadow:0 14px 36px rgba(31,41,55,.20)
+  }
+  .timeline-composer-head{margin-bottom:7px}
+  .timeline-composer-title{font-size:13px;gap:6px}
+  .timeline-composer-title strong{font-size:15px}
+  .timeline-composer-close{width:27px;height:27px;font-size:18px}
+  .timeline-compose-label{font-size:12px;margin:7px 0 5px}
+  .timeline-duration-set{
+    display:grid;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:4px;
+    align-items:center
+  }
+  .timeline-duration-btn{
+    width:100%;
+    min-width:0;
+    height:31px;
+    padding:0 4px;
+    font-size:12px;
+    border-radius:7px
+  }
+  .timeline-duration-btn.timeline-duration-custom{font-size:11px;letter-spacing:-.01em}
+  .timeline-student-search{
+    height:38px!important;
+    margin:0 0 6px!important;
+    font-size:13.5px!important;
+    padding:7px 10px!important;
+    border-radius:8px!important
+  }
+  .timeline-student-list{
+    display:block;
+    max-height:176px;
+    overflow-y:scroll;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y;
+    scrollbar-gutter:stable;
+    scrollbar-width:auto;
+    scrollbar-color:#aeb5c1 #f1f3f6;
+    padding:0;
+    border:1px solid #dfe3ea;
+    border-radius:8px;
+    background:#fff
+  }
+  .timeline-student-list::-webkit-scrollbar{width:10px}
+  .timeline-student-list::-webkit-scrollbar-track{background:#f1f3f6;border-radius:0 8px 8px 0}
+  .timeline-student-list::-webkit-scrollbar-thumb{background:#aeb5c1;border:2px solid #f1f3f6;border-radius:999px}
+  .timeline-student-list::-webkit-scrollbar-thumb:hover{background:#8f98a7}
+  .timeline-student-option{
+    display:block;
+    width:100%;
+    min-height:36px;
+    margin:0;
+    padding:8px 10px;
+    border:0;
+    border-bottom:1px solid #edf0f4;
+    border-radius:0;
+    background:#fff;
+    color:var(--ink-2);
+    font-size:13.5px;
+    font-weight:650;
+    line-height:1.3
+  }
+  .timeline-student-option:last-of-type{border-bottom:0}
+  .timeline-student-option:hover,.timeline-student-option:focus{
+    background:#f1f3f7;
+    color:var(--ink);
+    outline:none
+  }
+  .timeline-student-empty{padding:14px 10px;font-size:12px}
+  @media(max-width:760px){
+    .timeline-composer{width:286px;max-width:calc(100vw - 16px)}
+    .timeline-duration-set{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .timeline-student-list{max-height:164px}
+  }
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v272</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v273</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1003,7 +1090,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 272;
+const APP_VERSION = 273;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3433,10 +3520,10 @@ function timelineApptTier(h){
 function timelineStudentById(id){ return assignmentStudents().find(s=>s.id===id)||null; }
 function timelineDurationButtons(selected){
   const standard=normalizeDurationValue(state.config.durationMin)||20;
-  const vals=[standard,standard+5,standard+10].filter(v=>v<=120);
+  const vals=[standard,25,30,35,45].filter(v=>v>=5&&v<=120);
   if(selected&&!vals.includes(selected)) vals.push(selected);
   return [...new Set(vals)].sort((a,b)=>a-b).map(v=>'<button type="button" class="timeline-duration-btn'+(v===selected?' active':'')+'" data-timeline-duration="'+v+'">'+v+'&#39;</button>').join('')
-    +'<button type="button" class="timeline-duration-btn" data-timeline-duration-custom="1">Perso…</button>';
+    +'<button type="button" class="timeline-duration-btn timeline-duration-custom" data-timeline-duration-custom="1">Perso</button>';
 }
 function timelineIntervals(day,ignoreIdx){
   return plannerAssignedItems(day).filter(x=>x.idx!==ignoreIdx).map(x=>({
@@ -3462,8 +3549,37 @@ function timelinePreviousAppointmentEndingAt(day,min){
 }
 function timelineComposerTop(startMin,range){
   const raw=((startMin-range.startMin)/5)*range.unit-10;
-  const max=Math.max(8,range.rows*range.unit-330);
+  const estimatedHeight=348;
+  const max=Math.max(8,range.rows*range.unit-estimatedHeight);
   return Math.max(8,Math.min(raw,max));
+}
+function positionTimelineComposerInViewport(){
+  const pop=document.querySelector('.timeline-composer[data-timeline-composer="1"]');
+  if(!pop) return;
+  const margin=12;
+  const viewportH=document.documentElement.clientHeight||window.innerHeight||800;
+  const viewportW=document.documentElement.clientWidth||window.innerWidth||1200;
+  let rect=pop.getBoundingClientRect();
+  let top=parseFloat(pop.style.top)||0;
+  let desiredTop=rect.top;
+  if(rect.bottom>viewportH-margin) desiredTop-=rect.bottom-(viewportH-margin);
+  if(desiredTop<margin) desiredTop=margin;
+  if(Math.abs(desiredTop-rect.top)>.5){
+    top+=desiredTop-rect.top;
+    pop.style.top=top+'px';
+  }
+  rect=pop.getBoundingClientRect();
+  if(rect.right>viewportW-margin){
+    const dx=rect.right-(viewportW-margin);
+    if(pop.classList.contains('align-right')) pop.style.right=(8+dx)+'px';
+    else pop.style.left=Math.max(-rect.left+margin,(parseFloat(getComputedStyle(pop).left)||8)-dx)+'px';
+  }
+  rect=pop.getBoundingClientRect();
+  if(rect.left<margin){
+    const dx=margin-rect.left;
+    if(pop.classList.contains('align-right')) pop.style.right=Math.max(0,(parseFloat(getComputedStyle(pop).right)||8)-dx)+'px';
+    else pop.style.left=((parseFloat(getComputedStyle(pop).left)||8)+dx)+'px';
+  }
 }
 function timelineOpenComposer(day,startMin,durationMin){
   window._timelineComposer={day,startMin,durationMin:normalizeDurationValue(durationMin)||(normalizeDurationValue(state.config.durationMin)||20)};
@@ -3563,7 +3679,7 @@ function timelineCanvasHtml(day,range,dayIndex,dayCount){
     composerLineTime=minToTime(comp.startMin);
     const alignRight=dayIndex>=Math.ceil(dayCount/2);
     const baseComposerTop=timelineComposerTop(comp.startMin,range);
-    const maxComposerTop=Math.max(8,range.rows*range.unit-330);
+    const maxComposerTop=Math.max(8,range.rows*range.unit-348);
     const visualComposerTop=composerInvalid?Math.min(maxComposerTop,baseComposerTop+18):baseComposerTop;
     composer='<div class="timeline-composer'+(alignRight?' align-right':'')+'" style="top:'+visualComposerTop+'px" data-timeline-composer="1">'
       +'<div class="timeline-composer-head"><div class="timeline-composer-title"><span>Nouveau rendez-vous</span><strong>'+esc(minToTime(comp.startMin))+'</strong></div><button type="button" class="timeline-composer-close" data-timeline-close="1" aria-label="Fermer">✕</button></div>'
@@ -3728,6 +3844,7 @@ function renderQuickPlanner(){
   const groups=plannerWeekGroups(days);
   host.innerHTML='<div class="planner-summary"><span><strong>'+totalAssigned+' rendez-vous</strong> · '+remaining.length+' élève'+(remaining.length===1?'':'s')+' encore à placer</span></div>'
     +'<div class="timeline-weeks">'+groups.map(timelineWeekHtml).join('')+'</div>';
+  requestAnimationFrame(positionTimelineComposerInViewport);
 
   host.onclick=(ev)=>{
     if(window._timelineSuppressClick) return;
