@@ -806,11 +806,30 @@
     .timeline-student-list{max-height:164px}
   }
 
+
+  /* v274 — Démarrage plus plat, connexions dans le mode actif, ligne de placement robuste */
+  .mode-badge .mode-dot,
+  body.wf-eb .mode-badge .mode-dot,
+  body.wf-email .mode-badge .mode-dot,
+  body.wf-both .mode-badge .mode-dot{background:#b8bec9!important}
+  .setup-mode-grid{align-items:start}
+  .setup-mode-card{box-shadow:none!important;transform:none!important;transition:border-color .15s,background .15s!important}
+  .setup-mode-card:hover{box-shadow:none!important;transform:none!important;background:#fbfbfd;border-color:#d9deea}
+  .setup-mode-card.active{box-shadow:none!important;transform:none!important;background:#f7f8ff}
+  .setup-mode-connect-slot{display:none;margin-top:4px;padding-top:12px;border-top:1px solid var(--line);cursor:default}
+  .setup-mode-card.active .setup-mode-connect-slot{display:block}
+  .setup-mode-connect-slot .setup-status-stack{gap:8px}
+  .setup-mode-connect-slot .setup-status-row{padding:11px 12px;border-radius:12px;background:rgba(255,255,255,.78)}
+  .setup-mode-connect-slot .setup-status-panel{padding:10px 11px;border-radius:12px;background:rgba(255,255,255,.78)}
+  #setupStatusGrid{display:none!important}
+  .timeline-hover-line{height:2px;z-index:46;opacity:0;transition:none;transform:translateY(-1px);background:var(--accent);will-change:top,opacity}
+  .timeline-hover-line.show{opacity:1}
+  .timeline-hover-time{z-index:2;box-shadow:0 2px 8px rgba(73,83,170,.28)}
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v273</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v274</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -850,14 +869,17 @@
         <div class="setup-mode-card" data-mode="ebichelchen">
           <span class="setup-chip ok">Le plus rapide</span>
           <h3>Uniquement e-Bichelchen</h3>
+          <div class="setup-mode-connect-slot" data-setup-connect-slot="ebichelchen"></div>
         </div>
         <div class="setup-mode-card" data-mode="email">
           <span class="setup-chip">Classique</span>
           <h3>Uniquement e-mail</h3>
+          <div class="setup-mode-connect-slot" data-setup-connect-slot="email"></div>
         </div>
         <div class="setup-mode-card" data-mode="both">
           <span class="setup-chip warn">Complet</span>
           <h3>e-Bichelchen + e-mail</h3>
+          <div class="setup-mode-connect-slot" data-setup-connect-slot="both"></div>
         </div>
       </div>
       <div id="setupCurrent" class="setup-current"></div>
@@ -1090,7 +1112,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 273;
+const APP_VERSION = 274;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2821,6 +2843,7 @@ function renderSetup(){
   if(navHint) navHint.style.display="none";
   if(reminderChoice){ reminderChoice.style.display="none"; reminderChoice.innerHTML=""; }
   if(status){
+    if(grid) grid.querySelectorAll('[data-setup-connect-slot]').forEach(slot=>slot.innerHTML="");
     const cards=[];
     if(modeNeedsEb(mode)){
       const ebParts=[];
@@ -2846,9 +2869,12 @@ function renderSetup(){
         cards.push('<div><div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><b>Microsoft 365</b><span class="status-detail">Non connecté — nécessaire pour l’envoi d’e-mails</span><div id="setupLoginBox" style="display:none;margin-top:8px"></div></div><button type="button" class="ghost sm" id="setupMsConnect">Connecter</button></div></div>');
       }
     }
-    status.innerHTML=cards.join("");
+    const activeSlot=grid ? grid.querySelector('.setup-mode-card.active [data-setup-connect-slot]') : null;
+    if(activeSlot) activeSlot.innerHTML=cards.join("");
+    status.innerHTML="";
+    const bindRoot=activeSlot||status;
     const ebBtn=document.getElementById("setupEbConnect"); if(ebBtn) ebBtn.onclick=ebConnectFlow;
-    status.querySelectorAll('[data-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
+    bindRoot.querySelectorAll('[data-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
     const msBtn=document.getElementById("setupMsConnect"); if(msBtn) msBtn.onclick=()=>startMicrosoftLogin("setupLoginBox","setupMsConnect");
     const msRe=document.getElementById("setupMsReconnect"); if(msRe) msRe.onclick=()=>startMicrosoftLogin("setupLoginBox","setupMsReconnect");
   }
@@ -3694,7 +3720,7 @@ function timelineCanvasHtml(day,range,dayIndex,dayCount){
   return '<div class="timeline-day-column'+(comp&&comp.day===day?' composer-open':'')+'">'
     +'<div class="timeline-day-head"><div><strong>'+esc(plannerDateLabel(day,false))+'</strong><span>'+meta+'</span></div><span class="timeline-day-count">'+items.length+'</span></div>'
     +'<div class="timeline-canvas" tabindex="0" data-timeline-day="'+day+'" data-range-start="'+range.startMin+'" data-range-unit="'+range.unit+'" data-range-rows="'+range.rows+'" style="height:'+(range.rows*range.unit)+'px">'
-    +lines+(items.length?'':'<span class="timeline-empty-note">Cliquez sur une heure</span>')+appts+pauses
+    +lines+appts+pauses
     +'<div class="timeline-hover-line" data-timeline-hover-line="'+day+'"><span class="timeline-hover-time"></span></div>'
     +'<div class="timeline-drop-line'+(composerInvalid?' show invalid composer-invalid':'')+'" data-timeline-drop-line="'+day+'"'+(composerInvalid?' style="top:'+composerLineTop+'px"':'')+'><span class="timeline-drop-time">'+(composerInvalid?esc(composerLineTime):'')+'</span></div>'
     +composer+'</div></div>';
@@ -3909,24 +3935,26 @@ function renderQuickPlanner(){
       if(first){ ev.preventDefault(); first.click(); }
     }
   };
-  host.querySelectorAll('[data-timeline-day]').forEach(canvas=>{
-    canvas.onmousemove=(ev)=>{
-      const line=canvas.querySelector('[data-timeline-hover-line]');
-      if(!line) return;
-      if(!remaining.length||ev.target.closest('.timeline-appt,.timeline-pause,.timeline-composer')||document.body.classList.contains('timeline-dragging')){ line.classList.remove('show'); return; }
-      const r=canvas.getBoundingClientRect();
-      const unit=Number(canvas.dataset.rangeUnit)||13;
-      const rangeStart=Number(canvas.dataset.rangeStart)||0;
-      const rows=Number(canvas.dataset.rangeRows)||1;
-      const y=Math.max(0,Math.min(r.height-1,ev.clientY-r.top));
-      const row=Math.max(0,Math.min(rows-1,Math.round(y/unit)));
-      const min=rangeStart+row*5;
-      line.style.top=(row*unit)+'px';
-      const label=line.querySelector('.timeline-hover-time'); if(label) label.textContent=minToTime(min);
-      line.classList.add('show');
-    };
-    canvas.onmouseleave=()=>{ const line=canvas.querySelector('[data-timeline-hover-line]'); if(line) line.classList.remove('show'); };
-  });
+  host.onpointermove=(ev)=>{
+    timelineClearHoverLines(host);
+    if(!remaining.length||document.body.classList.contains('timeline-dragging')) return;
+    const hit=document.elementFromPoint(ev.clientX,ev.clientY);
+    const canvas=hit&&hit.closest?hit.closest('[data-timeline-day]'):null;
+    if(!canvas||hit.closest('.timeline-appt,.timeline-pause,.timeline-composer')) return;
+    const line=canvas.querySelector('[data-timeline-hover-line]');
+    if(!line) return;
+    const r=canvas.getBoundingClientRect();
+    const unit=Number(canvas.dataset.rangeUnit)||13;
+    const rangeStart=Number(canvas.dataset.rangeStart)||0;
+    const rows=Number(canvas.dataset.rangeRows)||1;
+    const y=Math.max(0,Math.min(r.height-1,ev.clientY-r.top));
+    const row=Math.max(0,Math.min(rows-1,Math.round(y/unit)));
+    const min=rangeStart+row*5;
+    line.style.top=(row*unit)+'px';
+    const label=line.querySelector('.timeline-hover-time'); if(label) label.textContent=minToTime(min);
+    line.classList.add('show');
+  };
+  host.onpointerleave=()=>timelineClearHoverLines(host);
   installTimelineDrag(host);
 }
 
