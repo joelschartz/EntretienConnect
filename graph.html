@@ -825,11 +825,78 @@
   .timeline-hover-line{height:2px;z-index:46;opacity:0;transition:none;transform:translateY(-1px);background:var(--accent);will-change:top,opacity}
   .timeline-hover-line.show{opacity:1}
   .timeline-hover-time{z-index:2;box-shadow:0 2px 8px rgba(73,83,170,.28)}
+
+  /* v275 — Démarrage stable et compact, séparateurs/ligne du calendrier robustes */
+  .setup-mode-grid{align-items:stretch!important}
+  .setup-mode-card{
+    box-sizing:border-box;
+    min-height:254px;
+    border:1px solid var(--line)!important;
+    background:#fff;
+    box-shadow:none!important;
+    transform:none!important;
+    transition:background .14s ease!important
+  }
+  .setup-mode-card:hover{
+    border-color:var(--line)!important;
+    background:#fafbfc!important;
+    box-shadow:none!important;
+    transform:none!important
+  }
+  .setup-mode-card.active{
+    border:1px solid var(--line)!important;
+    background:#f5f6ff!important;
+    box-shadow:none!important;
+    transform:none!important
+  }
+  .setup-mode-card.active:after{
+    top:16px;right:16px;width:28px;height:28px;
+    font-size:17px;box-shadow:none
+  }
+  .setup-mode-card.active .setup-chip{padding-right:9px}
+  .setup-mode-card h3{font-size:16px;line-height:1.25}
+  .setup-mode-connect-slot{
+    display:flex!important;
+    flex:1 1 auto;
+    min-height:108px;
+    margin-top:auto;
+    padding-top:12px;
+    border-top:1px solid var(--line);
+    align-items:center;
+    cursor:default
+  }
+  .setup-mode-connect-slot .setup-status-stack{width:100%;gap:8px}
+  .setup-mode-connect-slot .setup-status-row{
+    min-height:48px;
+    padding:9px 11px;
+    border-radius:11px;
+    background:rgba(255,255,255,.78);
+    flex-wrap:nowrap;
+    gap:10px
+  }
+  .setup-mode-connect-slot .setup-status-panel{width:100%;padding:9px 10px;border-radius:11px;background:rgba(255,255,255,.78)}
+  .setup-service-title{display:flex;align-items:center;gap:6px;min-width:0;line-height:1.25}
+  .setup-service-title b{font-size:13.5px;white-space:nowrap}
+  .setup-connected-label{color:var(--ok);font-size:12px;font-weight:800;white-space:nowrap}
+  .setup-pending-label{color:var(--muted-3);font-size:12px;font-weight:700;white-space:nowrap}
+  .setup-mode-connect-slot .status-detail{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .setup-mode-connect-slot .ghost.sm{flex:0 0 auto}
+  .timeline-day-column{isolation:isolate}
+  .timeline-day-column::after{
+    content:"";position:absolute;top:0;bottom:0;right:-1px;width:1px;
+    background:var(--line);z-index:8;pointer-events:none
+  }
+  .timeline-day-column:last-child::after{display:none}
+  .timeline-hover-line{z-index:55!important}
+  @media(max-width:900px){
+    .setup-mode-card{min-height:220px}
+    .setup-mode-connect-slot{min-height:86px}
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v274</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v275</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1112,7 +1179,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 274;
+const APP_VERSION = 275;
 
 window.addEventListener("error", function(ev){
   try{
@@ -2819,6 +2886,34 @@ function msConnectedSummaryHtml(){
 function previewHintText(){
   return "";
 }
+function setupConnectionSlotHtml(cardMode,isActive){
+  const rows=[];
+  const suffix=String(cardMode||'mode').replace(/[^a-z0-9_-]/gi,'_');
+  if(modeNeedsEb(cardMode)){
+    if(ebReady()){
+      const g=(typeof ebData!=="undefined" && ebData.group) ? ebData.group : {};
+      const n=ebStudents().length;
+      const detail=String(g.classAlias||g.name||g.id||"") ? 'Classe « '+esc(String(g.classAlias||g.name||g.id||""))+' » · '+studentCount(n) : studentCount(n);
+      rows.push('<div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-connected-label">Connecté</span></div><span class="status-detail">'+detail+'</span></div></div>');
+    }else{
+      const btnId='setupEbConnect_'+suffix;
+      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-pending-label">Non connecté</span></div></div>'+(isActive?'<button type="button" class="ghost sm" id="'+btnId+'" data-setup-eb-connect>Connecter</button>':'')+'</div>');
+    }
+  }
+  if(modeNeedsEmail(cardMode)){
+    if(account){
+      const who=[account.name||"", account.email||""].filter(Boolean).join(" · ");
+      rows.push('<div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><div class="setup-service-title"><b>Microsoft 365</b><span class="setup-connected-label">Connecté</span></div>'+(who?'<span class="status-detail">'+esc(who)+'</span>':'')+'</div></div>');
+    }else{
+      const btnId='setupMsConnect_'+suffix;
+      const boxId='setupLoginBox_'+suffix;
+      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>Microsoft 365</b><span class="setup-pending-label">Non connecté</span></div><div id="'+boxId+'" style="display:none;margin-top:7px"></div></div>'+(isActive?'<button type="button" class="ghost sm" id="'+btnId+'" data-setup-ms-connect data-login-box="'+boxId+'">Connecter</button>':'')+'</div>');
+    }
+  }
+  let html='<div class="setup-status-stack">'+rows.join('')+'</div>';
+  if(isActive && modeNeedsEb(cardMode) && ebHasMultipleKnownGroups()) html+='<div class="setup-status-panel">'+ebGroupChoiceHtml()+'</div>';
+  return html;
+}
 function renderSetup(){
   const mode=workflowMode();
   const current=document.getElementById("setupCurrent");
@@ -2843,40 +2938,18 @@ function renderSetup(){
   if(navHint) navHint.style.display="none";
   if(reminderChoice){ reminderChoice.style.display="none"; reminderChoice.innerHTML=""; }
   if(status){
-    if(grid) grid.querySelectorAll('[data-setup-connect-slot]').forEach(slot=>slot.innerHTML="");
-    const cards=[];
-    if(modeNeedsEb(mode)){
-      const ebParts=[];
-      if(ebReady()){
-        const g=(typeof ebData!=="undefined" && ebData.group) ? ebData.group : {};
-        const n=ebStudents().length;
-        ebParts.push('<div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><b>e-Bichelchen</b><span class="status-detail">Classe « '+esc(String(g.classAlias||g.name||g.id||""))+' » · '+studentCount(n)+'</span></div></div>');
-      }
-      if(ebHasMultipleKnownGroups()){
-        ebParts.push('<div class="setup-status-panel">'+ebGroupChoiceHtml()+'</div>');
-      }else if(!ebReady()){
-        // v214: le statut en direct est SOUS la ligne (pleine largeur) — le point et « Connecter »
-        // restent alignés sur le titre même quand le message grandit.
-        ebParts.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><b>e-Bichelchen</b><span class="status-detail">Non connecté — nécessaire pour les messages e-Bichelchen</span></div><button type="button" class="ghost sm" id="setupEbConnect">Connecter</button></div><div id="setupEbLiveStatus" style="display:none"></div>');
-      }
-      if(ebParts.length) cards.push('<div class="setup-status-stack">'+ebParts.join("")+'</div>');
+    if(grid){
+      grid.querySelectorAll('[data-setup-connect-slot]').forEach(slot=>{
+        const cardMode=slot.dataset.setupConnectSlot||"";
+        slot.innerHTML=setupConnectionSlotHtml(cardMode,cardMode===mode);
+      });
     }
-    if(modeNeedsEmail(mode)){
-      if(account){
-        const who=[account.name||"", account.email||""].filter(Boolean).join(" · ");
-        cards.push('<div><div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><b>Microsoft 365</b>'+(who?'<span class="status-detail">'+esc(who)+'</span>':'')+'<div id="setupLoginBox" style="display:none;margin-top:8px"></div></div></div></div>');
-      }else{
-        cards.push('<div><div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><b>Microsoft 365</b><span class="status-detail">Non connecté — nécessaire pour l’envoi d’e-mails</span><div id="setupLoginBox" style="display:none;margin-top:8px"></div></div><button type="button" class="ghost sm" id="setupMsConnect">Connecter</button></div></div>');
-      }
-    }
-    const activeSlot=grid ? grid.querySelector('.setup-mode-card.active [data-setup-connect-slot]') : null;
-    if(activeSlot) activeSlot.innerHTML=cards.join("");
     status.innerHTML="";
-    const bindRoot=activeSlot||status;
-    const ebBtn=document.getElementById("setupEbConnect"); if(ebBtn) ebBtn.onclick=ebConnectFlow;
-    bindRoot.querySelectorAll('[data-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
-    const msBtn=document.getElementById("setupMsConnect"); if(msBtn) msBtn.onclick=()=>startMicrosoftLogin("setupLoginBox","setupMsConnect");
-    const msRe=document.getElementById("setupMsReconnect"); if(msRe) msRe.onclick=()=>startMicrosoftLogin("setupLoginBox","setupMsReconnect");
+    document.querySelectorAll('[data-setup-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
+    document.querySelectorAll('[data-setup-ms-connect]').forEach(btn=>{
+      btn.onclick=()=>startMicrosoftLogin(btn.dataset.loginBox,btn.id);
+    });
+    document.querySelectorAll('[data-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
   }
 }
 function bindSetup(){
@@ -3935,25 +4008,40 @@ function renderQuickPlanner(){
       if(first){ ev.preventDefault(); first.click(); }
     }
   };
-  host.onpointermove=(ev)=>{
-    timelineClearHoverLines(host);
-    if(!remaining.length||document.body.classList.contains('timeline-dragging')) return;
-    const hit=document.elementFromPoint(ev.clientX,ev.clientY);
-    const canvas=hit&&hit.closest?hit.closest('[data-timeline-day]'):null;
-    if(!canvas||hit.closest('.timeline-appt,.timeline-pause,.timeline-composer')) return;
-    const line=canvas.querySelector('[data-timeline-hover-line]');
-    if(!line) return;
-    const r=canvas.getBoundingClientRect();
-    const unit=Number(canvas.dataset.rangeUnit)||13;
-    const rangeStart=Number(canvas.dataset.rangeStart)||0;
-    const rows=Number(canvas.dataset.rangeRows)||1;
-    const y=Math.max(0,Math.min(r.height-1,ev.clientY-r.top));
-    const row=Math.max(0,Math.min(rows-1,Math.round(y/unit)));
-    const min=rangeStart+row*5;
-    line.style.top=(row*unit)+'px';
-    const label=line.querySelector('.timeline-hover-time'); if(label) label.textContent=minToTime(min);
-    line.classList.add('show');
-  };
+  host.onpointermove=null;
+  host.querySelectorAll('[data-timeline-day]').forEach(canvas=>{
+    canvas.onpointermove=(ev)=>{
+      if(!remaining.length||document.body.classList.contains('timeline-dragging')){
+        timelineClearHoverLines(host);
+        return;
+      }
+      if(ev.target.closest('.timeline-appt,.timeline-pause,.timeline-composer')){
+        timelineClearHoverLines(host);
+        return;
+      }
+      const line=canvas.querySelector('[data-timeline-hover-line]');
+      if(!line) return;
+      host.querySelectorAll('.timeline-hover-line.show').forEach(other=>{ if(other!==line) other.classList.remove('show'); });
+      const r=canvas.getBoundingClientRect();
+      const unit=Number(canvas.dataset.rangeUnit)||13;
+      const rangeStart=Number(canvas.dataset.rangeStart)||0;
+      const rows=Number(canvas.dataset.rangeRows)||1;
+      const y=Math.max(0,Math.min(r.height-1,ev.clientY-r.top));
+      const row=Math.max(0,Math.min(rows-1,Math.round(y/unit)));
+      const min=rangeStart+row*5;
+      line.style.top=(row*unit)+'px';
+      const label=line.querySelector('.timeline-hover-time');
+      if(label) label.textContent=minToTime(min);
+      line.classList.add('show');
+    };
+    canvas.onpointerleave=(ev)=>{
+      const next=ev.relatedTarget;
+      if(!next||!canvas.contains(next)){
+        const line=canvas.querySelector('[data-timeline-hover-line]');
+        if(line) line.classList.remove('show');
+      }
+    };
+  });
   host.onpointerleave=()=>timelineClearHoverLines(host);
   installTimelineDrag(host);
 }
