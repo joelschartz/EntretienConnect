@@ -1028,11 +1028,42 @@
     .setup-mode-connect-slot .setup-status-stack{width:100%!important}
   }
 
+  /* v278 — Démarrage einladender: die dezenten Modus-Farben von früher zurück,
+     aber die Verbindung bleibt im Drittel der aktiven Karte (kein Balken über alle drei). */
+  .setup-mode-card{min-height:150px!important}
+  .setup-mode-card p{color:var(--muted);font-size:13px;line-height:1.45}
+  /* Ruhezustand: sehr leichter Farbverlauf je Modus */
+  .setup-mode-card[data-mode="ebichelchen"]{background:linear-gradient(180deg,#fff,#f2faf6)!important}
+  .setup-mode-card[data-mode="email"]{background:linear-gradient(180deg,#fff,#f2f4fe)!important}
+  .setup-mode-card[data-mode="both"]{background:linear-gradient(180deg,#fff,#fdf6ee)!important}
+  /* Hover: Rahmen nimmt die Modusfarbe zart auf */
+  .setup-mode-card[data-mode="ebichelchen"]:hover{border-color:#a9d9c1!important;background:linear-gradient(180deg,#fff,#edf7f2)!important}
+  .setup-mode-card[data-mode="email"]:hover{border-color:#c9d0f7!important;background:linear-gradient(180deg,#fff,#eceffe)!important}
+  .setup-mode-card[data-mode="both"]:hover{border-color:#ecd5a8!important;background:linear-gradient(180deg,#fff,#fbf1e2)!important}
+  /* Aktiv: die Karte trägt klar ihre Farbe (Rahmen, Verlauf, Häkchen, Titel) */
+  .setup-mode-card[data-mode="ebichelchen"].active{border-color:var(--ok)!important;background:linear-gradient(180deg,#fafffc,#e7f5ee)!important}
+  .setup-mode-card[data-mode="email"].active{border-color:var(--accent)!important;background:linear-gradient(180deg,#fafaff,#f0f2fe)!important}
+  .setup-mode-card[data-mode="both"].active{border-color:#c98a2e!important;background:linear-gradient(180deg,#fffdf8,#faefda)!important}
+  .setup-mode-card[data-mode="ebichelchen"].active h3{color:var(--ok)!important}
+  .setup-mode-card[data-mode="email"].active h3{color:var(--accent)!important}
+  .setup-mode-card[data-mode="both"].active h3{color:var(--warn)!important}
+  .setup-mode-card[data-mode="ebichelchen"].active:after{background:var(--ok)!important}
+  .setup-mode-card[data-mode="email"].active:after{background:var(--accent)!important}
+  .setup-mode-card[data-mode="both"].active:after{background:#c98a2e!important}
+  /* Verbindungszeilen sitzen im Drittel der Karte, mit feiner Trennlinie und hellem Sockel,
+     damit der Farbton der Karte ringsum durchscheint. */
+  .setup-mode-card.active .setup-mode-connect-slot{
+    margin-top:12px!important;padding-top:12px!important;
+    border-top:1px solid rgba(28,28,45,.07)!important
+  }
+  .setup-mode-connect-slot .setup-status-row,
+  .setup-mode-connect-slot .setup-status-panel{background:rgba(255,255,255,.85)!important}
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v277</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v278</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1072,16 +1103,19 @@
         <div class="setup-mode-card" data-mode="ebichelchen">
           <span class="setup-chip ok">Le plus rapide</span>
           <h3>Uniquement e-Bichelchen</h3>
+          <p>Se connecte à e-Bichelchen et y écrit les messages.</p>
           <div class="setup-mode-connect-slot" data-connect-slot="ebichelchen"></div>
         </div>
         <div class="setup-mode-card" data-mode="email">
           <span class="setup-chip">Classique</span>
           <h3>Uniquement e-mail</h3>
+          <p>Se connecte à Microsoft 365 et envoie les e-mails de confirmation.</p>
           <div class="setup-mode-connect-slot" data-connect-slot="email"></div>
         </div>
         <div class="setup-mode-card" data-mode="both">
           <span class="setup-chip warn">Complet</span>
           <h3>e-Bichelchen + e-mail</h3>
+          <p>Écrit les messages dans e-Bichelchen et envoie les e-mails de confirmation.</p>
           <div class="setup-mode-connect-slot" data-connect-slot="both"></div>
         </div>
       </div>
@@ -1315,7 +1349,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 277;
+const APP_VERSION = 278;
 
 window.addEventListener("error", function(ev){
   try{
