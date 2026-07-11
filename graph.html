@@ -1076,11 +1076,38 @@
   #previewTabs .preview-tab[data-preview-kind="eb"].active{background:var(--ok);border-color:var(--ok)}
   #previewTabs .preview-tab[data-preview-kind="reminder"].active{background:var(--accent);border-color:var(--accent)}
 
+  /* v280 — Démarrage auf das App-Violett (#6c7cf0, wie Modus „e-mail") vereinheitlicht:
+     die drei Einzelfarben (grün/bernstein) entfallen → die App wirkt aus einem Guss.
+     Der Badge-Punkt zeigt jetzt den Verbindungsstatus statt der Modusfarbe. */
+  /* (1) alle drei Karten tragen dasselbe Violett */
+  .setup-mode-card[data-mode="ebichelchen"],
+  .setup-mode-card[data-mode="email"],
+  .setup-mode-card[data-mode="both"]{background:linear-gradient(180deg,#fff,#f2f4fe)!important}
+  .setup-mode-card[data-mode="ebichelchen"]:hover,
+  .setup-mode-card[data-mode="email"]:hover,
+  .setup-mode-card[data-mode="both"]:hover{border-color:#c9d0f7!important;background:linear-gradient(180deg,#fff,#eceffe)!important}
+  .setup-mode-card[data-mode="ebichelchen"].active,
+  .setup-mode-card[data-mode="email"].active,
+  .setup-mode-card[data-mode="both"].active{border-color:var(--accent)!important;background:linear-gradient(180deg,#fafaff,#f0f2fe)!important}
+  .setup-mode-card[data-mode="ebichelchen"].active h3,
+  .setup-mode-card[data-mode="email"].active h3,
+  .setup-mode-card[data-mode="both"].active h3{color:var(--accent)!important}
+  .setup-mode-card[data-mode="ebichelchen"].active:after,
+  .setup-mode-card[data-mode="email"].active:after,
+  .setup-mode-card[data-mode="both"].active:after{background:var(--accent)!important}
+  /* (2) Badge-Punkt = Verbindungsstatus: grün wenn komplett verbunden, sonst grau */
+  #modeBadge .mode-dot{background:var(--muted-2)!important}
+  #modeBadge.connected .mode-dot{background:var(--ok)!important}
+  /* (3) Envoi-Unterreiter einheitlich violett (kein Grün mehr) */
+  #previewTabs .preview-tab::before{display:none!important}
+  #previewTabs .preview-tab[data-preview-kind="eb"]:hover{background:var(--accent-soft)!important;border-color:#dfe3fc!important}
+  #previewTabs .preview-tab[data-preview-kind="eb"].active{background:var(--accent)!important;border-color:var(--accent)!important}
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v279</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v280</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1366,7 +1393,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 279;
+const APP_VERSION = 280;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6380,6 +6407,23 @@ function applyChannelVisibility(){
     if(badge){
       const lbl = mode==="ebichelchen" ? "e-Bichelchen" : (mode==="email" ? "E-mail" : (mode==="both" ? "e-Bichelchen + e-mail" : ""));
       badge.innerHTML = lbl ? '<span class="mode-dot"></span>'+lbl : "";
+      // v280: le point du badge reflète l'état de connexion (vert = tout est connecté pour
+      // le mode choisi, sinon gris), avec un message au survol.
+      const ebOk = !eb || ebReady();
+      const emOk = !em || !!account;
+      const connected = (em||eb) && ebOk && emOk;
+      badge.classList.toggle("connected", connected);
+      badge.classList.toggle("pending", !connected);
+      if(!lbl){
+        badge.removeAttribute("title");
+      } else if(connected){
+        badge.title = "Connecté ✓ — cliquer pour changer de mode.";
+      } else {
+        const miss=[];
+        if(eb && !ebReady()) miss.push("e-Bichelchen");
+        if(em && !account) miss.push("Microsoft 365");
+        badge.title = "Pas encore connecté" + (miss.length ? " : "+miss.join(" + ") : "") + " — cliquer pour vous connecter dans « Démarrage ».";
+      }
     }
   }catch(_){}
   renderSetup();
