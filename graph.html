@@ -1103,11 +1103,71 @@
   #previewTabs .preview-tab[data-preview-kind="eb"]:hover{background:var(--accent-soft)!important;border-color:#dfe3fc!important}
   #previewTabs .preview-tab[data-preview-kind="eb"].active{background:var(--accent)!important;border-color:var(--accent)!important}
 
+
+  /* v281 — état initial clairement neutre, sélection violette sans dégradé.
+     Les cartes blanches restent vivantes grâce à un petit repère d'accent,
+     tandis que la couleur pleine est réservée au mode réellement choisi. */
+  .setup-mode-card[data-mode="ebichelchen"],
+  .setup-mode-card[data-mode="email"],
+  .setup-mode-card[data-mode="both"]{
+    background:#fff!important;
+    border-color:#e1e4ec!important;
+    box-shadow:none!important;
+    position:relative
+  }
+  .setup-mode-card[data-mode]::before{
+    content:"";
+    position:absolute;
+    top:-1px;
+    left:20px;
+    width:46px;
+    height:3px;
+    border-radius:0 0 4px 4px;
+    background:rgba(108,124,240,.24);
+    transition:width .16s ease,background .16s ease
+  }
+  .setup-mode-card[data-mode="ebichelchen"]:hover,
+  .setup-mode-card[data-mode="email"]:hover,
+  .setup-mode-card[data-mode="both"]:hover{
+    background:#fcfcff!important;
+    border-color:#cbd1fa!important
+  }
+  .setup-mode-card[data-mode]:hover::before{
+    width:58px;
+    background:rgba(108,124,240,.48)
+  }
+  .setup-mode-card[data-mode="ebichelchen"].active,
+  .setup-mode-card[data-mode="email"].active,
+  .setup-mode-card[data-mode="both"].active{
+    background:#f3f4ff!important;
+    border-color:var(--accent)!important;
+    box-shadow:none!important
+  }
+  .setup-mode-card[data-mode].active::before{
+    width:72px;
+    background:var(--accent)
+  }
+  .setup-mode-card[data-mode="ebichelchen"].active h3,
+  .setup-mode-card[data-mode="email"].active h3,
+  .setup-mode-card[data-mode="both"].active h3{color:var(--accent)!important}
+  .setup-mode-card[data-mode="ebichelchen"].active:after,
+  .setup-mode-card[data-mode="email"].active:after,
+  .setup-mode-card[data-mode="both"].active:after{background:var(--accent)!important}
+  .setup-mode-card.active .setup-mode-connect-slot{
+    border-top-color:rgba(108,124,240,.16)!important
+  }
+  .setup-mode-card.active .setup-mode-connect-slot .setup-status-row,
+  .setup-mode-card.active .setup-mode-connect-slot .setup-status-panel{
+    background:#fff!important;
+    border-color:#e0e3ee!important;
+    box-shadow:0 3px 12px rgba(40,46,80,.07)!important
+  }
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v280</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v281</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1393,7 +1453,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 280;
+const APP_VERSION = 281;
 
 window.addEventListener("error", function(ev){
   try{
