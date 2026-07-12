@@ -1163,11 +1163,61 @@
     box-shadow:0 3px 12px rgba(40,46,80,.07)!important
   }
 
+
+
+  /* v282 — Démarrage un peu plus vivant sans introduire de nouvelles couleurs de mode.
+     Une seule couleur d’accent, déjà utilisée dans toute l’application, anime les cartes
+     neutres. La sélection reste nettement plus forte que l’état initial. */
+  .setup-mode-card[data-mode="ebichelchen"],
+  .setup-mode-card[data-mode="email"],
+  .setup-mode-card[data-mode="both"]{
+    background:#fcfcff!important;
+    border-color:#e0e3ec!important;
+    box-shadow:inset 0 4px 0 #e2e5ff!important
+  }
+  .setup-mode-card[data-mode]::before{
+    display:none!important
+  }
+  .setup-mode-card[data-mode="ebichelchen"]:hover,
+  .setup-mode-card[data-mode="email"]:hover,
+  .setup-mode-card[data-mode="both"]:hover{
+    background:#f8f9ff!important;
+    border-color:#cbd1fa!important;
+    box-shadow:inset 0 4px 0 #cbd1fa!important
+  }
+  .setup-mode-card[data-mode="ebichelchen"].active,
+  .setup-mode-card[data-mode="email"].active,
+  .setup-mode-card[data-mode="both"].active{
+    background:#f2f3ff!important;
+    border-color:#b8c0fb!important;
+    border-width:1px!important;
+    box-shadow:inset 0 5px 0 var(--accent)!important
+  }
+  .setup-mode-card .setup-chip,
+  .setup-mode-card .setup-chip.ok,
+  .setup-mode-card .setup-chip.warn{
+    background:#eef0fe!important;
+    color:#5965bd!important;
+    border:1px solid #e0e3fb!important
+  }
+  .setup-mode-card p{color:#686b77!important}
+  .setup-mode-card.active .setup-mode-connect-slot .setup-status-row,
+  .setup-mode-card.active .setup-mode-connect-slot .setup-status-panel{
+    box-shadow:0 3px 12px rgba(40,46,80,.07)!important
+  }
+
+  /* v282 — mêmes bannières jaunes pour les étapes qui bloquent la planification. */
+  .planner-guidance{
+    margin:2px 0 14px!important;
+    padding:12px 14px!important;
+    line-height:1.45
+  }
+  .planner-guidance strong{font-weight:800}
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v281</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v282</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1453,7 +1503,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 281;
+const APP_VERSION = 282;
 
 window.addEventListener("error", function(ev){
   try{
@@ -4205,11 +4255,14 @@ function renderQuickPlanner(){
   if(!remaining.length) window._timelineComposer=null;
   if(!days.length){
     window._timelineComposer=null;
-    host.innerHTML='<div class="planner-empty"><strong>Sélectionnez d’abord un ou plusieurs jours.</strong>Les lignes du temps apparaîtront ici dès que des jours d’entretien sont choisis.</div>';
+    host.innerHTML='<div class="banner warn planner-guidance"><strong>Sélectionnez d’abord un ou plusieurs jours d’entretien dans le calendrier ci-dessus.</strong></div>';
     return;
   }
   const groups=plannerWeekGroups(days);
-  host.innerHTML='<div class="planner-summary"><span><strong>'+totalAssigned+' rendez-vous</strong> · '+remaining.length+' élève'+(remaining.length===1?'':'s')+' encore à placer</span></div>'
+  const hasStudents=assignmentStudents().length>0;
+  const studentWarning=hasStudents ? '' : '<div class="banner warn planner-guidance"><strong>Aucun élève disponible.</strong> Ajoutez ou importez d’abord des élèves dans l’onglet « 2 · Élèves » avant de planifier les rendez-vous.</div>';
+  const plannerSummary=hasStudents ? '<div class="planner-summary"><span><strong>'+totalAssigned+' rendez-vous</strong> · '+remaining.length+' élève'+(remaining.length===1?'':'s')+' encore à placer</span></div>' : '';
+  host.innerHTML=studentWarning+plannerSummary
     +'<div class="timeline-weeks">'+groups.map(timelineWeekHtml).join('')+'</div>';
   requestAnimationFrame(positionTimelineComposerInViewport);
 
