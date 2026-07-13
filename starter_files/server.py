@@ -1642,6 +1642,13 @@ def main():
         except KeyboardInterrupt:
             print("\nTerminé.")
         finally:
+            # v296: Der e-Bichelchen-Browser bleibt während der App-Sitzung warm,
+            # wird beim echten Beenden von EntretienConnect aber zuverlässig geschlossen.
+            try:
+                if EB_AVAILABLE:
+                    eb.force_close_launched_browser()
+            except Exception:
+                pass
             _remove_pid_file()
 
 

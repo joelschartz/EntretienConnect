@@ -533,15 +533,22 @@ function New-EbReadExpression($selectedGroupId = $null) {
       .filter(u => /get-subjects-for-groups/i.test(u)))];
 
     async function tryFetch(label, url, options) {
-      const key = label + " " + url + " " + (options?.method || "GET") + " " + (options?.body || "");
+      const rawOptions = Object.assign({}, options || {});
+      const timeoutMs = Math.max(700, Number(rawOptions.timeoutMs) || 2200);
+      delete rawOptions.timeoutMs;
+      const key = url + " " + (rawOptions.method || "GET") + " " + (rawOptions.body || "");
       if (triedKeys.has(key)) return [];
       triedKeys.add(key);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const opts = Object.assign({
           method: "GET",
           credentials: "include",
-          headers: { "accept": "application/json, text/plain, */*", "mobileappversion": "web" }
-        }, options || {});
+          headers: { "accept": "application/json, text/plain, */*", "mobileappversion": "web" },
+          signal: controller.signal
+        }, rawOptions);
+        opts.signal = controller.signal;
         if (opts.body && !opts.headers["content-type"]) opts.headers["content-type"] = "application/json";
         const res = await fetch(url, opts);
         const text = await res.text();
@@ -558,54 +565,81 @@ function New-EbReadExpression($selectedGroupId = $null) {
         attempts.push({ label, url, method: opts.method || "GET", ok:true, status:res.status, subjects:subjects.length, messageSubjectId:(detectMessageSubject(subjects)||{}).id || null });
         return subjects;
       } catch (e) {
-        attempts.push({ label, url, method: options?.method || "GET", ok:false, error:String(e.message || e).slice(0,180) });
+        attempts.push({ label, url, method: rawOptions.method || "GET", ok:false, error:String(e.message || e).slice(0,180) });
         return [];
+      } finally {
+        clearTimeout(timer);
       }
     }
 
-    // 1) URLs verwenden, die e-Bichelchen selbst schon geladen hat.
+    async function tryBatch(label, specs) {
+      const jobs = (specs || []).map((spec, i) => tryFetch(label + ":" + i, spec.url, spec.options)
+        .then(subjects => ({ subjects, spec })));
+      if (!jobs.length) return null;
+      const results = await Promise.all(jobs);
+      return results.find(r => r.subjects && r.subjects.length) || null;
+    }
+
+    // 1) Den echten Frontend-Aufruf bevorzugen, falls e-Bichelchen ihn bereits geladen hat.
+    // Das ist normalerweise der schnellste und genaueste Weg.
     for (const url of knownUrls) {
-      const subjects = await tryFetch("known-resource", url);
+      const subjects = await tryFetch("known-resource", url, { timeoutMs:1800 });
       if (subjects.length) return { subjects, source:"known-resource", attempts, knownSubjectUrls: knownUrls };
     }
 
-    // 2) Direkt den bekannten e-Bichelchen-Endpunkt aufrufen.
-    // Das ist weiterhin read-only: Es wird nur dieselbe Kategorienliste abgefragt, die e-Bichelchen beim Kalender lädt.
-    const baseUrls = [
-      "/ebichelchen/app/api/group/get-subjects-for-groups",
-      "/ebichelchen/app/api/get-subjects-for-groups",
-      "/ebichelchen/app/api/v6/get-subjects-for-groups"
-    ];
+    // 2) v296 Fast-Path: die wahrscheinlichsten GET-Varianten parallel statt Dutzende
+    // Kombinationen nacheinander. Ein langsamer/alter Endpoint blockiert dadurch nicht mehr
+    // den gesamten Verbindungsaufbau.
+    const v6 = "/ebichelchen/app/api/v6/get-subjects-for-groups";
+    const groupApi = "/ebichelchen/app/api/group/get-subjects-for-groups";
+    const legacy = "/ebichelchen/app/api/get-subjects-for-groups";
+    const gidQ = Number.isFinite(gid) ? encodeURIComponent(gid) : "";
+    const fastGet = Number.isFinite(gid) ? [
+      { url:v6 + "?groupId=" + gidQ },
+      { url:v6 + "?groupIds=" + gidQ },
+      { url:v6 },
+      { url:groupApi + "?groupId=" + gidQ }
+    ] : [{ url:v6 }, { url:groupApi }, { url:legacy }];
+    let hit = await tryBatch("fast-get", fastGet);
+    if (hit) return { subjects:hit.subjects, source:"fast-get " + hit.spec.url, attempts, knownSubjectUrls: knownUrls };
+
+    // 3) Seltenere GET-Varianten ebenfalls parallel und mit kurzem Timeout prüfen.
+    const baseUrls = [v6, groupApi, legacy];
     const queryParts = [""];
     if (Number.isFinite(gid)) {
-      queryParts.push("?groupId=" + encodeURIComponent(gid));
-      queryParts.push("?groupIds=" + encodeURIComponent(gid));
-      queryParts.push("?ids=" + encodeURIComponent(gid));
-      if (group.classGrade) queryParts.push("?groupId=" + encodeURIComponent(gid) + "&classGrade=" + encodeURIComponent(group.classGrade));
+      queryParts.unshift("?groupId=" + gidQ, "?groupIds=" + gidQ);
+      queryParts.push("?ids=" + gidQ);
+      if (group.classGrade) queryParts.push("?groupId=" + gidQ + "&classGrade=" + encodeURIComponent(group.classGrade));
     }
-    for (const base of baseUrls) {
-      for (const q of queryParts) {
-        const subjects = await tryFetch("direct-get", base + q);
-        if (subjects.length) return { subjects, source:"direct-get " + base + q, attempts, knownSubjectUrls: knownUrls };
-      }
-    }
+    const fallbackGet = [];
+    for (const base of baseUrls) for (const q of queryParts) fallbackGet.push({ url:base + q });
+    hit = await tryBatch("fallback-get", fallbackGet);
+    if (hit) return { subjects:hit.subjects, source:"fallback-get " + hit.spec.url, attempts, knownSubjectUrls: knownUrls };
 
-    // 3) Falls der echte Frontend-Call POST verwendet, probieren wir harmlose JSON-Körper.
+    // 4) Falls das Frontend POST verwendet: wahrscheinliche Körper zuerst parallel.
     if (Number.isFinite(gid)) {
-      const bodies = [
-        { groupId: gid },
-        { groupIds: [gid] },
-        { ids: [gid] },
+      const headers = { "accept":"application/json, text/plain, */*", "mobileappversion":"web", "content-type":"application/json" };
+      const fastPostBodies = [
+        { groupId:gid },
+        { groupIds:[gid] },
         [gid],
-        [{ id: gid }],
-        { groups: [{ id: gid }] }
+        { ids:[gid] }
       ];
-      for (const base of baseUrls) {
-        for (const body of bodies) {
-          const subjects = await tryFetch("direct-post", base, { method:"POST", body: JSON.stringify(body), headers: { "accept":"application/json, text/plain, */*", "mobileappversion":"web", "content-type":"application/json" } });
-          if (subjects.length) return { subjects, source:"direct-post " + base, attempts, knownSubjectUrls: knownUrls };
-        }
+      const fastPost = fastPostBodies.map(body => ({ url:v6, options:{ method:"POST", body:JSON.stringify(body), headers, timeoutMs:2200 } }));
+      hit = await tryBatch("fast-post", fastPost);
+      if (hit) return { subjects:hit.subjects, source:"fast-post " + hit.spec.url, attempts, knownSubjectUrls: knownUrls };
+
+      // Letzter Kompatibilitäts-Fallback für ältere Installationen.
+      const bodies = [
+        { groupId: gid }, { groupIds: [gid] }, { ids: [gid] }, [gid],
+        [{ id: gid }], { groups: [{ id: gid }] }
+      ];
+      const fallbackPost = [];
+      for (const base of baseUrls) for (const body of bodies) {
+        fallbackPost.push({ url:base, options:{ method:"POST", body:JSON.stringify(body), headers, timeoutMs:2200 } });
       }
+      hit = await tryBatch("fallback-post", fallbackPost);
+      if (hit) return { subjects:hit.subjects, source:"fallback-post " + hit.spec.url, attempts, knownSubjectUrls: knownUrls };
     }
 
     return { subjects: [], source:null, attempts, knownSubjectUrls: knownUrls };
@@ -635,7 +669,9 @@ function New-EbReadExpression($selectedGroupId = $null) {
   // v286: e-Bichelchen landet nach IAM teilweise auf « Neuigkeiten / Affiches ».
   // Bei einer eindeutig bestimmbaren Klasse (oder nach expliziter Wahl in der App)
   // wird sie im e-Bichelchen-Tab automatisch aktiviert und der Kalender geöffnet.
-  const shouldPrepareGroup = !!(group && Number(group.id) !== Number(selectedFromStore) && (requestedGroupId !== null || groupChosenAutomatically));
+  // v296: Bei einer eindeutig automatisch erkannten Klasse keine sichtbare
+  // Auswahl + Kalender-Neuladung erzwingen. Nur explizite Klassenwechsel synchronisieren.
+  const shouldPrepareGroup = !!(group && Number(group.id) !== Number(selectedFromStore) && requestedGroupId !== null);
   if (shouldPrepareGroup) {
     const rawGroup = groupObjects.find(g => Number(g?.id ?? g?.groupId) === Number(group.id)) || group;
     const prepared = await ensureGroupSelectedInPage(group, rawGroup);
@@ -669,7 +705,7 @@ function New-EbReadExpression($selectedGroupId = $null) {
   } : null;
 
   const payload = {
-    version: "1.10.21",
+    version: "1.10.22",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,

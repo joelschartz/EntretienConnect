@@ -399,6 +399,8 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
     js = r"""
 (async () => {
   const requestedGroupId = __SELECTED_GROUP_ID__;
+  const perfStart = performance.now();
+  const timing = {};
 
   async function getJson(url, options) {
     const res = await fetch(url, Object.assign({
@@ -729,15 +731,22 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
       .filter(u => /get-subjects-for-groups/i.test(u)))];
 
     async function tryFetch(label, url, options) {
-      const key = label + " " + url + " " + (options?.method || "GET") + " " + (options?.body || "");
+      const rawOptions = Object.assign({}, options || {});
+      const timeoutMs = Math.max(700, Number(rawOptions.timeoutMs) || 2200);
+      delete rawOptions.timeoutMs;
+      const key = url + " " + (rawOptions.method || "GET") + " " + (rawOptions.body || "");
       if (triedKeys.has(key)) return [];
       triedKeys.add(key);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const opts = Object.assign({
           method: "GET",
           credentials: "include",
-          headers: { "accept": "application/json, text/plain, */*", "mobileappversion": "web" }
-        }, options || {});
+          headers: { "accept": "application/json, text/plain, */*", "mobileappversion": "web" },
+          signal: controller.signal
+        }, rawOptions);
+        opts.signal = controller.signal;
         if (opts.body && !opts.headers["content-type"]) opts.headers["content-type"] = "application/json";
         const res = await fetch(url, opts);
         const text = await res.text();
@@ -754,54 +763,81 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
         attempts.push({ label, url, method: opts.method || "GET", ok:true, status:res.status, subjects:subjects.length, messageSubjectId:(detectMessageSubject(subjects)||{}).id || null });
         return subjects;
       } catch (e) {
-        attempts.push({ label, url, method: options?.method || "GET", ok:false, error:String(e.message || e).slice(0,180) });
+        attempts.push({ label, url, method: rawOptions.method || "GET", ok:false, error:String(e.message || e).slice(0,180) });
         return [];
+      } finally {
+        clearTimeout(timer);
       }
     }
 
-    // 1) URLs verwenden, die e-Bichelchen selbst schon geladen hat.
+    async function tryBatch(label, specs) {
+      const jobs = (specs || []).map((spec, i) => tryFetch(label + ":" + i, spec.url, spec.options)
+        .then(subjects => ({ subjects, spec })));
+      if (!jobs.length) return null;
+      const results = await Promise.all(jobs);
+      return results.find(r => r.subjects && r.subjects.length) || null;
+    }
+
+    // 1) Den echten Frontend-Aufruf bevorzugen, falls e-Bichelchen ihn bereits geladen hat.
+    // Das ist normalerweise der schnellste und genaueste Weg.
     for (const url of knownUrls) {
-      const subjects = await tryFetch("known-resource", url);
+      const subjects = await tryFetch("known-resource", url, { timeoutMs:1800 });
       if (subjects.length) return { subjects, source:"known-resource", attempts, knownSubjectUrls: knownUrls };
     }
 
-    // 2) Direkt den bekannten e-Bichelchen-Endpunkt aufrufen.
-    // Das ist weiterhin read-only: Es wird nur dieselbe Kategorienliste abgefragt, die e-Bichelchen beim Kalender lädt.
-    const baseUrls = [
-      "/ebichelchen/app/api/group/get-subjects-for-groups",
-      "/ebichelchen/app/api/get-subjects-for-groups",
-      "/ebichelchen/app/api/v6/get-subjects-for-groups"
-    ];
+    // 2) v296 Fast-Path: die wahrscheinlichsten GET-Varianten parallel statt Dutzende
+    // Kombinationen nacheinander. Ein langsamer/alter Endpoint blockiert dadurch nicht mehr
+    // den gesamten Verbindungsaufbau.
+    const v6 = "/ebichelchen/app/api/v6/get-subjects-for-groups";
+    const groupApi = "/ebichelchen/app/api/group/get-subjects-for-groups";
+    const legacy = "/ebichelchen/app/api/get-subjects-for-groups";
+    const gidQ = Number.isFinite(gid) ? encodeURIComponent(gid) : "";
+    const fastGet = Number.isFinite(gid) ? [
+      { url:v6 + "?groupId=" + gidQ },
+      { url:v6 + "?groupIds=" + gidQ },
+      { url:v6 },
+      { url:groupApi + "?groupId=" + gidQ }
+    ] : [{ url:v6 }, { url:groupApi }, { url:legacy }];
+    let hit = await tryBatch("fast-get", fastGet);
+    if (hit) return { subjects:hit.subjects, source:"fast-get " + hit.spec.url, attempts, knownSubjectUrls: knownUrls };
+
+    // 3) Seltenere GET-Varianten ebenfalls parallel und mit kurzem Timeout prüfen.
+    const baseUrls = [v6, groupApi, legacy];
     const queryParts = [""];
     if (Number.isFinite(gid)) {
-      queryParts.push("?groupId=" + encodeURIComponent(gid));
-      queryParts.push("?groupIds=" + encodeURIComponent(gid));
-      queryParts.push("?ids=" + encodeURIComponent(gid));
-      if (group.classGrade) queryParts.push("?groupId=" + encodeURIComponent(gid) + "&classGrade=" + encodeURIComponent(group.classGrade));
+      queryParts.unshift("?groupId=" + gidQ, "?groupIds=" + gidQ);
+      queryParts.push("?ids=" + gidQ);
+      if (group.classGrade) queryParts.push("?groupId=" + gidQ + "&classGrade=" + encodeURIComponent(group.classGrade));
     }
-    for (const base of baseUrls) {
-      for (const q of queryParts) {
-        const subjects = await tryFetch("direct-get", base + q);
-        if (subjects.length) return { subjects, source:"direct-get " + base + q, attempts, knownSubjectUrls: knownUrls };
-      }
-    }
+    const fallbackGet = [];
+    for (const base of baseUrls) for (const q of queryParts) fallbackGet.push({ url:base + q });
+    hit = await tryBatch("fallback-get", fallbackGet);
+    if (hit) return { subjects:hit.subjects, source:"fallback-get " + hit.spec.url, attempts, knownSubjectUrls: knownUrls };
 
-    // 3) Falls der echte Frontend-Call POST verwendet, probieren wir harmlose JSON-Körper.
+    // 4) Falls das Frontend POST verwendet: wahrscheinliche Körper zuerst parallel.
     if (Number.isFinite(gid)) {
-      const bodies = [
-        { groupId: gid },
-        { groupIds: [gid] },
-        { ids: [gid] },
+      const headers = { "accept":"application/json, text/plain, */*", "mobileappversion":"web", "content-type":"application/json" };
+      const fastPostBodies = [
+        { groupId:gid },
+        { groupIds:[gid] },
         [gid],
-        [{ id: gid }],
-        { groups: [{ id: gid }] }
+        { ids:[gid] }
       ];
-      for (const base of baseUrls) {
-        for (const body of bodies) {
-          const subjects = await tryFetch("direct-post", base, { method:"POST", body: JSON.stringify(body), headers: { "accept":"application/json, text/plain, */*", "mobileappversion":"web", "content-type":"application/json" } });
-          if (subjects.length) return { subjects, source:"direct-post " + base, attempts, knownSubjectUrls: knownUrls };
-        }
+      const fastPost = fastPostBodies.map(body => ({ url:v6, options:{ method:"POST", body:JSON.stringify(body), headers, timeoutMs:2200 } }));
+      hit = await tryBatch("fast-post", fastPost);
+      if (hit) return { subjects:hit.subjects, source:"fast-post " + hit.spec.url, attempts, knownSubjectUrls: knownUrls };
+
+      // Letzter Kompatibilitäts-Fallback für ältere Installationen.
+      const bodies = [
+        { groupId: gid }, { groupIds: [gid] }, { ids: [gid] }, [gid],
+        [{ id: gid }], { groups: [{ id: gid }] }
+      ];
+      const fallbackPost = [];
+      for (const base of baseUrls) for (const body of bodies) {
+        fallbackPost.push({ url:base, options:{ method:"POST", body:JSON.stringify(body), headers, timeoutMs:2200 } });
       }
+      hit = await tryBatch("fallback-post", fallbackPost);
+      if (hit) return { subjects:hit.subjects, source:"fallback-post " + hit.spec.url, attempts, knownSubjectUrls: knownUrls };
     }
 
     return { subjects: [], source:null, attempts, knownSubjectUrls: knownUrls };
@@ -809,7 +845,9 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
 
   if (!location.href.includes("/ebichelchen/app/")) throw new Error("Bitte im echten e-Bichelchen-Tab bleiben.");
 
+  const groupsT0 = performance.now();
   const groupsResult = await getGroupsFromTeacher();
+  timing.groupsMs = Math.round(performance.now() - groupsT0);
   let groupObjects = extractGroupObjects(groupsResult.json);
   const groups = groupObjects.map(mapGroup).filter(g => Number.isFinite(g.id)).sort((a,b) => String(a.classAlias || a.name).localeCompare(String(b.classAlias || b.name)));
   if (!groups.length) throw new Error("Keine Klassen aus get-groups-from-teacher erhalten. Automatik-Versuche: " + JSON.stringify(groupsResult.attempts || []).slice(0, 900));
@@ -831,7 +869,11 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   // v286: e-Bichelchen landet nach IAM teilweise auf « Neuigkeiten / Affiches ».
   // Bei einer eindeutig bestimmbaren Klasse (oder nach expliziter Wahl in der App)
   // wird sie im e-Bichelchen-Tab automatisch aktiviert und der Kalender geöffnet.
-  const shouldPrepareGroup = !!(group && Number(group.id) !== Number(selectedFromStore) && (requestedGroupId !== null || groupChosenAutomatically));
+  // v296: Eine eindeutig automatisch erkannte Klasse muss nicht erst im sichtbaren
+  // Frontend angeklickt und der Kalender neu geladen werden. Gruppen-/Schülerdaten sind
+  // bereits vorhanden; die Kategorie wird direkt per API gelesen. Nur eine ausdrückliche
+  // Klassenwahl des Nutzers synchronisiert weiterhin den e-Bichelchen-Tab.
+  const shouldPrepareGroup = !!(group && Number(group.id) !== Number(selectedFromStore) && requestedGroupId !== null);
   if (shouldPrepareGroup) {
     const rawGroup = groupObjects.find(g => Number(g?.id ?? g?.groupId) === Number(group.id)) || group;
     const prepared = await ensureGroupSelectedInPage(group, rawGroup);
@@ -841,6 +883,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
     }
   }
 
+  const subjectsT0 = performance.now();
   const storageSubjects = findSubjectsFromStorage();
   let subjects = storageSubjects.subjects.map(s => ({ id:s.id, labelDeu:s.labelDeu||"", labelFra:s.labelFra||"", label:s.label||"", icon:s.icon||"", defaultColor:s.defaultColor ?? null, source:s.source||"storage" }));
   let subjectsSource = subjects.length ? "storage" : null;
@@ -857,6 +900,9 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
     storageSubjects.knownSubjectUrls = apiSubj.knownSubjectUrls || [];
   }
 
+  timing.subjectsMs = Math.round(performance.now() - subjectsT0);
+  timing.totalMs = Math.round(performance.now() - perfStart);
+
   const loggedInUser = userStore?.loggedInUser ? {
     firstName: userStore.loggedInUser.firstName || "",
     lastName: userStore.loggedInUser.lastName || "",
@@ -865,7 +911,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   } : null;
 
   const payload = {
-    version: "1.10.21",
+    version: "1.10.22",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -879,6 +925,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
     subjects,
     messageSubject: messageSubject ? { id: messageSubject.id, labelDeu: messageSubject.labelDeu || "", labelFra: messageSubject.labelFra || "", label: messageSubject.label || "", source: messageSubject.source || subjectsSource || "" } : null,
     endpoints: { groupsUrl: groupsResult.url, subjectsSource, scannedStorageKeys: storageSubjects.scannedKeys, knownSubjectUrls: storageSubjects.knownSubjectUrls || [], subjectAttempts },
+    timing,
     summary: { groups: groups.length, students: group ? group.students.length : 0, teachers: group ? group.teachers.length : 0, tutors: group ? group.tutors.length : 0, excluded: group ? group.excluded.length : 0, subjects: subjects.length, messageSubjectId: messageSubject ? messageSubject.id : null }
   };
   return JSON.stringify(payload);
@@ -913,29 +960,19 @@ def find_ebichelchen_target() -> dict:
 
 
 def check_login_ready() -> dict:
-    """Leichte Bereitschaftsprüfung für den Login-Polling-Loop.
+    """Sehr leichte Bereitschaftsprüfung für den Login-Polling-Loop.
 
-    Die frühere Oberfläche startete bei jedem Poll bereits die komplette Klassen-,
-    Schüler- und Fächeranalyse. Diese kann mehrere Sekunden dauern und enthielt
-    zusätzliche Fallback-Wartezeiten. v1.10.21 prüft zuerst nur, ob der echte
-    e-Bichelchen-Kontext wieder sichtbar ist und der Klassen-Endpunkt Daten liefert.
-    Erst danach wird einmalig die vollständige Analyse gestartet.
+    v296: nur noch ein DevTools-Listenaufruf pro Poll (statt zuerst /json/version
+    und danach nochmals /json). Sobald die eingeloggten Stores vorhanden sind, wird
+    die vollständige Lesung sofort freigegeben; der API-Probe-Fallback hat ein kurzes
+    Timeout. Dadurch reagiert die Oberfläche nach IAM deutlich schneller.
     """
-    if not debug_browser_running():
-        return {"ok": True, "ready": False, "browserClosed": True, "stage": "closed", "lightweight": True}
-
     try:
-        targets = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json", timeout=1.0)
+        targets = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json", timeout=0.8)
     except Exception as exc:
-        return {"ok": True, "ready": False, "browserClosed": False, "stage": "devtools", "detail": str(exc), "lightweight": True}
+        return {"ok": True, "ready": False, "browserClosed": True, "stage": "closed", "detail": str(exc), "lightweight": True}
 
     pages = [t for t in (targets if isinstance(targets, list) else []) if t.get("type") == "page"]
-    # v290: macOS beendet Chrome/Edge nicht, wenn das letzte Fenster geschlossen wird.
-    # Schließt der Nutzer das e-Bichelchen-Fenster VOR dem Login, bleibt der Debug-Browser
-    # als Prozess am Leben – nur ohne echte Webseite. Die DevTools antworten dann weiter,
-    # es gibt aber kein http/https-Seiten-Target mehr. Das ist ein abgebrochener Login und
-    # muss als "geschlossen" gemeldet werden, damit die Oberfläche zurücksetzt und man sich
-    # erneut verbinden kann (sonst hängt sie ewig auf "Connexion en cours…").
     real_pages = [t for t in pages if str(t.get("url") or "").startswith(("http://", "https://"))]
     if not real_pages:
         return {"ok": True, "ready": False, "browserClosed": True, "stage": "no-windows", "lightweight": True}
@@ -951,10 +988,23 @@ def check_login_ready() -> dict:
 
     expr = r"""
 (async () => {
-  const out = { ready:false, pageUrl:String(location.href || ""), groupCount:0 };
+  const out = { ready:false, pageUrl:String(location.href || ""), groupCount:0, via:"" };
   if (!out.pageUrl.includes('/ebichelchen/app/')) return JSON.stringify(out);
+
+  // Fast-Path: Nach erfolgreichem IAM sind diese Stores meist schon vorhanden,
+  // noch bevor der Kalender alle Ressourcen geladen hat.
+  try {
+    const user = JSON.parse(sessionStorage.getItem('userStore') || 'null');
+    const groups = JSON.parse(sessionStorage.getItem('groupStore') || 'null');
+    if ((user && user.loggedInUser) || (groups && (groups.selectedGroup || groups.selectedGroupId))) {
+      out.ready = true;
+      out.via = 'storage';
+      return JSON.stringify(out);
+    }
+  } catch (_) {}
+
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 1800);
+  const timer = setTimeout(() => controller.abort(), 1000);
   try {
     const res = await fetch('/ebichelchen/app/api/group/get-groups-from-teacher', {
       method:'GET', credentials:'include', signal:controller.signal,
@@ -969,6 +1019,7 @@ def check_login_ready() -> dict:
     const groups = candidates.find(Array.isArray) || [];
     out.groupCount = groups.length;
     out.ready = groups.length > 0;
+    out.via = 'api';
     return JSON.stringify(out);
   } catch (e) {
     out.error = String(e && (e.message || e) || '');
@@ -979,7 +1030,7 @@ def check_login_ready() -> dict:
 })()
 """
     try:
-        msg = cdp_eval(ws_url, expr, await_promise=True, msg_id=609, timeout_ms=2500)
+        msg = cdp_eval(ws_url, expr, await_promise=True, msg_id=609, timeout_ms=1600)
         result = msg.get("result", {})
         if result.get("exceptionDetails"):
             return {"ok": True, "ready": False, "browserClosed": False, "stage": "page", "lightweight": True}
@@ -992,6 +1043,7 @@ def check_login_ready() -> dict:
             "stage": "ready" if data.get("ready") else "app-loading",
             "groupCount": int(data.get("groupCount") or 0),
             "status": data.get("status"),
+            "via": data.get("via") or "",
             "lightweight": True,
         }
     except Exception as exc:
