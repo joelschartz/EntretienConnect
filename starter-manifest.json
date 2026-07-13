@@ -1,5 +1,5 @@
 {
-  "version": "v292",
+  "version": "v293",
   "files": [
     {
       "target": "server.py",
@@ -40,7 +40,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "4601e5cb614ace634b15f1d7cd04ea969641ba8ab646d7ab27f968fb2cf9008e",
+      "sha256": "78ecebb8b137d24401b09b584f9128c7f41f9214ffa4df465946e96e69da3a82",
       "size": 5
     },
     {

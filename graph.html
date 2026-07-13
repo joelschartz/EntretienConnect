@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v292</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v293</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1571,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 292;
+const APP_VERSION = 293;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6035,11 +6035,15 @@ function mailBannerHtml(){
   if(em && !account && currentMsgs.some(m=>m.kind!=="eb")) banners.push('<div class="banner warn">Microsoft 365 n’est pas connecté. Connectez-vous dans l’onglet Démarrage.</div>');
   if(eb && !ebReady()) banners.push('<div class="banner warn">e-Bichelchen n’est pas connecté. Connectez-vous dans l’onglet Démarrage.</div>');
   if(currentMsgs.length===0) banners.push('<div class="banner warn">Aucun envoi prêt. Attribuez des élèves dans l’onglet « Calendrier »'+(em?' et saisissez les adresses e-mail':'')+'.</div>');
-  if(em && missing.length){
+  // v293: quand rien n'est prêt (currentMsgs.length===0), on n'affiche QUE le message
+  // ci-dessus. Les détails « sans e-mail » / « sans rendez-vous » faisaient doublon
+  // (p. ex. élèves importés d'e-Bichelchen, il ne manque que les adresses e-mail).
+  const somethingReady = currentMsgs.length>0;
+  if(somethingReady && em && missing.length){
     const missingHtml=[...new Set(missing)].map(n=>`<span class="truncated-inline" title="${esc(n)}">${esc(displayStudentName(n))}</span>`).join(", ");
     banners.push(`<div class="banner warn">Sans adresse e-mail : ${missingHtml}. Ces e-mails seront ignorés${eb?' ; e-Bichelchen reste possible.':'.'}</div>`);
   }
-  if(em){
+  if(somethingReady && em){
     const invalidEmails=invalidStudentEmails();
     if(invalidEmails.length){
       const shown=invalidEmails.slice(0,3).map(x=>`<span class="truncated-inline" title="${esc(x.email)}">${esc(displayStudentName(x.student))} · contact ${x.contact}</span>`).join(", ");
@@ -6049,7 +6053,7 @@ function mailBannerHtml(){
   }
   const duplicateWarning=duplicateStudentWarningsHtml();
   if(duplicateWarning) banners.push(duplicateWarning);
-  const missingApptWarning=missingAppointmentWarningHtml();
+  const missingApptWarning=somethingReady ? missingAppointmentWarningHtml() : "";
   if(missingApptWarning) banners.push(missingApptWarning);
   const pastAppts=pastAssignedAppointmentsCount();
   if(pastAppts){
@@ -6775,14 +6779,13 @@ document.addEventListener("click", function(ev){
   if(c){ ev.preventDefault(); ev.stopPropagation(); ebCancelPending(); }
 }, true);
 async function ebCleanupAfterSuccessfulRead(){
-  // v291: après une lecture réussie, on NE FERME PLUS le navigateur e-Bichelchen —
-  // on le garde « au chaud » en minimisant simplement sa fenêtre. La prochaine connexion
-  // réutilise alors l'onglet existant (voir launch_browser) au lieu d'un redémarrage à
-  // froid lent, et sur Windows cela évite d'accumuler un nouvel onglet à chaque fois.
-  // La fermeture réelle n'a lieu qu'à la fermeture de l'app (heartbeat / onglet fermé).
+  // v293: après une lecture réussie, on FERME de nouveau la fenêtre e-Bichelchen.
+  // La « mise au chaud » en minimisant la fenêtre (v291/v292) était perturbante :
+  // la fenêtre se minimisait pendant qu'on se connectait. Fermer est prévisible et
+  // remet EntretienConnect au premier plan.
   try{
-    await fetch("/api/eb/park?focusApp=1",{cache:"no-store"});
-  }catch(e){ /* best-effort : garder au chaud reste sans conséquence si l'appel échoue */ }
+    await fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"});
+  }catch(e){ /* best-effort */ }
 }
 let ebConnectBusy=false;
 async function ebConnectFlow(){
@@ -6871,20 +6874,24 @@ async function ebAutoAttempt(){
     ebScheduleAuto(450);
     return;
   }
-  ebBrowserMissingCount=0;
 
-  // Le backend Python v288 indique « lightweight:true ». Un ancien/fallback
-  // backend peut ne pas connaître la sonde ; dans ce cas on conserve la lecture
-  // classique, mais à un rythme plus lent.
+  // v293: NE PAS remettre le compteur à zéro sur une sonde en échec (probe=null).
+  // Avant, une sonde ratée pendant que le navigateur se ferme réinitialisait le compteur
+  // à chaque cycle → il n'atteignait jamais 2 → « Connexion en cours » tournait à l'infini
+  // jusqu'à « Annuler ». On ne remet à zéro que sur un signal clairement vivant.
   const probeSupported=!!(probe && probe.lightweight);
-  if(probeSupported && !probe.ready){
-    ebReadBusy=false;
-    const age=Date.now()-ebAutoStart;
-    ebScheduleAuto(age<30000 ? 650 : 1200);
-    return;
+  if(probeSupported){
+    ebBrowserMissingCount=0;
+    if(!probe.ready){
+      ebReadBusy=false;
+      const age=Date.now()-ebAutoStart;
+      ebScheduleAuto(age<30000 ? 650 : 1200);
+      return;
+    }
   }
 
   let j=null;
+  const _readT0=Date.now();
   try{
     j=await ebGet("/api/eb/read-browser?quiet=1");
   }catch(e){
@@ -6894,6 +6901,8 @@ async function ebAutoAttempt(){
     return;
   }
   ebReadBusy=false;
+  // v293: Zeitmessung, um „gefühlt langsam" vs. real zu klären. In der Browser-Konsole sichtbar.
+  window.__ebReadMs=Date.now()-_readT0;
 
   if(j && j.browserClosed){
     ebBrowserMissingCount++;
@@ -6907,6 +6916,10 @@ async function ebAutoAttempt(){
     ebStopAuto();
     ebConnectBusy=false;
     ebLoginPending=false;
+    // v293: Gesamtzeit ab „Fenster offen" bis Daten da + reine Lesezeit — in der Konsole.
+    const _total=((Date.now()-ebAutoStart)/1000).toFixed(1);
+    const _read=((window.__ebReadMs||0)/1000).toFixed(1);
+    console.log("[eb] Verbindung fertig in "+_total+"s (davon Lesen "+_read+"s) — Rest = Login/IAM + Laden von e-Bichelchen.");
     ebApplyRead(j.data);
     if(!j.data.needsGroupSelection){ ebCleanupAfterSuccessfulRead(); }
     return;
