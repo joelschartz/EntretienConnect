@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v288</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v289</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1571,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 288;
+const APP_VERSION = 289;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6774,18 +6774,31 @@ async function ebConnectFlow(){
   setEbStatus("Ouverture de la fenêtre e-Bichelchen…","info");
   ebStopAuto();
 
-  // Le profil du navigateur est conservé pour éviter un démarrage à froid très lent ;
-  // seules les données de connexion sont remises à zéro.
+  // Le profil du navigateur est conservé pour éviter un démarrage à froid très lent.
   ebData=null;
   state.ebichelchenData=null;
   state.ebichelchenGroups=[];
   state.ebichelchenSelectedGroupId="";
   state.ebichelchenMap=state.ebichelchenMap||{};
+
+  // v289: Ne plus effacer les cookies/la session IAM à chaque connexion.
+  // Auparavant, chaque clic sur « Connecter » supprimait les cookies e-Bichelchen
+  // (reset-session), ce qui obligeait à refaire toute l’authentification IAM/EduKey —
+  // d’où la lenteur par rapport à l’ouverture manuelle d’e-Bichelchen dans le navigateur,
+  // où la session reste ouverte. Désormais on ne réinitialise QUE si la dernière tentative
+  // ne s’est pas terminée proprement (fenêtre fermée trop tôt, mauvais mot de passe) ;
+  // sinon les cookies sont conservés et la reconnexion est quasi instantanée.
+  const previousLoginDirty=!!state.ebLoginDirty;
+  state.ebLoginDirty=true; // remis à false une fois la lecture réussie (session propre)
   saveState();
-  try{ await ebGet("/api/eb/reset-session?light=1"); }
-  catch(_){
-    try{ await ebGet("/api/eb/cleanup?closeEb=1&focusApp=0"); }catch(__){}
-    try{ await ebGet("/api/eb/clear"); }catch(__){}
+  if(previousLoginDirty){
+    // Tentative précédente interrompue : on purge une fois la session IAM à moitié faite
+    // pour ne pas bloquer la prochaine demande de sécurité EduKey.
+    try{ await ebGet("/api/eb/reset-session?light=1"); }
+    catch(_){
+      try{ await ebGet("/api/eb/cleanup?closeEb=1&focusApp=0"); }catch(__){}
+      try{ await ebGet("/api/eb/clear"); }catch(__){}
+    }
   }
 
   try{
@@ -6894,6 +6907,7 @@ async function ebRead(quiet, groupId){
 function ebApplyRead(data){
   ebConnectBusy=false;
   ebLoginPending=false;
+  if(data){ state.ebLoginDirty=false; } // v289: lecture réussie → session propre, cookies conservés pour la prochaine connexion
   const previousGroups=ebKnownGroups();
   ebData=data||null;
   if(ebData){
