@@ -1237,7 +1237,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v283</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v284</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1523,7 +1523,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 283;
+const APP_VERSION = 284;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3255,6 +3255,10 @@ function setupConnectionSlotHtml(cardMode,isActive){
     }
   }
   let html='<div class="setup-status-stack">'+rows.join('')+'</div>';
+  // v284: afficher les étapes de connexion dans la carte active. Depuis le déplacement
+  // des connexions dans les cartes, ce conteneur avait disparu : le clic semblait ne
+  // rien faire, même lorsque le helper local travaillait déjà.
+  if(isActive && modeNeedsEb(cardMode)) html+='<div id="setupEbLiveStatus" style="display:none;margin:10px 0 0"></div>';
   if(isActive && modeNeedsEb(cardMode) && ebHasMultipleKnownGroups()) html+='<div class="setup-status-panel">'+ebGroupChoiceHtml()+'</div>';
   return html;
 }
@@ -3371,8 +3375,19 @@ function ecSafeChooseMode(mode){
 }
 try{ window.setWorkflowMode=setWorkflowMode; window.workflowMode=workflowMode; }catch(e){}
 document.addEventListener("click", function(ev){
-  const btn = ev.target && ev.target.closest ? ev.target.closest("[data-choose-mode]") : null;
-  const card = ev.target && ev.target.closest ? ev.target.closest(".setup-mode-card[data-mode]") : null;
+  const target=ev.target;
+  const btn = target && target.closest ? target.closest("[data-choose-mode]") : null;
+  const card = target && target.closest ? target.closest(".setup-mode-card[data-mode]") : null;
+  if(!btn && card && target && target.closest){
+    // v284: une carte déjà active n'a pas besoin d'être sélectionnée à nouveau.
+    // Cela évite aussi de reconstruire son contenu pendant une connexion en cours.
+    if(card.classList.contains("active")) return;
+    // Une carte de mode contient aussi de vraies actions (Connecter, choix de classe,
+    // champs, liens…). Le gestionnaire global en phase de capture interceptait
+    // auparavant ces clics avant qu'ils atteignent leur bouton.
+    const interactive=target.closest('button,a,input,select,textarea,label,summary,details,[role="button"],[contenteditable="true"]');
+    if(interactive) return;
+  }
   if(btn || card){
     const mode=(btn && btn.dataset.chooseMode) || (card && card.dataset.mode) || "";
     if(mode){ ev.preventDefault(); ev.stopPropagation(); ecSafeChooseMode(mode); }
