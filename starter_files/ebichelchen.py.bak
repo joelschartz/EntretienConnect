@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.19 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.18 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -161,22 +161,15 @@ def read_url_json(url: str, timeout: float = 4.0):
 
 
 def open_remote_tab(url: str) -> bool:
-    """Öffnet zuverlässig einen neuen CDP-Tab.
-
-    Aktuelle Chrome-/Edge-Versionen erwarten PUT; einige ältere Builds akzeptieren
-    nur GET. Beide Varianten werden unterstützt. Ein fehlgeschlagener Aufruf darf
-    nicht mehr fälschlich als erfolgreicher Browserstart gemeldet werden.
-    """
-    target = f"http://127.0.0.1:{CDP_PORT}/json/new?" + urllib.parse.quote(url, safe="")
-    for method in ("PUT", "GET"):
-        try:
-            req = urllib.request.Request(target, method=method)
-            with urllib.request.urlopen(req, timeout=2) as resp:
-                resp.read()
-            return True
-        except Exception:
-            continue
-    return False
+    # Browser DevTools: /json/new?{url} requires PUT in current Chrome versions.
+    try:
+        target = f"http://127.0.0.1:{CDP_PORT}/json/new?" + urllib.parse.quote(url, safe="")
+        req = urllib.request.Request(target, method="PUT")
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            resp.read()
+        return True
+    except Exception:
+        return False
 
 
 def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
@@ -195,33 +188,11 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     profile_dir = PROFILE_ROOT / browser_id / profile
     profile_dir.mkdir(parents=True, exist_ok=True)
 
-    # Falls schon ein Browser mit CDP-Port läuft, einen neuen e-Bichelchen-Tab öffnen.
-    # v285: Nur Erfolg melden, wenn /json/new den Tab wirklich angelegt hat. Zuvor
-    # wurde ein Fehler hier ignoriert; die Oberfläche wartete dann endlos auf einen
-    # Tab, der nie geöffnet worden war.
+    # Falls schon ein Browser mit CDP-Port läuft, nur neuen e-Bichelchen-Tab öffnen.
     try:
         version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1)
-        opened = False
-        for _ in range(8):
-            if open_remote_tab(EB_URL):
-                opened = True
-                break
-            time.sleep(0.25)
-        if opened:
-            return {"alreadyRunning": True, "openedTab": True, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
-        # Fallback: URL über den Browser-Prozess an die bereits laufende Instanz geben.
-        # Chrome/Edge leitet dies normalerweise an dieselbe Profilinstanz weiter.
-        try:
-            subprocess.Popen([browser_path, f"--remote-debugging-port={CDP_PORT}", f"--user-data-dir={profile_dir}", EB_URL], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
-        for _ in range(16):
-            if open_remote_tab(EB_URL):
-                return {"alreadyRunning": True, "openedTab": True, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
-            time.sleep(0.25)
-        raise RuntimeError("Le navigateur est ouvert, mais l’onglet e-Bichelchen n’a pas pu être créé. Réessayez une fois.")
-    except RuntimeError:
-        raise
+        open_remote_tab(EB_URL)
+        return {"alreadyRunning": True, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
     except Exception:
         pass
 
@@ -237,19 +208,14 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     BROWSER_PROCESSES[profile] = proc
 
-    # Ein Kaltstart kann auf verwalteten Macs/Schul-PCs deutlich länger als sechs
-    # Sekunden dauern. Wir warten deshalb länger auf DevTools, ohne die Oberfläche mit
-    # vorübergehenden "Connection refused"-Meldungen zu belasten.
-    for _ in range(48):
+    for _ in range(30):
         try:
             version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=0.5)
             return {"alreadyRunning": False, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
         except Exception:
-            if proc.poll() is not None:
-                raise RuntimeError(f"{browser_name} s’est fermé avant l’ouverture de la fenêtre e-Bichelchen.")
-            time.sleep(0.25)
+            time.sleep(0.2)
 
-    return {"alreadyRunning": False, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "warning": "Le navigateur a été lancé, mais sa préparation prend plus de temps que prévu."}
+    return {"alreadyRunning": False, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "warning": "Browser wurde gestartet, DevTools war aber noch nicht erreichbar."}
 
 
 class SimpleWebSocket:
@@ -1007,38 +973,7 @@ def force_close_launched_browser() -> dict:
     return result
 
 
-def _clear_saved_login_data() -> list[str]:
-    """Entfernt nur Login-/Sitzungsdaten aus den App-Browserprofilen.
-
-    Das Profil selbst (Cache, Initialisierung, Browserkonfiguration) bleibt erhalten,
-    wodurch Chrome/Edge wesentlich schneller startet als nach einem vollständigen
-    Löschen des Profilordners.
-    """
-    removed: list[str] = []
-    file_names = {"Cookies", "Cookies-journal", "Web Data", "Web Data-journal"}
-    dir_names = {"Sessions", "Session Storage"}
-    try:
-        if not PROFILE_ROOT.exists():
-            return removed
-        # Verzeichnisse zuerst sammeln, damit das Traversieren nicht durch Löschungen
-        # während rglob durcheinandergerät.
-        paths = list(PROFILE_ROOT.rglob("*"))
-        for path in sorted(paths, key=lambda x: len(x.parts), reverse=True):
-            try:
-                if path.is_dir() and path.name in dir_names:
-                    shutil.rmtree(path, ignore_errors=True)
-                    removed.append(str(path.relative_to(PROFILE_ROOT)))
-                elif path.is_file() and path.name in file_names:
-                    path.unlink(missing_ok=True)
-                    removed.append(str(path.relative_to(PROFILE_ROOT)))
-            except Exception:
-                pass
-    except Exception:
-        pass
-    return removed
-
-
-def reset_login_session(profile: str = "default", preserve_profile: bool = False) -> dict:
+def reset_login_session(profile: str = "default") -> dict:
     """v155: Kompletter Neustart der e-Bichelchen-Anmeldung. Schließt den App-Browser
     und löscht die App-Browserprofile (Cookies / halbfertige IAM-Sitzung). Ohne diesen
     Reset blockiert eine abgebrochene Anmeldung (falsches Passwort, Fenster zu früh
@@ -1060,10 +995,6 @@ def reset_login_session(profile: str = "default", preserve_profile: bool = False
                 break
             except Exception:
                 continue
-    elif preserve_profile:
-        # v285: schneller Reset für den normalen Verbindungsfluss. Nur Login- und
-        # Sitzungsdaten entfernen, das bereits initialisierte Browserprofil behalten.
-        removed = _clear_saved_login_data()
     else:
         prof_root = PROFILE_ROOT
         try:
@@ -1080,7 +1011,7 @@ def reset_login_session(profile: str = "default", preserve_profile: bool = False
         clear_current()
     except Exception:
         pass
-    return {"closed": closed, "profilesRemoved": removed if not preserve_profile else [], "sessionDataRemoved": removed if preserve_profile else [], "cookiesCleared": cookies_cleared, "profilePreserved": bool(preserve_profile)}
+    return {"closed": closed, "profilesRemoved": removed, "cookiesCleared": cookies_cleared}
 
 
 def cleanup_after_read(close_eb: bool = True, focus_app: bool = True) -> dict:

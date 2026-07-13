@@ -1233,43 +1233,11 @@
     line-height:1.45;
     font-weight:400!important
   }
-
-
-  /* v285 — connexion e-Bichelchen : état compact dans la carte, sans bannière étroite.
-     Le message transitoire reste court et prend toute la largeur sous la carte de statut. */
-  .setup-mode-connect-slot{flex-direction:column!important;align-items:stretch!important}
-  .setup-mode-connect-slot .setup-status-stack{width:100%!important;max-width:100%!important}
-  .setup-eb-live-status{
-    box-sizing:border-box;
-    width:100%;
-    max-width:100%;
-    margin:7px 0 0;
-    padding:0 2px;
-    color:#5b6280;
-    font-size:11.5px;
-    font-weight:500;
-    line-height:1.42;
-    overflow-wrap:anywhere
-  }
-  .setup-eb-live-status.info{color:#5965a9}
-  .setup-eb-live-status.warn,
-  .setup-eb-live-status.err{
-    padding:8px 10px;
-    border:1px solid #f0d59f;
-    border-radius:10px;
-    background:#fff8e8;
-    color:#8a5a13
-  }
-  .setup-eb-live-status.err{border-color:#f0c6c1;background:#fff2f0;color:#a33a31}
-  .setup-eb-live-status:empty{display:none!important}
-  .setup-mode-card.active .setup-mode-connect-slot{min-width:0!important}
-  .setup-mode-card.active .setup-mode-connect-slot .setup-status-row{max-width:100%!important}
-
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v285</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v284</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1555,7 +1523,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 285;
+const APP_VERSION = 284;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3265,8 +3233,6 @@ function previewHintText(){
 function setupConnectionSlotHtml(cardMode,isActive){
   const rows=[];
   const suffix=String(cardMode||'mode').replace(/[^a-z0-9_-]/gi,'_');
-  const ebPending=(typeof ebLoginPending!=="undefined" && ebLoginPending);
-  const ebBusy=(typeof ebConnectBusy!=="undefined" && ebConnectBusy);
   if(modeNeedsEb(cardMode)){
     if(ebReady()){
       const g=(typeof ebData!=="undefined" && ebData.group) ? ebData.group : {};
@@ -3275,9 +3241,7 @@ function setupConnectionSlotHtml(cardMode,isActive){
       rows.push('<div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-connected-label">Connecté</span></div><span class="status-detail">'+detail+'</span></div></div>');
     }else{
       const btnId='setupEbConnect_'+suffix;
-      const pendingLabel=ebPending ? 'Connexion en cours' : 'Non connecté';
-      const buttonLabel=ebPending ? 'Rouvrir' : (ebBusy ? 'Ouverture…' : 'Connecter');
-      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-pending-label">'+pendingLabel+'</span></div></div>'+(isActive?'<button type="button" class="ghost sm" id="'+btnId+'" data-setup-eb-connect'+(ebBusy?' disabled aria-busy="true"':'')+'>'+buttonLabel+'</button>':'')+'</div>');
+      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-pending-label">Non connecté</span></div></div>'+(isActive?'<button type="button" class="ghost sm" id="'+btnId+'" data-setup-eb-connect>Connecter</button>':'')+'</div>');
     }
   }
   if(modeNeedsEmail(cardMode)){
@@ -3290,9 +3254,11 @@ function setupConnectionSlotHtml(cardMode,isActive){
       rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>Microsoft 365</b><span class="setup-pending-label">Non connecté</span></div><div id="'+boxId+'" style="display:none;margin-top:7px"></div></div>'+(isActive?'<button type="button" class="ghost sm" id="'+btnId+'" data-setup-ms-connect data-login-box="'+boxId+'">Connecter</button>':'')+'</div>');
     }
   }
-  let html='<div class="setup-status-stack">'+rows.join('');
-  if(isActive && modeNeedsEb(cardMode)) html+='<div id="setupEbLiveStatus" class="setup-eb-live-status" style="display:none"></div>';
-  html+='</div>';
+  let html='<div class="setup-status-stack">'+rows.join('')+'</div>';
+  // v284: afficher les étapes de connexion dans la carte active. Depuis le déplacement
+  // des connexions dans les cartes, ce conteneur avait disparu : le clic semblait ne
+  // rien faire, même lorsque le helper local travaillait déjà.
+  if(isActive && modeNeedsEb(cardMode)) html+='<div id="setupEbLiveStatus" style="display:none;margin:10px 0 0"></div>';
   if(isActive && modeNeedsEb(cardMode) && ebHasMultipleKnownGroups()) html+='<div class="setup-status-panel">'+ebGroupChoiceHtml()+'</div>';
   return html;
 }
@@ -6409,7 +6375,7 @@ function refreshSelectionUI(){
 /* ============================ e-Bichelchen-Kanal ============================
    Optionaler zweiter Versandkanal. Solange der Schalter aus ist, wird nichts
    geladen und kein Login verlangt. */
-let ebData=null, ebAutoTimer=null, ebAutoStart=0, ebReadBusy=false, ebLoginPending=false; // v138: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
+let ebData=null, ebAutoTimer=null, ebAutoStart=0, ebReadBusy=false; // v138: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
@@ -6451,18 +6417,25 @@ function setEbStatus(msg, cls){
   if(el){ el.className="banner compact "+c; el.innerHTML=msg; }
   const live=document.getElementById("setupEbLiveStatus");
   if(live){
-    live.className="setup-eb-live-status "+c;
+    // v214: les « Détails techniques » ouverts le restent quand le sondage rafraîchit le message.
+    const wasOpen=!!(live.querySelector("details") && live.querySelector("details").open);
+    live.className="banner compact "+c;
+    live.style.margin="10px 0 0";
     live.style.display = msg ? "" : "none";
     live.innerHTML=msg;
+    const det=live.querySelector("details");
+    if(det && wasOpen) det.open=true;
   }
 }
-// v285: erreurs CDP transitoires (Connection refused, aucun onglet pendant le démarrage)
-// ne sont pas utiles à l'utilisateur. Elles restent dans la console et l'interface
-// n'affiche qu'une instruction courte et stable.
+// v214: pendant l'attente de connexion, message rassurant — les erreurs brutes du backend
+// (urlopen Errno 61, tentatives JSON, …) sont des états transitoires normaux du sondage
+// et n'apparaissent plus que repliées sous « Détails techniques ».
 function ebWaitingStatusHtml(detail){
+  // v216: plus de bouton « Relire maintenant » pendant l'attente — la lecture tourne déjà
+  // toute seule ; le bouton déclenchait des lectures parallèles qui se freinaient mutuellement.
   const d=String(detail||"").trim();
-  if(d) console.debug("e-Bichelchen en attente :", d);
-  return 'Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen.';
+  return 'En attente de la connexion e-Bichelchen … La lecture des élèves démarre automatiquement dès que vous êtes connecté.'
+    +(d?'<details class="eb-status-details"><summary>Détails techniques</summary><div>'+esc(d.slice(0,400))+'</div></details>':'');
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
@@ -6703,80 +6676,68 @@ function renderEbMatch(){
 function ebStopAuto(){ if(ebAutoTimer){ clearInterval(ebAutoTimer); ebAutoTimer=null; } }
 let ebConnectBusy=false;
 async function ebConnectFlow(){
-  if(ebConnectBusy) return;
+  if(ebConnectBusy){
+    setEbStatus("Connexion e-Bichelchen déjà en cours …","info");
+    return;
+  }
   if(!localBackendAvailable()){
     setEbStatus(localBackendMissingMessage(),"warn");
     return;
   }
-  const reopenOnly=!!ebLoginPending;
   ebConnectBusy=true;
-  ebLoginPending=true;
-  renderSetup();
-  setEbStatus(reopenOnly ? "Réouverture de la fenêtre e-Bichelchen…" : "Ouverture de la fenêtre e-Bichelchen…","info");
+  const btn=document.getElementById("ebConnect");
+  if(btn) btn.disabled=true;
   ebStopAuto();
-
-  if(!reopenOnly){
-    // v285: remise à zéro légère. Le profil du navigateur est conservé afin d'éviter
-    // un démarrage à froid très lent ; seules la session et les données e-Bichelchen
-    // sont réinitialisées.
-    ebData=null;
-    state.ebichelchenData=null;
-    state.ebichelchenGroups=[];
-    state.ebichelchenSelectedGroupId="";
-    state.ebichelchenMap=state.ebichelchenMap||{};
-    saveState();
-    try{ await ebGet("/api/eb/reset-session?light=1"); }
-    catch(_){
-      try{ await ebGet("/api/eb/cleanup?closeEb=1&focusApp=0"); }catch(__){}
-      try{ await ebGet("/api/eb/clear"); }catch(__){}
-    }
+  // v138: repartir proprement. Les anciennes classes mises en cache ne doivent pas
+  // donner l’impression que l’utilisateur est encore connecté.
+  ebData=null;
+  state.ebichelchenData=null;
+  state.ebichelchenGroups=[];
+  state.ebichelchenSelectedGroupId="";
+  state.ebichelchenMap=state.ebichelchenMap||{};
+  saveState();
+  renderSetup(); renderEbPanel(); applyChannelVisibility();
+  // v155: repartir d'une session totalement vierge — ferme le navigateur de l'app
+  // et supprime son profil (cookies IAM). Sans cela, une connexion interrompue
+  // (mauvais mot de passe, fenêtre fermée trop tôt) bloque la nouvelle demande EduKey.
+  let resetOk=false;
+  try{ const r=await ebGet("/api/eb/reset-session"); resetOk=!!(r&&r.ok); }catch(_){}
+  if(!resetOk){
+    try{ await ebGet("/api/eb/cleanup?closeEb=1"); }catch(_){}
+    try{ await ebGet("/api/eb/clear"); }catch(_){}
   }
-
+  setEbStatus("Ouverture de la fenêtre de connexion e-Bichelchen …","info");
   try{
     const j=await ebGet("/api/eb/open-browser?browser="+encodeURIComponent(ebBrowserPref()));
     if(!j.ok) throw new Error(j.error||"Erreur");
-    ebConnectBusy=false;
-    renderSetup();
-    setEbStatus("Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen.","info");
+    setEbStatus("Connectez-vous dans la fenêtre e-Bichelchen ouverte. La lecture des élèves démarre automatiquement …","info");
     ebAutoStart=Date.now();
-    ebAutoTimer=setInterval(ebAutoAttempt, 3000);
-    setTimeout(ebAutoAttempt, 1200);
+    ebAutoTimer=setInterval(ebAutoAttempt, 2600);
+    ebAutoAttempt();
   }catch(e){
-    ebConnectBusy=false;
-    ebLoginPending=false;
-    renderSetup();
     setEbStatus("Impossible d’ouvrir e-Bichelchen : "+esc(e.message||e),"err");
+  }finally{
+    ebConnectBusy=false;
+    if(btn) btn.disabled=false;
   }
 }
 async function ebAutoAttempt(){
-  // v216: une seule lecture à la fois. Les lectures parallèles se freinent mutuellement.
+  // v216: une seule lecture à la fois. Les lectures parallèles (sondage toutes les 2,6 s
+  // pendant qu'une lecture de 15–20 s tournait encore) se freinaient mutuellement et
+  // produisaient les erreurs « timed out ».
   if(ebReadBusy) return;
-  if(Date.now()-ebAutoStart>600000){
-    ebStopAuto();
-    ebConnectBusy=false;
-    ebLoginPending=false;
-    renderSetup();
-    setEbStatus("Connexion non terminée. Cliquez sur « Connecter » pour réessayer.","warn");
-    return;
-  }
+  if(Date.now()-ebAutoStart>600000){ ebStopAuto(); setEbStatus("Connexion non terminée (10 min). Cliquez de nouveau sur « Connecter e-Bichelchen » après vous être connecté. <button type=\"button\" class=\"ghost sm\" data-eb-read-now style=\"margin-left:8px\">Relire maintenant</button>","warn"); return; }
   ebReadBusy=true;
   let j=null;
   try{ j=await ebGet("/api/eb/read-browser?quiet=1"); }
-  catch(e){
-    setEbStatus(ebWaitingStatusHtml(String(e.message||e)),"info");
-    return;
-  }
+  catch(e){ setEbStatus(ebWaitingStatusHtml(String(e.message||e)),"info"); return; }
   finally{ ebReadBusy=false; }
   if(j && j.ok && j.data){
     ebStopAuto();
-    ebConnectBusy=false;
-    ebLoginPending=false;
     ebApplyRead(j.data);
     if(!j.data.needsGroupSelection){ fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
   }
-  else{
-    setEbStatus(ebWaitingStatusHtml(j&&j.error?String(j.error):""),"info");
-  }
+  else { setEbStatus(ebWaitingStatusHtml(j&&j.error?String(j.error):""),"info"); }
 }
 async function ebRead(quiet, groupId){
   if(ebReadBusy){ setEbStatus("Lecture déjà en cours … merci de patienter.","info"); return; }
@@ -6792,8 +6753,6 @@ async function ebRead(quiet, groupId){
   finally{ ebReadBusy=false; }
 }
 function ebApplyRead(data){
-  ebConnectBusy=false;
-  ebLoginPending=false;
   const previousGroups=ebKnownGroups();
   ebData=data||null;
   if(ebData){

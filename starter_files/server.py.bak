@@ -845,11 +845,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 eb.clear_current()
                 return self._json(200, {"ok": True})
             if path == "/api/eb/reset-session":
-                # v285: Im normalen Verbindungsfluss bleibt das App-Browserprofil erhalten.
-                # Das spart den langsamen Kaltstart; Cookies/Sitzungsdaten werden trotzdem
-                # entfernt. Mit light=0 bleibt der frühere vollständige Reset verfügbar.
-                light = q("light", "0") in ("1", "true", "True", "yes")
-                return self._json(200, {"ok": True, "info": eb.reset_login_session(q("profile", "default"), preserve_profile=light)})
+                # v155: Anmeldung komplett zurücksetzen (Browser schließen + Profil löschen),
+                # damit IAM/EduKey eine frische Sicherheitsanfrage schickt.
+                return self._json(200, {"ok": True, "info": eb.reset_login_session(q("profile", "default"))})
             return self._json(404, {"ok": False, "error": "Route e-Bichelchen inconnue."})
         except Exception as exc:
             return self._json(500, {"ok": False, "error": str(exc)})
