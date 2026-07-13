@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 #  EntretienConnect - lokaler Helfer fuer Windows (PowerShell)
 #  Ersetzt server.py: liefert graph.html aus und erledigt Login (Geraetecode)
 #  + Versand ueber Microsoft Graph. Kein Python, keine Installation, kein Admin.
@@ -550,6 +550,16 @@ function Handle-EbRequest($stream, $req) {
             return
         }
 
+        if ($req.Method -eq "GET" -and $path -eq "/api/eb/login-ready") {
+            $r = Invoke-EbHelper "ready"
+            if ($r.ok) {
+                Send-Json $stream @{ ok=$true; ready=[bool]$r.ready; groupCount=$r.groupCount; status=$r.status; browserClosed=$false; lightweight=$true }
+            } else {
+                Send-Json $stream @{ ok=$true; ready=$false; browserClosed=[bool]$r.browserClosed; lightweight=$true; stage="waiting" }
+            }
+            return
+        }
+
         if ($req.Method -eq "GET" -and $path -eq "/api/eb/read-browser") {
             $groupId = Get-QueryParam $req.Path "groupId" ""
             $quiet = (Get-QueryParam $req.Path "quiet" "0") -in @("1","true","True","yes")
@@ -560,7 +570,9 @@ function Handle-EbRequest($stream, $req) {
             }
             else {
                 $browserClosed = [bool]$r.browserClosed
-                Send-Json $stream @{ ok=$false; waiting=($quiet -and -not $browserClosed); browserClosed=$browserClosed; error=$r.error }
+                $errorText = [string]$r.error
+                $retrySoon = ($errorText -match 'Relecture en cours|sélectionnée automatiquement')
+                Send-Json $stream @{ ok=$false; waiting=($quiet -and -not $browserClosed); browserClosed=$browserClosed; retrySoon=$retrySoon; error=$errorText }
             }
             return
         }

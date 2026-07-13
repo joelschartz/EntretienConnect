@@ -646,7 +646,7 @@ function New-EbReadExpression($selectedGroupId = $null) {
   } : null;
 
   const payload = {
-    version: "1.10.20",
+    version: "1.10.21",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -667,6 +667,36 @@ function New-EbReadExpression($selectedGroupId = $null) {
 
 '@
     return $js.Replace("__GROUP_LITERAL__", $lit)
+}
+
+function New-EbReadyExpression {
+    return @'
+(async () => {
+  const out = { ready:false, pageUrl:String(location.href || ""), groupCount:0 };
+  if (!out.pageUrl.includes('/ebichelchen/app/')) return JSON.stringify(out);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1800);
+  try {
+    const res = await fetch('/ebichelchen/app/api/group/get-groups-from-teacher', {
+      method:'GET', credentials:'include', signal:controller.signal,
+      headers:{'accept':'application/json, text/plain, */*','mobileappversion':'web'}
+    });
+    out.status = res.status;
+    if (!res.ok) return JSON.stringify(out);
+    const json = await res.json();
+    const candidates = [json, json && json.objects, json && json.groups, json && json.data,
+      json && json.data && json.data.objects, json && json.result,
+      json && json.result && json.result.objects];
+    const groups = candidates.find(Array.isArray) || [];
+    out.groupCount = groups.length;
+    out.ready = groups.length > 0;
+    return JSON.stringify(out);
+  } catch (e) {
+    out.error = String(e && (e.message || e) || '');
+    return JSON.stringify(out);
+  } finally { clearTimeout(timer); }
+})()
+'@
 }
 
 function Set-EbData($data) {
@@ -801,6 +831,13 @@ try {
         exit 0
     }
 
+    if ($Action -eq "ready") {
+        $expr = New-EbReadyExpression
+        $data = Invoke-CdpEval $expr 3000 609
+        @{ ok=$true; ready=[bool]$data.ready; groupCount=[int]($data.groupCount); status=$data.status; browserClosed=$false; lightweight=$true } | ConvertTo-Json -Depth 10 -Compress
+        exit 0
+    }
+
     if ($Action -eq "read") {
         $expr = New-EbReadExpression $GroupId
         $data = Invoke-CdpEval $expr 35000 610
@@ -812,7 +849,7 @@ try {
     exit 2
 } catch {
     $browserClosed = $false
-    if ($Action -eq "read") {
+    if ($Action -in @("read","ready")) {
         try {
             $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
         } catch {

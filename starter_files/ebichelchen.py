@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.20 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.21 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -850,7 +850,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   } : null;
 
   const payload = {
-    version: "1.10.20",
+    version: "1.10.21",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -895,6 +895,83 @@ def find_ebichelchen_target() -> dict:
     return target
 
 
+
+
+def check_login_ready() -> dict:
+    """Leichte Bereitschaftsprüfung für den Login-Polling-Loop.
+
+    Die frühere Oberfläche startete bei jedem Poll bereits die komplette Klassen-,
+    Schüler- und Fächeranalyse. Diese kann mehrere Sekunden dauern und enthielt
+    zusätzliche Fallback-Wartezeiten. v1.10.21 prüft zuerst nur, ob der echte
+    e-Bichelchen-Kontext wieder sichtbar ist und der Klassen-Endpunkt Daten liefert.
+    Erst danach wird einmalig die vollständige Analyse gestartet.
+    """
+    if not debug_browser_running():
+        return {"ok": True, "ready": False, "browserClosed": True, "stage": "closed", "lightweight": True}
+
+    try:
+        targets = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json", timeout=1.0)
+    except Exception as exc:
+        return {"ok": True, "ready": False, "browserClosed": False, "stage": "devtools", "detail": str(exc), "lightweight": True}
+
+    pages = [t for t in (targets if isinstance(targets, list) else []) if t.get("type") == "page"]
+    candidates = [t for t in pages if "/ebichelchen/app/" in str(t.get("url") or "")]
+    if not candidates:
+        return {"ok": True, "ready": False, "browserClosed": False, "stage": "login", "lightweight": True}
+
+    candidates.sort(key=lambda t: ("/tabs/calendar" not in str(t.get("url") or ""), str(t.get("url") or "")))
+    target = candidates[0]
+    ws_url = target.get("webSocketDebuggerUrl")
+    if not ws_url:
+        return {"ok": True, "ready": False, "browserClosed": False, "stage": "target", "lightweight": True}
+
+    expr = r"""
+(async () => {
+  const out = { ready:false, pageUrl:String(location.href || ""), groupCount:0 };
+  if (!out.pageUrl.includes('/ebichelchen/app/')) return JSON.stringify(out);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1800);
+  try {
+    const res = await fetch('/ebichelchen/app/api/group/get-groups-from-teacher', {
+      method:'GET', credentials:'include', signal:controller.signal,
+      headers:{'accept':'application/json, text/plain, */*','mobileappversion':'web'}
+    });
+    out.status = res.status;
+    if (!res.ok) return JSON.stringify(out);
+    const json = await res.json();
+    const candidates = [json, json && json.objects, json && json.groups, json && json.data,
+      json && json.data && json.data.objects, json && json.result,
+      json && json.result && json.result.objects];
+    const groups = candidates.find(Array.isArray) || [];
+    out.groupCount = groups.length;
+    out.ready = groups.length > 0;
+    return JSON.stringify(out);
+  } catch (e) {
+    out.error = String(e && (e.message || e) || '');
+    return JSON.stringify(out);
+  } finally {
+    clearTimeout(timer);
+  }
+})()
+"""
+    try:
+        msg = cdp_eval(ws_url, expr, await_promise=True, msg_id=609, timeout_ms=2500)
+        result = msg.get("result", {})
+        if result.get("exceptionDetails"):
+            return {"ok": True, "ready": False, "browserClosed": False, "stage": "page", "lightweight": True}
+        value = result.get("result", {}).get("value")
+        data = json.loads(value) if value else {}
+        return {
+            "ok": True,
+            "ready": bool(data.get("ready")),
+            "browserClosed": False,
+            "stage": "ready" if data.get("ready") else "app-loading",
+            "groupCount": int(data.get("groupCount") or 0),
+            "status": data.get("status"),
+            "lightweight": True,
+        }
+    except Exception as exc:
+        return {"ok": True, "ready": False, "browserClosed": False, "stage": "probe", "detail": str(exc), "lightweight": True}
 
 
 def read_from_chrome(selected_group_id: int | None = None) -> dict:
@@ -1127,33 +1204,79 @@ def force_close_launched_browser() -> dict:
 
 
 def _clear_saved_login_data() -> list[str]:
-    """Entfernt nur Login-/Sitzungsdaten aus den App-Browserprofilen.
+    """Entfernt gezielt nur Login-/Sitzungsdaten aus den App-Browserprofilen.
 
-    Das Profil selbst (Cache, Initialisierung, Browserkonfiguration) bleibt erhalten,
-    wodurch Chrome/Edge wesentlich schneller startet als nach einem vollständigen
-    Löschen des Profilordners.
+    v1.10.21: Frühere Versionen liefen mit ``PROFILE_ROOT.rglob("*")`` durch den
+    gesamten Chromium-Cache. Nach mehreren Starts konnte allein dieser Scan mehrere
+    Sekunden dauern, obwohl nur wenige feste Cookie-/Session-Pfade relevant sind.
+    Jetzt werden ausschließlich die bekannten Profilordner und Dateien geprüft.
+    Cache, Browserinitialisierung und ``Web Data`` bleiben erhalten.
     """
     removed: list[str] = []
-    file_names = {"Cookies", "Cookies-journal", "Web Data", "Web Data-journal"}
-    dir_names = {"Sessions", "Session Storage"}
+    if not PROFILE_ROOT.exists():
+        return removed
+
+    # --user-data-dir legt die eigentlichen Chromium-Profile normalerweise in
+    # "Default" (oder "Profile X") an. Einige ältere Builds schrieben einzelne
+    # Datenbanken direkt in den user-data-dir; deshalb wird auch dieser geprüft.
+    profile_roots: list[pathlib.Path] = []
     try:
-        if not PROFILE_ROOT.exists():
-            return removed
-        # Verzeichnisse zuerst sammeln, damit das Traversieren nicht durch Löschungen
-        # während rglob durcheinandergerät.
-        paths = list(PROFILE_ROOT.rglob("*"))
-        for path in sorted(paths, key=lambda x: len(x.parts), reverse=True):
+        for browser_dir in PROFILE_ROOT.iterdir():
+            if not browser_dir.is_dir():
+                continue
+            for user_data_dir in browser_dir.iterdir():
+                if not user_data_dir.is_dir():
+                    continue
+                profile_roots.append(user_data_dir)
+                default_dir = user_data_dir / "Default"
+                if default_dir.is_dir():
+                    profile_roots.append(default_dir)
+                try:
+                    profile_roots.extend(
+                        d for d in user_data_dir.glob("Profile *") if d.is_dir()
+                    )
+                except Exception:
+                    pass
+    except Exception:
+        return removed
+
+    file_relpaths = (
+        pathlib.Path("Cookies"),
+        pathlib.Path("Cookies-journal"),
+        pathlib.Path("Network") / "Cookies",
+        pathlib.Path("Network") / "Cookies-journal",
+    )
+    dir_relpaths = (
+        pathlib.Path("Sessions"),
+        pathlib.Path("Session Storage"),
+    )
+
+    seen: set[str] = set()
+    for base in profile_roots:
+        for rel in dir_relpaths:
+            path = base / rel
+            key = str(path)
+            if key in seen:
+                continue
+            seen.add(key)
             try:
-                if path.is_dir() and path.name in dir_names:
+                if path.is_dir():
                     shutil.rmtree(path, ignore_errors=True)
                     removed.append(str(path.relative_to(PROFILE_ROOT)))
-                elif path.is_file() and path.name in file_names:
+            except Exception:
+                pass
+        for rel in file_relpaths:
+            path = base / rel
+            key = str(path)
+            if key in seen:
+                continue
+            seen.add(key)
+            try:
+                if path.is_file():
                     path.unlink(missing_ok=True)
                     removed.append(str(path.relative_to(PROFILE_ROOT)))
             except Exception:
                 pass
-    except Exception:
-        pass
     return removed
 
 

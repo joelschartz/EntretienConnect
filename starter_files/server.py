@@ -818,6 +818,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if path == "/api/eb/open-browser":
                 info = eb.launch_browser(q("profile", "default"), preferred_browser=q("browser", "auto"))
                 return self._json(200, {"ok": True, "info": info})
+            if path == "/api/eb/login-ready":
+                return self._json(200, eb.check_login_ready())
             if path == "/api/eb/read-browser":
                 quiet = q("quiet", "0") in ("1", "true", "True", "yes")
                 gid_raw = q("groupId", "")
@@ -837,7 +839,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     return self._json(200, {"ok": True, "data": payload, "receivedAt": at})
                 except Exception as exc:
                     browser_closed = not eb.debug_browser_running()
-                    return self._json(200 if quiet else 500, {"ok": False, "waiting": bool(quiet and not browser_closed), "browserClosed": browser_closed, "error": str(exc)})
+                    error_text = str(exc)
+                    retry_soon = ("Relecture en cours" in error_text or "sélectionnée automatiquement" in error_text)
+                    return self._json(200 if quiet else 500, {"ok": False, "waiting": bool(quiet and not browser_closed), "browserClosed": browser_closed, "retrySoon": retry_soon, "error": error_text})
             if path == "/api/eb/focus-app":
                 return self._json(200, {"ok": True, "info": eb.focus_app_tab()})
             if path == "/api/eb/close":

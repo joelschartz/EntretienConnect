@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v287</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v288</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1571,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 287;
+const APP_VERSION = 288;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6717,7 +6717,12 @@ function renderEbMatch(){
     saveState(); renderEbMatch(); updateMailBanner();
   });
 }
-function ebStopAuto(){ if(ebAutoTimer){ clearInterval(ebAutoTimer); ebAutoTimer=null; } }
+function ebStopAuto(){ if(ebAutoTimer){ clearTimeout(ebAutoTimer); ebAutoTimer=null; } }
+function ebScheduleAuto(delay){
+  ebStopAuto();
+  const ms=Math.max(120, Number(delay)||900);
+  ebAutoTimer=setTimeout(()=>{ ebAutoTimer=null; ebAutoAttempt(); },ms);
+}
 function ebResetAfterClosedBrowser(){
   // v287: si l’utilisateur ferme la fenêtre de connexion avant la fin, revenir
   // immédiatement à un état réessayable au lieu de rester bloqué sur « Connexion en cours ».
@@ -6790,8 +6795,9 @@ async function ebConnectFlow(){
     renderSetup();
     setEbStatus("Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen.","info");
     ebAutoStart=Date.now();
-    ebAutoTimer=setInterval(ebAutoAttempt, 3000);
-    setTimeout(ebAutoAttempt, 1200);
+    // v288: zuerst nur leicht prüfen, ob IAM/e-Bichelchen wirklich bereit ist.
+    // Die teure Klassen-/Schüleranalyse wird erst dann einmalig gestartet.
+    ebScheduleAuto(320);
   }catch(e){
     ebConnectBusy=false;
     ebLoginPending=false;
@@ -6800,8 +6806,7 @@ async function ebConnectFlow(){
   }
 }
 async function ebAutoAttempt(){
-  // v216: une seule lecture à la fois. Les lectures parallèles se freinent mutuellement.
-  if(ebReadBusy) return;
+  if(ebReadBusy){ ebScheduleAuto(220); return; }
   if(Date.now()-ebAutoStart>600000){
     ebStopAuto();
     ebConnectBusy=false;
@@ -6810,36 +6815,69 @@ async function ebAutoAttempt(){
     setEbStatus("Connexion non terminée. Cliquez sur « Connecter » pour réessayer.","warn");
     return;
   }
+
   ebReadBusy=true;
-  let j=null;
-  try{ j=await ebGet("/api/eb/read-browser?quiet=1"); }
-  catch(e){
-    setEbStatus(ebWaitingStatusHtml(String(e.message||e)),"info");
-    return;
+  let probe=null;
+  try{
+    probe=await ebGet("/api/eb/login-ready");
+  }catch(e){
+    console.debug("Vérification e-Bichelchen indisponible :",e);
   }
-  finally{ ebReadBusy=false; }
-  if(j && j.browserClosed){
+
+  if(probe && probe.browserClosed){
+    ebReadBusy=false;
     ebBrowserMissingCount++;
-    // Deux contrôles successifs évitent un faux retour à « Non connecté » lors
-    // d’un très bref redémarrage du navigateur, tout en réagissant en quelques secondes.
-    if(ebBrowserMissingCount>=2){
-      ebResetAfterClosedBrowser();
-      return;
-    }
+    if(ebBrowserMissingCount>=2){ ebResetAfterClosedBrowser(); return; }
+    ebScheduleAuto(450);
     return;
   }
   ebBrowserMissingCount=0;
+
+  // Le backend Python v288 indique « lightweight:true ». Un ancien/fallback
+  // backend peut ne pas connaître la sonde ; dans ce cas on conserve la lecture
+  // classique, mais à un rythme plus lent.
+  const probeSupported=!!(probe && probe.lightweight);
+  if(probeSupported && !probe.ready){
+    ebReadBusy=false;
+    const age=Date.now()-ebAutoStart;
+    ebScheduleAuto(age<30000 ? 650 : 1200);
+    return;
+  }
+
+  let j=null;
+  try{
+    j=await ebGet("/api/eb/read-browser?quiet=1");
+  }catch(e){
+    ebReadBusy=false;
+    setEbStatus(ebWaitingStatusHtml(String(e.message||e)),"info");
+    ebScheduleAuto(probeSupported ? 850 : 2500);
+    return;
+  }
+  ebReadBusy=false;
+
+  if(j && j.browserClosed){
+    ebBrowserMissingCount++;
+    if(ebBrowserMissingCount>=2){ ebResetAfterClosedBrowser(); return; }
+    ebScheduleAuto(450);
+    return;
+  }
+  ebBrowserMissingCount=0;
+
   if(j && j.ok && j.data){
     ebStopAuto();
     ebConnectBusy=false;
     ebLoginPending=false;
     ebApplyRead(j.data);
     if(!j.data.needsGroupSelection){ ebCleanupAfterSuccessfulRead(); }
+    return;
   }
-  else{
-    setEbStatus(ebWaitingStatusHtml(j&&j.error?String(j.error):""),"info");
-  }
+
+  setEbStatus(ebWaitingStatusHtml(j&&j.error?String(j.error):""),"info");
+  // Nach der automatischen Klassenauswahl nicht mehr bis zum nächsten regulären
+  // Zyklus warten: der Kalender wird normalerweise in wenigen hundert ms bereit.
+  ebScheduleAuto(j&&j.retrySoon ? 360 : (probeSupported ? 850 : 2500));
 }
+
 async function ebRead(quiet, groupId){
   if(ebReadBusy){ setEbStatus("Lecture déjà en cours … merci de patienter.","info"); return; }
   ebReadBusy=true;
