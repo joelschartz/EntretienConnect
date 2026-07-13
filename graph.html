@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v293</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v295</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1571,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 293;
+const APP_VERSION = 295;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3246,13 +3246,21 @@ function setWorkflowMode(mode, opts={}){
   else if(modeNeedsEmail(mode)) state.options.templateMode="confirmation";
   syncPreviewKindToTemplateMode(state.options.templateMode);
   window._openPreviewId="";
-  saveState();
+  // v294: die Modus-Auswahl lagte, weil ALLE Renders synchron in einem Rutsch liefen —
+  // der Browser konnte die Auswahl erst zeichnen, wenn auch die schweren Renders
+  // (Schülerliste, Vorschau, e-Bichelchen-Panel) fertig waren. Jetzt: sofort das leichte
+  // visuelle Feedback (Karte markieren), die schwere Arbeit eine Frame später.
   applyChannelVisibility();
   renderSetup();
-  renderStudents();
-  renderEbPanel();
+  const _finishModeRender=()=>{
+    saveState();
+    renderStudents();
+    renderEbPanel();
+    if(typeof window._reloadTemplateEditor==="function") window._reloadTemplateEditor(); else renderMails();
+  };
+  if(typeof requestAnimationFrame==="function") requestAnimationFrame(_finishModeRender);
+  else setTimeout(_finishModeRender, 0);
   if(modeNeedsEmail(mode)) setTimeout(()=>maybeAutoLoadLocalCsv("workflow"), 250);
-  if(typeof window._reloadTemplateEditor==="function") window._reloadTemplateEditor(); else renderMails();
   if(opts.openEb && modeNeedsEb(mode)) ebConnectFlow();
   if(opts.openEmail && modeNeedsEmail(mode)){ const b=document.getElementById("signIn"); if(b) b.click(); }
 }
@@ -6810,26 +6818,14 @@ async function ebConnectFlow(){
   state.ebichelchenSelectedGroupId="";
   state.ebichelchenMap=state.ebichelchenMap||{};
 
-  // v289: Ne plus effacer les cookies/la session IAM à chaque connexion.
-  // Auparavant, chaque clic sur « Connecter » supprimait les cookies e-Bichelchen
-  // (reset-session), ce qui obligeait à refaire toute l’authentification IAM/EduKey —
-  // d’où la lenteur par rapport à l’ouverture manuelle d’e-Bichelchen dans le navigateur,
-  // où la session reste ouverte. Désormais on ne réinitialise QUE si la dernière tentative
-  // ne s’est pas terminée proprement (fenêtre fermée trop tôt, mauvais mot de passe) ;
-  // sinon les cookies sont conservés et la reconnexion est quasi instantanée.
-  const previousLoginDirty=!!state.ebLoginDirty;
-  state.ebLoginDirty=true; // remis à false une fois la lecture réussie (session propre)
+  // v294: KEIN automatisches Zurücksetzen/Abmelden mehr beim Verbinden.
+  // Das frühere soft-reset (v292) löschte beim Connect die Cookies (= Abmeldung!) und
+  // lud den Tab neu — dadurch startete e-Bichelchen zwar mit dem Kalender, meldete sich
+  // dann aber wieder ab / lud neu / landete auf der Pinwand. Sehr verwirrend. Jetzt wird
+  // der Browser einfach geöffnet und gelesen; gültige Cookies bleiben erhalten (schneller
+  // Login, kein Ausloggen). Bei einer wirklich hängenden Anmeldung schließt der Nutzer das
+  // Fenster und klickt erneut auf « Connecter ».
   saveState();
-  if(previousLoginDirty){
-    // v292: tentative précédente interrompue → on vide la session IAM à moitié faite
-    // SANS fermer le navigateur (soft-reset : cookies effacés via DevTools, onglet rechargé).
-    // Ainsi la reconnexion réutilise le navigateur déjà ouvert au lieu d'en démarrer un
-    // nouveau (c'était la cause du « un nouveau navigateur démarre »).
-    try{ await ebGet("/api/eb/reset-session?soft=1"); }
-    catch(_){
-      try{ await ebGet("/api/eb/clear"); }catch(__){}
-    }
-  }
 
   try{
     const j=await ebGet("/api/eb/open-browser?browser="+encodeURIComponent(ebBrowserPref()));
