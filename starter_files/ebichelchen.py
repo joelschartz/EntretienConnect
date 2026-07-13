@@ -160,6 +160,18 @@ def read_url_json(url: str, timeout: float = 4.0):
         return json.loads(resp.read().decode("utf-8"))
 
 
+def debug_browser_running() -> bool:
+    """True only while the isolated Chrome/Edge instance used for e-Bichelchen
+    still exposes its DevTools endpoint. A normal Chrome window is intentionally
+    not considered here because it cannot be read safely without remote debugging.
+    """
+    try:
+        data = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1.0)
+        return isinstance(data, dict)
+    except Exception:
+        return False
+
+
 def open_remote_tab(url: str) -> bool:
     """Öffnet zuverlässig einen neuen CDP-Tab.
 

@@ -1265,11 +1265,27 @@
   .setup-mode-card.active .setup-mode-connect-slot{min-width:0!important}
   .setup-mode-card.active .setup-mode-connect-slot .setup-status-row{max-width:100%!important}
 
+
+  /* v287 — sélection plus calme : le titre reste noir, tandis que la pill devient
+     le petit repère coloré principal. Elle garde la couleur appréciée, mais avec
+     davantage de contraste sur le fond lavande de la carte active. */
+  .setup-mode-card[data-mode].active h3{
+    color:var(--ink)!important
+  }
+  .setup-mode-card[data-mode].active .setup-chip,
+  .setup-mode-card[data-mode].active .setup-chip.ok,
+  .setup-mode-card[data-mode].active .setup-chip.warn{
+    background:#e3e7ff!important;
+    color:#4e5bc0!important;
+    border-color:#cbd2ff!important;
+    font-weight:780!important
+  }
+
 </style>
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v286</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v287</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1555,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 286;
+const APP_VERSION = 287;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6410,7 +6426,7 @@ function refreshSelectionUI(){
 /* ============================ e-Bichelchen-Kanal ============================
    Optionaler zweiter Versandkanal. Solange der Schalter aus ist, wird nichts
    geladen und kein Login verlangt. */
-let ebData=null, ebAutoTimer=null, ebAutoStart=0, ebReadBusy=false, ebLoginPending=false; // v138: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
+let ebData=null, ebAutoTimer=null, ebAutoStart=0, ebReadBusy=false, ebLoginPending=false, ebBrowserMissingCount=0; // v138: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
@@ -6463,7 +6479,7 @@ function setEbStatus(msg, cls){
 function ebWaitingStatusHtml(detail){
   const d=String(detail||"").trim();
   if(d) console.debug("e-Bichelchen en attente :", d);
-  return 'Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen. La classe et les élèves seront lus automatiquement.';
+  return 'Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen.';
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
@@ -6702,6 +6718,24 @@ function renderEbMatch(){
   });
 }
 function ebStopAuto(){ if(ebAutoTimer){ clearInterval(ebAutoTimer); ebAutoTimer=null; } }
+function ebResetAfterClosedBrowser(){
+  // v287: si l’utilisateur ferme la fenêtre de connexion avant la fin, revenir
+  // immédiatement à un état réessayable au lieu de rester bloqué sur « Connexion en cours ».
+  ebStopAuto();
+  ebConnectBusy=false;
+  ebLoginPending=false;
+  ebBrowserMissingCount=0;
+  ebData=null;
+  state.ebichelchenData=null;
+  saveState();
+  try{ ebGet("/api/eb/clear").catch(()=>{}); }catch(_){ }
+  renderSetup();
+  renderStudents();
+  renderEbPanel();
+  applyChannelVisibility();
+  renderMails();
+  setEbStatus("","info");
+}
 async function ebCleanupAfterSuccessfulRead(){
   // v286: sur Mac, fermer réellement la fenêtre e-Bichelchen après une lecture réussie
   // puis remettre EntretienConnect au premier plan. Le helper Windows peut répondre
@@ -6730,6 +6764,7 @@ async function ebConnectFlow(){
   }
   ebConnectBusy=true;
   ebLoginPending=true;
+  ebBrowserMissingCount=0;
   renderSetup();
   setEbStatus("Ouverture de la fenêtre e-Bichelchen…","info");
   ebStopAuto();
@@ -6753,7 +6788,7 @@ async function ebConnectFlow(){
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebConnectBusy=false;
     renderSetup();
-    setEbStatus("Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen. La classe et les élèves seront lus automatiquement.","info");
+    setEbStatus("Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen.","info");
     ebAutoStart=Date.now();
     ebAutoTimer=setInterval(ebAutoAttempt, 3000);
     setTimeout(ebAutoAttempt, 1200);
@@ -6783,6 +6818,17 @@ async function ebAutoAttempt(){
     return;
   }
   finally{ ebReadBusy=false; }
+  if(j && j.browserClosed){
+    ebBrowserMissingCount++;
+    // Deux contrôles successifs évitent un faux retour à « Non connecté » lors
+    // d’un très bref redémarrage du navigateur, tout en réagissant en quelques secondes.
+    if(ebBrowserMissingCount>=2){
+      ebResetAfterClosedBrowser();
+      return;
+    }
+    return;
+  }
+  ebBrowserMissingCount=0;
   if(j && j.ok && j.data){
     ebStopAuto();
     ebConnectBusy=false;

@@ -1,29 +1,29 @@
 {
-  "version": "v286",
+  "version": "v287",
   "files": [
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "cd36bf1f976cadd0f8924b99af75f1b44f157b224325846ecbb979087f0962f4",
-      "size": 68239
+      "sha256": "5daf4a475207b15111ac8f58924d15f0101ebab1b1b41cfc6371ffaccbfaa63a",
+      "size": 68747
     },
     {
       "target": "ebichelchen.py",
       "url": "starter_files/ebichelchen.py",
-      "sha256": "ef657e7f5af60527a64c6d2653d23c5029383ba5e24f3f4ade1348baaf40e28f",
-      "size": 83679
+      "sha256": "3a808c9fe07c615360e3aec0700e128ec74cee4e5e59dad8351679d135ab4da5",
+      "size": 84146
     },
     {
       "target": "EntretienConnect.ps1",
       "url": "starter_files/EntretienConnect.ps1",
-      "sha256": "389f7ca388934d7b30728473762d828ed1eb80351f51e89d127b3e99991c5223",
-      "size": 51937
+      "sha256": "7fa16459bf439e0a1eba8645e76d2091adde77c8bbf2af9b12313aef5710cb00",
+      "size": 52078
     },
     {
       "target": "EntretienConnect-eb.ps1",
       "url": "starter_files/EntretienConnect-eb.ps1",
-      "sha256": "34183c87819ffd3e00f308a2185175dd8d3bdbc2fb7ca753d9f739b364b199f2",
-      "size": 40650
+      "sha256": "b1fb89c8a7b810678690883a9209aee70ddf5450216af6ff880075ce8a2aae2a",
+      "size": 40907
     },
     {
       "target": "EntretienConnect-Start.bat",
@@ -40,7 +40,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "28f38e73dea34ab87baddbcba3d0aeb9fccd07f10b0b1b3279f5672d89990383",
+      "sha256": "784fe5bb82819b1c456404d4470c925d7fcf632037b0e3b68dd7ec8d7d6adb14",
       "size": 5
     },
     {

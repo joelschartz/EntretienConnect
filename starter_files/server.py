@@ -827,12 +827,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         gid = int(gid_raw)
                     except Exception:
                         gid = None
+                # v287: a manually closed helper browser is not a login state. Report it
+                # explicitly so the UI can return to « Non connecté / Connecter ».
+                if quiet and not eb.debug_browser_running():
+                    return self._json(200, {"ok": False, "waiting": False, "browserClosed": True, "error": "Fenêtre e-Bichelchen fermée."})
                 try:
                     payload = eb.read_browser_and_store(gid)
                     _, at = eb.get_current()
                     return self._json(200, {"ok": True, "data": payload, "receivedAt": at})
                 except Exception as exc:
-                    return self._json(200 if quiet else 500, {"ok": False, "waiting": quiet, "error": str(exc)})
+                    browser_closed = not eb.debug_browser_running()
+                    return self._json(200 if quiet else 500, {"ok": False, "waiting": bool(quiet and not browser_closed), "browserClosed": browser_closed, "error": str(exc)})
             if path == "/api/eb/focus-app":
                 return self._json(200, {"ok": True, "info": eb.focus_app_tab()})
             if path == "/api/eb/close":

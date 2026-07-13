@@ -558,7 +558,10 @@ function Handle-EbRequest($stream, $req) {
                 Write-EbCache $r.data $r.receivedAt
                 Send-Json $stream @{ ok=$true; data=$r.data; receivedAt=$r.receivedAt }
             }
-            else { Send-Json $stream @{ ok=$false; waiting=$quiet; error=$r.error } }
+            else {
+                $browserClosed = [bool]$r.browserClosed
+                Send-Json $stream @{ ok=$false; waiting=($quiet -and -not $browserClosed); browserClosed=$browserClosed; error=$r.error }
+            }
             return
         }
 

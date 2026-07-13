@@ -811,6 +811,14 @@ try {
     @{ ok=$false; error=("Unbekannte Aktion: " + $Action) } | ConvertTo-Json -Depth 10 -Compress
     exit 2
 } catch {
-    @{ ok=$false; action=$Action; error=$_.Exception.Message } | ConvertTo-Json -Depth 10 -Compress
+    $browserClosed = $false
+    if ($Action -eq "read") {
+        try {
+            $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
+        } catch {
+            $browserClosed = $true
+        }
+    }
+    @{ ok=$false; action=$Action; error=$_.Exception.Message; browserClosed=$browserClosed } | ConvertTo-Json -Depth 10 -Compress
     exit 1
 }
