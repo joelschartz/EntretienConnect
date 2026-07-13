@@ -1304,6 +1304,46 @@ def _clear_saved_login_data() -> list[str]:
     return removed
 
 
+def soft_reset_login() -> dict:
+    """v292: Verwirft eine halbfertige/abgebrochene IAM-Sitzung, OHNE den Browser zu
+    schließen. Die Cookies werden per DevTools gelöscht (browserweit) und der
+    e-Bichelchen-Tab frisch geladen, sodass ein sauberer Login startet. Der Browser
+    bleibt "warm": Der nächste Connect verwendet ihn weiter, statt einen langsamen
+    neuen Browser zu starten. Läuft kein Debug-Browser, passiert nichts (open-browser
+    macht dann ohnehin einen Kaltstart)."""
+    if not debug_browser_running():
+        try:
+            clear_current()
+        except Exception:
+            pass
+        return {"softReset": True, "browserRunning": False, "cookiesCleared": False, "navigated": False}
+    cleared = False
+    for t in _list_cdp_targets():
+        ws = t.get("webSocketDebuggerUrl")
+        if not ws:
+            continue
+        try:
+            cdp_call(ws, "Network.clearBrowserCookies", {}, msg_id=720)
+            cleared = True
+            break
+        except Exception:
+            continue
+    navigated = False
+    try:
+        target = find_ebichelchen_target()
+        ws = target.get("webSocketDebuggerUrl")
+        if ws:
+            cdp_call(ws, "Page.navigate", {"url": EB_URL}, msg_id=721)
+            navigated = True
+    except Exception:
+        pass
+    try:
+        clear_current()
+    except Exception:
+        pass
+    return {"softReset": True, "browserRunning": True, "cookiesCleared": cleared, "navigated": navigated}
+
+
 def reset_login_session(profile: str = "default", preserve_profile: bool = False) -> dict:
     """v155: Kompletter Neustart der e-Bichelchen-Anmeldung. Schließt den App-Browser
     und löscht die App-Browserprofile (Cookies / halbfertige IAM-Sitzung). Ohne diesen

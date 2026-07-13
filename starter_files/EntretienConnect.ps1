@@ -586,6 +586,15 @@ function Handle-EbRequest($stream, $req) {
             return
         }
 
+        if ($req.Method -eq "GET" -and $path -eq "/api/eb/reset-session") {
+            # v292: soft=1 → session IAM à moitié faite effacée (cookies via DevTools),
+            # navigateur gardé au chaud. Windows ne ferme de toute façon jamais la fenêtre.
+            $r = Invoke-EbHelper "soft-reset"
+            if ($r.ok) { Send-Json $stream @{ ok=$true; info=$r.info } }
+            else { Send-Json $stream @{ ok=$true; info=@{ softReset=$true; browserRunning=$false } } }
+            return
+        }
+
         if ($req.Method -eq "GET" -and ($path -eq "/api/eb/cleanup" -or $path -eq "/api/eb/close" -or $path -eq "/api/eb/focus-app")) {
             Send-Json $stream @{ ok=$true; info=@{ keptOpenForPublishing=$true; isolatedHelper=$true } }
             return

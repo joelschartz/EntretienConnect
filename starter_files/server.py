@@ -858,6 +858,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 eb.clear_current()
                 return self._json(200, {"ok": True})
             if path == "/api/eb/reset-session":
+                # v292: soft=1 verwirft die halbfertige IAM-Sitzung, hält den Browser aber
+                # "warm" (Cookies per DevTools löschen, kein Schließen/Kaltstart).
+                soft = q("soft", "0") in ("1", "true", "True", "yes")
+                if soft:
+                    return self._json(200, {"ok": True, "info": eb.soft_reset_login()})
                 # v285: Im normalen Verbindungsfluss bleibt das App-Browserprofil erhalten.
                 # Das spart den langsamen Kaltstart; Cookies/Sitzungsdaten werden trotzdem
                 # entfernt. Mit light=0 bleibt der frühere vollständige Reset verfügbar.

@@ -881,6 +881,23 @@ try {
         exit 0
     }
 
+    if ($Action -eq "soft-reset") {
+        # v292: halbfertige IAM-Sitzung verwerfen, Browser aber "warm" lassen (nicht schließen).
+        # Cookies per DevTools löschen und e-Bichelchen-Tab frisch laden. Nächster Connect
+        # verwendet den Browser weiter, statt einen neuen zu starten.
+        $running = $false; $cleared = $false; $navigated = $false
+        try { $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1; $running = $true } catch {}
+        if ($running) {
+            try {
+                $target = Get-EbTarget
+                try { $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Network.clearBrowserCookies" @{} 720 6; $cleared = $true } catch {}
+                try { $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Page.navigate" @{ url = $EbUrl } 721 6; $navigated = $true } catch {}
+            } catch {}
+        }
+        @{ ok=$true; info=@{ softReset=$true; browserRunning=$running; cookiesCleared=$cleared; navigated=$navigated } } | ConvertTo-Json -Depth 10 -Compress
+        exit 0
+    }
+
     @{ ok=$false; error=("Unbekannte Aktion: " + $Action) } | ConvertTo-Json -Depth 10 -Compress
     exit 2
 } catch {

@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v291</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v292</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1571,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 291;
+const APP_VERSION = 292;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6511,7 +6511,19 @@ function ebGroupChoiceHtml(){
     groups.map(g=>{ const gid=String(g.id); const selected=selectedId && gid===selectedId; return `<div class="eb-classbox${selected?' selected':''}"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(gid)} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm${selected?' selected-class-btn':''}" type="button" data-eb-group-id="${esc(gid)}" ${selected?'aria-pressed="true" disabled':''}>${selected?'✓ Sélectionné':'Choisir cette classe'}</button></div>`; }).join("")+
   '</div>';
 }
-function ebBrowserPref(){ const s=document.getElementById("ebBrowser"); return s ? s.value : "auto"; }
+function ebBrowserPref(){
+  const s=document.getElementById("ebBrowser");
+  let v = s ? s.value : "auto";
+  if(v==="auto"){
+    // v292: e-Bichelchen möglichst im SELBEN Browser öffnen wie die App. Sonst lief die App
+    // z. B. in Edge, e-Bichelchen aber in Chrome (Auto bevorzugte Chrome). Läuft die App in
+    // Safari/Firefox (kein Chromium), bleibt "auto" und das Backend wählt Chrome/Edge.
+    const ua = navigator.userAgent || "";
+    if(/Edg\//.test(ua)) return "edge";
+    if(/Chrome\//.test(ua) && !/Edg\//.test(ua)) return "chrome";
+  }
+  return v;
+}
 function ebMatchedIdFor(stu){
   if(!stu) return "";
   const map=state.ebichelchenMap||{};
@@ -6806,11 +6818,12 @@ async function ebConnectFlow(){
   state.ebLoginDirty=true; // remis à false une fois la lecture réussie (session propre)
   saveState();
   if(previousLoginDirty){
-    // Tentative précédente interrompue : on purge une fois la session IAM à moitié faite
-    // pour ne pas bloquer la prochaine demande de sécurité EduKey.
-    try{ await ebGet("/api/eb/reset-session?light=1"); }
+    // v292: tentative précédente interrompue → on vide la session IAM à moitié faite
+    // SANS fermer le navigateur (soft-reset : cookies effacés via DevTools, onglet rechargé).
+    // Ainsi la reconnexion réutilise le navigateur déjà ouvert au lieu d'en démarrer un
+    // nouveau (c'était la cause du « un nouveau navigateur démarre »).
+    try{ await ebGet("/api/eb/reset-session?soft=1"); }
     catch(_){
-      try{ await ebGet("/api/eb/cleanup?closeEb=1&focusApp=0"); }catch(__){}
       try{ await ebGet("/api/eb/clear"); }catch(__){}
     }
   }
