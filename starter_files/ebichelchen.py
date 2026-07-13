@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.19 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.20 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -424,6 +424,95 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
     }
   }
 
+
+
+  function normalizeGroupLabel(value) {
+    return String(value || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().replace(/\s+/g, " ").trim();
+  }
+
+  async function ensureGroupSelectedInPage(group, rawGroup) {
+    if (!group || !Number.isFinite(Number(group.id))) return { ok:false, reason:"no-group" };
+    const gid = String(group.id);
+    const labels = [group.classAlias, group.name].map(normalizeGroupLabel).filter(Boolean);
+
+    function selectedIdFromStore() {
+      const store = parseStore("groupStore");
+      return String(store?.selectedGroup?.id ?? store?.selectedGroupId ?? "");
+    }
+    if (selectedIdFromStore() === gid) return { ok:true, via:"store", changed:false };
+
+    function isVisible(el) {
+      return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+    }
+    function textOf(el) {
+      return normalizeGroupLabel(el?.innerText || el?.textContent || el?.getAttribute?.("aria-label") || el?.getAttribute?.("title") || "");
+    }
+
+    // 1) Echte Auswahlfelder bevorzugen: das löst die Frontend-Logik am saubersten aus.
+    for (const select of [...document.querySelectorAll("select")]) {
+      if (!isVisible(select)) continue;
+      const options = [...select.options].map(opt => {
+        const value = String(opt.value || opt.getAttribute("data-id") || opt.getAttribute("data-group-id") || "");
+        const txt = textOf(opt);
+        let score = value === gid ? 100 : 0;
+        for (const label of labels) {
+          if (txt === label) score = Math.max(score, 90);
+          else if (label.length >= 3 && txt.includes(label)) score = Math.max(score, 55);
+        }
+        return { opt, score };
+      }).sort((a,b) => b.score - a.score);
+      if (options[0] && options[0].score >= 55) {
+        select.value = options[0].opt.value;
+        options[0].opt.selected = true;
+        select.dispatchEvent(new Event("input", { bubbles:true }));
+        select.dispatchEvent(new Event("change", { bubbles:true }));
+        await waitMs(900);
+        if (selectedIdFromStore() === gid) return { ok:true, via:"select", changed:true };
+      }
+    }
+
+    // 2) Klassenkarte/-zeile anklicken, falls e-Bichelchen die Auswahl nicht als <select> rendert.
+    const selector = 'button,a,ion-item,[role="button"],[role="option"],[data-id],[data-group-id],[data-groupid],.list-group-item,.mat-list-item';
+    const candidates = [...document.querySelectorAll(selector)].filter(isVisible).map(el => {
+      const txt = textOf(el);
+      const attrs = ["data-id","data-group-id","data-groupid","value","href","routerlink","ng-reflect-router-link"]
+        .map(k => String(el.getAttribute?.(k) || ""));
+      let score = attrs.some(v => v === gid) ? 120 : (attrs.some(v => v.includes(gid)) ? 70 : 0);
+      for (const label of labels) {
+        if (txt === label) score = Math.max(score, 100);
+        else if (label.length >= 3 && txt.includes(label)) score = Math.max(score, 60);
+      }
+      if (/connect|connexion|logout|deconnexion|abmelden/i.test(txt)) score = 0;
+      return { el, txt, score };
+    }).filter(x => x.score >= 60).sort((a,b) => b.score - a.score);
+    if (candidates[0]) {
+      try {
+        candidates[0].el.scrollIntoView({ block:"center", inline:"center" });
+        candidates[0].el.click();
+        await waitMs(1400);
+        if (selectedIdFromStore() === gid) return { ok:true, via:"click", changed:true };
+      } catch (_) {}
+    }
+
+    // 3) Robuster Fallback: denselben groupStore setzen, den e-Bichelchen selbst nutzt,
+    // und anschließend den Kalender neu laden. Der nächste automatische Leseversuch
+    // läuft nach der Navigation weiter; der Nutzer muss die Klasse nicht mehr im
+    // e-Bichelchen-Fenster anklicken.
+    try {
+      const current = parseStore("groupStore");
+      const store = current && typeof current === "object" ? current : {};
+      store.selectedGroup = rawGroup || group;
+      store.selectedGroupId = Number(group.id);
+      sessionStorage.setItem("groupStore", JSON.stringify(store));
+      setTimeout(() => location.replace("/ebichelchen/app/tabs/calendar"), 30);
+      return { ok:true, via:"store-navigation", changed:true, navigating:true };
+    } catch (e) {
+      return { ok:false, reason:String(e.message || e) };
+    }
+  }
+
   async function getGroupsFromTeacher() {
     const preferred = "/ebichelchen/app/api/group/get-groups-from-teacher";
     const attempts = [];
@@ -703,9 +792,27 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   const selectedFromStore = Number(groupStore?.selectedGroup?.id);
 
   let group = null;
+  let groupChosenAutomatically = false;
   if (requestedGroupId !== null) group = groups.find(g => Number(g.id) === Number(requestedGroupId)) || null;
   if (!group && Number.isFinite(selectedFromStore)) group = groups.find(g => Number(g.id) === selectedFromStore) || null;
-  if (!group && groups.length === 1) group = groups[0];
+  if (!group && groups.length === 1) { group = groups[0]; groupChosenAutomatically = true; }
+  if (!group) {
+    const activeGroups = groups.filter(g => g.isActivatedByTeacher && !g.isInactive && !g.isTestClass);
+    if (activeGroups.length === 1) { group = activeGroups[0]; groupChosenAutomatically = true; }
+  }
+
+  // v286: e-Bichelchen landet nach IAM teilweise auf « Neuigkeiten / Affiches ».
+  // Bei einer eindeutig bestimmbaren Klasse (oder nach expliziter Wahl in der App)
+  // wird sie im e-Bichelchen-Tab automatisch aktiviert und der Kalender geöffnet.
+  const shouldPrepareGroup = !!(group && Number(group.id) !== Number(selectedFromStore) && (requestedGroupId !== null || groupChosenAutomatically));
+  if (shouldPrepareGroup) {
+    const rawGroup = groupObjects.find(g => Number(g?.id ?? g?.groupId) === Number(group.id)) || group;
+    const prepared = await ensureGroupSelectedInPage(group, rawGroup);
+    if (prepared && prepared.navigating) {
+      await waitMs(90);
+      throw new Error("Classe e-Bichelchen sélectionnée automatiquement. Relecture en cours.");
+    }
+  }
 
   const storageSubjects = findSubjectsFromStorage();
   let subjects = storageSubjects.subjects.map(s => ({ id:s.id, labelDeu:s.labelDeu||"", labelFra:s.labelFra||"", label:s.label||"", icon:s.icon||"", defaultColor:s.defaultColor ?? null, source:s.source||"storage" }));
@@ -731,7 +838,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   } : null;
 
   const payload = {
-    version: "1.10.16",
+    version: "1.10.20",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,

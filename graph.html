@@ -1269,7 +1269,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v285</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v286</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1555,7 +1555,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 285;
+const APP_VERSION = 286;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3276,8 +3276,9 @@ function setupConnectionSlotHtml(cardMode,isActive){
     }else{
       const btnId='setupEbConnect_'+suffix;
       const pendingLabel=ebPending ? 'Connexion en cours' : 'Non connecté';
-      const buttonLabel=ebPending ? 'Rouvrir' : (ebBusy ? 'Ouverture…' : 'Connecter');
-      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-pending-label">'+pendingLabel+'</span></div></div>'+(isActive?'<button type="button" class="ghost sm" id="'+btnId+'" data-setup-eb-connect'+(ebBusy?' disabled aria-busy="true"':'')+'>'+buttonLabel+'</button>':'')+'</div>');
+      const buttonLabel=ebBusy ? 'Ouverture…' : 'Connecter';
+      const actionButton=(isActive && !ebPending) ? '<button type="button" class="ghost sm" id="'+btnId+'" data-setup-eb-connect'+(ebBusy?' disabled aria-busy="true"':'')+'>'+buttonLabel+'</button>' : '';
+      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-pending-label">'+pendingLabel+'</span></div></div>'+actionButton+'</div>');
     }
   }
   if(modeNeedsEmail(cardMode)){
@@ -6462,7 +6463,7 @@ function setEbStatus(msg, cls){
 function ebWaitingStatusHtml(detail){
   const d=String(detail||"").trim();
   if(d) console.debug("e-Bichelchen en attente :", d);
-  return 'Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen.';
+  return 'Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen. La classe et les élèves seront lus automatiquement.';
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
@@ -6701,35 +6702,50 @@ function renderEbMatch(){
   });
 }
 function ebStopAuto(){ if(ebAutoTimer){ clearInterval(ebAutoTimer); ebAutoTimer=null; } }
+async function ebCleanupAfterSuccessfulRead(){
+  // v286: sur Mac, fermer réellement la fenêtre e-Bichelchen après une lecture réussie
+  // puis remettre EntretienConnect au premier plan. Le helper Windows peut répondre
+  // qu'il garde son navigateur ouvert pour la publication ; dans ce cas on ne relance pas.
+  try{
+    const res=await fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"});
+    const j=await res.json().catch(()=>null);
+    const info=j&&j.info;
+    const closed=!!(info&&info.closedEbichelchen&&info.closedEbichelchen.closed);
+    const intentionallyKept=!!(info&&info.keptOpenForPublishing);
+    if(!closed && !intentionallyKept){
+      setTimeout(()=>fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}),700);
+    }
+  }catch(e){
+    setTimeout(()=>fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}),700);
+  }
+}
 let ebConnectBusy=false;
 async function ebConnectFlow(){
-  if(ebConnectBusy) return;
+  // v286: pendant qu'une connexion est en cours, aucun second bouton « Rouvrir »
+  // n'est proposé. Cela évite les doubles fenêtres et les lectures concurrentes.
+  if(ebConnectBusy || ebLoginPending) return;
   if(!localBackendAvailable()){
     setEbStatus(localBackendMissingMessage(),"warn");
     return;
   }
-  const reopenOnly=!!ebLoginPending;
   ebConnectBusy=true;
   ebLoginPending=true;
   renderSetup();
-  setEbStatus(reopenOnly ? "Réouverture de la fenêtre e-Bichelchen…" : "Ouverture de la fenêtre e-Bichelchen…","info");
+  setEbStatus("Ouverture de la fenêtre e-Bichelchen…","info");
   ebStopAuto();
 
-  if(!reopenOnly){
-    // v285: remise à zéro légère. Le profil du navigateur est conservé afin d'éviter
-    // un démarrage à froid très lent ; seules la session et les données e-Bichelchen
-    // sont réinitialisées.
-    ebData=null;
-    state.ebichelchenData=null;
-    state.ebichelchenGroups=[];
-    state.ebichelchenSelectedGroupId="";
-    state.ebichelchenMap=state.ebichelchenMap||{};
-    saveState();
-    try{ await ebGet("/api/eb/reset-session?light=1"); }
-    catch(_){
-      try{ await ebGet("/api/eb/cleanup?closeEb=1&focusApp=0"); }catch(__){}
-      try{ await ebGet("/api/eb/clear"); }catch(__){}
-    }
+  // Le profil du navigateur est conservé pour éviter un démarrage à froid très lent ;
+  // seules les données de connexion sont remises à zéro.
+  ebData=null;
+  state.ebichelchenData=null;
+  state.ebichelchenGroups=[];
+  state.ebichelchenSelectedGroupId="";
+  state.ebichelchenMap=state.ebichelchenMap||{};
+  saveState();
+  try{ await ebGet("/api/eb/reset-session?light=1"); }
+  catch(_){
+    try{ await ebGet("/api/eb/cleanup?closeEb=1&focusApp=0"); }catch(__){}
+    try{ await ebGet("/api/eb/clear"); }catch(__){}
   }
 
   try{
@@ -6737,7 +6753,7 @@ async function ebConnectFlow(){
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebConnectBusy=false;
     renderSetup();
-    setEbStatus("Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen.","info");
+    setEbStatus("Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen. La classe et les élèves seront lus automatiquement.","info");
     ebAutoStart=Date.now();
     ebAutoTimer=setInterval(ebAutoAttempt, 3000);
     setTimeout(ebAutoAttempt, 1200);
@@ -6772,7 +6788,7 @@ async function ebAutoAttempt(){
     ebConnectBusy=false;
     ebLoginPending=false;
     ebApplyRead(j.data);
-    if(!j.data.needsGroupSelection){ fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
+    if(!j.data.needsGroupSelection){ ebCleanupAfterSuccessfulRead(); }
   }
   else{
     setEbStatus(ebWaitingStatusHtml(j&&j.error?String(j.error):""),"info");
@@ -6787,7 +6803,7 @@ async function ebRead(quiet, groupId){
     const j=await ebGet("/api/eb/read-browser"+(p.toString()?("?"+p.toString()):""));
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebApplyRead(j.data);
-    if(!j.data || !j.data.needsGroupSelection){ fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}); }
+    if(!j.data || !j.data.needsGroupSelection){ ebCleanupAfterSuccessfulRead(); }
   }catch(e){ setEbStatus("Lecture impossible : "+esc(e.message||e),"err"); }
   finally{ ebReadBusy=false; }
 }
@@ -6811,7 +6827,7 @@ function ebApplyRead(data){
   let imported=0;
   if(ebReady()) imported=importEbStudentsToList(true);
   if(ebData && ebData.needsGroupSelection){ setEbStatus("Plusieurs classes trouvées. Choisissez la bonne classe dans la liste affichée.","warn"); }
-  else if(ebReady()){ setEbStatus("Connecté ✓ — classe « "+esc(String(ebData.group.classAlias||ebData.group.name||ebData.group.id))+" », "+ebStudents().length+" élève(s) lus."+(imported?" "+imported+" nouvel élève importé.":"")+" La fenêtre e-Bichelchen peut se fermer automatiquement après la lecture.","ok"); }
+  else if(ebReady()){ setEbStatus("Connecté ✓ — classe « "+esc(String(ebData.group.classAlias||ebData.group.name||ebData.group.id))+" », "+ebStudents().length+" élève(s) lus."+(imported?" "+imported+" nouvel élève importé.":"")+"","ok"); }
   else if(ebData){ setEbStatus("Données lues, mais la catégorie « Message » est introuvable. La publication restera bloquée.","warn"); }
   renderSetup(); renderStudents(); renderEbPanel(); applyChannelVisibility(); renderMails();
 }
