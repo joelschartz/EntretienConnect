@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v289</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v291</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1571,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 289;
+const APP_VERSION = 291;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3293,7 +3293,15 @@ function setupConnectionSlotHtml(cardMode,isActive){
       const btnId='setupEbConnect_'+suffix;
       const pendingLabel=ebPending ? 'Connexion en cours' : 'Non connecté';
       const buttonLabel=ebBusy ? 'Ouverture…' : 'Connecter';
-      const actionButton=(isActive && !ebPending) ? '<button type="button" class="ghost sm" id="'+btnId+'" data-setup-eb-connect'+(ebBusy?' disabled aria-busy="true"':'')+'>'+buttonLabel+'</button>' : '';
+      // v290: pendant l'attente, toujours proposer « Annuler » — sinon, si la fenêtre
+      // e-Bichelchen est fermée avant l'identification, l'utilisateur reste bloqué sans
+      // aucun bouton pour relancer la connexion.
+      let actionButton='';
+      if(isActive && !ebPending){
+        actionButton='<button type="button" class="ghost sm" id="'+btnId+'" data-setup-eb-connect'+(ebBusy?' disabled aria-busy="true"':'')+'>'+buttonLabel+'</button>';
+      }else if(isActive && ebPending){
+        actionButton='<button type="button" class="ghost sm" data-eb-cancel>Annuler</button>';
+      }
       rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-pending-label">'+pendingLabel+'</span></div></div>'+actionButton+'</div>');
     }
   }
@@ -6479,7 +6487,8 @@ function setEbStatus(msg, cls){
 function ebWaitingStatusHtml(detail){
   const d=String(detail||"").trim();
   if(d) console.debug("e-Bichelchen en attente :", d);
-  return 'Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen.';
+  // v290: lien « Annuler » toujours présent pour sortir d'une connexion interrompue.
+  return 'Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen. <a href="#" data-eb-cancel style="white-space:nowrap">Annuler</a>';
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
@@ -6732,8 +6741,12 @@ function ebResetAfterClosedBrowser(){
   ebBrowserMissingCount=0;
   ebData=null;
   state.ebichelchenData=null;
+  state.ebLoginDirty=true; // v290: interrompu → la prochaine connexion repart d'une session propre
   saveState();
-  try{ ebGet("/api/eb/clear").catch(()=>{}); }catch(_){ }
+  // v290: fermer réellement le navigateur resté ouvert sans fenêtre (macOS) et purger la
+  // session IAM à moitié faite. Sans cela, une fenêtre Chrome fantôme reste en vie et la
+  // prochaine demande EduKey peut rester bloquée.
+  try{ ebGet("/api/eb/reset-session?light=1").catch(()=>{ ebGet("/api/eb/clear").catch(()=>{}); }); }catch(_){ }
   renderSetup();
   renderStudents();
   renderEbPanel();
@@ -6741,22 +6754,23 @@ function ebResetAfterClosedBrowser(){
   renderMails();
   setEbStatus("","info");
 }
+// v290: sortie manuelle si la connexion est bloquée (fenêtre fermée avant l'identification).
+function ebCancelPending(){
+  ebResetAfterClosedBrowser();
+}
+document.addEventListener("click", function(ev){
+  var c = ev.target && ev.target.closest ? ev.target.closest("[data-eb-cancel]") : null;
+  if(c){ ev.preventDefault(); ev.stopPropagation(); ebCancelPending(); }
+}, true);
 async function ebCleanupAfterSuccessfulRead(){
-  // v286: sur Mac, fermer réellement la fenêtre e-Bichelchen après une lecture réussie
-  // puis remettre EntretienConnect au premier plan. Le helper Windows peut répondre
-  // qu'il garde son navigateur ouvert pour la publication ; dans ce cas on ne relance pas.
+  // v291: après une lecture réussie, on NE FERME PLUS le navigateur e-Bichelchen —
+  // on le garde « au chaud » en minimisant simplement sa fenêtre. La prochaine connexion
+  // réutilise alors l'onglet existant (voir launch_browser) au lieu d'un redémarrage à
+  // froid lent, et sur Windows cela évite d'accumuler un nouvel onglet à chaque fois.
+  // La fermeture réelle n'a lieu qu'à la fermeture de l'app (heartbeat / onglet fermé).
   try{
-    const res=await fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"});
-    const j=await res.json().catch(()=>null);
-    const info=j&&j.info;
-    const closed=!!(info&&info.closedEbichelchen&&info.closedEbichelchen.closed);
-    const intentionallyKept=!!(info&&info.keptOpenForPublishing);
-    if(!closed && !intentionallyKept){
-      setTimeout(()=>fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}),700);
-    }
-  }catch(e){
-    setTimeout(()=>fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"}).catch(()=>{}),700);
-  }
+    await fetch("/api/eb/park?focusApp=1",{cache:"no-store"});
+  }catch(e){ /* best-effort : garder au chaud reste sans conséquence si l'appel échoue */ }
 }
 let ebConnectBusy=false;
 async function ebConnectFlow(){
@@ -6806,7 +6820,7 @@ async function ebConnectFlow(){
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebConnectBusy=false;
     renderSetup();
-    setEbStatus("Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen.","info");
+    setEbStatus(ebWaitingStatusHtml(""),"info");
     ebAutoStart=Date.now();
     // v288: zuerst nur leicht prüfen, ob IAM/e-Bichelchen wirklich bereit ist.
     // Die teure Klassen-/Schüleranalyse wird erst dann einmalig gestartet.

@@ -213,6 +213,21 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     # Tab, der nie geöffnet worden war.
     try:
         version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1)
+        # v291: Läuft der Browser bereits, zuerst einen vorhandenen e-Bichelchen-Tab
+        # WIEDERVERWENDEN, statt jedes Mal einen neuen zu öffnen. Das verhindert die
+        # Tab-Flut und nutzt den nach dem Lesen "warm" (minimiert) gehaltenen Tab weiter,
+        # sodass kein langsamer Kaltstart nötig ist. Fenster wird dabei wieder normalisiert.
+        try:
+            existing = find_ebichelchen_target()
+        except Exception:
+            existing = None
+        if existing:
+            _cdp_set_window_state(existing, "normal")
+            try:
+                cdp_call(existing.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=912)
+            except Exception:
+                pass
+            return {"alreadyRunning": True, "reusedTab": True, "openedTab": False, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
         opened = False
         for _ in range(8):
             if open_remote_tab(EB_URL):
@@ -915,6 +930,15 @@ def check_login_ready() -> dict:
         return {"ok": True, "ready": False, "browserClosed": False, "stage": "devtools", "detail": str(exc), "lightweight": True}
 
     pages = [t for t in (targets if isinstance(targets, list) else []) if t.get("type") == "page"]
+    # v290: macOS beendet Chrome/Edge nicht, wenn das letzte Fenster geschlossen wird.
+    # Schließt der Nutzer das e-Bichelchen-Fenster VOR dem Login, bleibt der Debug-Browser
+    # als Prozess am Leben – nur ohne echte Webseite. Die DevTools antworten dann weiter,
+    # es gibt aber kein http/https-Seiten-Target mehr. Das ist ein abgebrochener Login und
+    # muss als "geschlossen" gemeldet werden, damit die Oberfläche zurücksetzt und man sich
+    # erneut verbinden kann (sonst hängt sie ewig auf "Connexion en cours…").
+    real_pages = [t for t in pages if str(t.get("url") or "").startswith(("http://", "https://"))]
+    if not real_pages:
+        return {"ok": True, "ready": False, "browserClosed": True, "stage": "no-windows", "lightweight": True}
     candidates = [t for t in pages if "/ebichelchen/app/" in str(t.get("url") or "")]
     if not candidates:
         return {"ok": True, "ready": False, "browserClosed": False, "stage": "login", "lightweight": True}
@@ -1323,6 +1347,47 @@ def reset_login_session(profile: str = "default", preserve_profile: bool = False
     except Exception:
         pass
     return {"closed": closed, "profilesRemoved": removed if not preserve_profile else [], "sessionDataRemoved": removed if preserve_profile else [], "cookiesCleared": cookies_cleared, "profilePreserved": bool(preserve_profile)}
+
+
+def _cdp_set_window_state(target: dict, state: str) -> bool:
+    """v291: Fenster eines CDP-Targets minimieren/normalisieren – rein über DevTools,
+    ohne AppleScript (Mac) oder Fenster-API (Windows). state: "minimized" | "normal"."""
+    ws = (target or {}).get("webSocketDebuggerUrl")
+    tid = (target or {}).get("id")
+    if not ws or not tid:
+        return False
+    try:
+        win = cdp_call(ws, "Browser.getWindowForTarget", {"targetId": tid}, msg_id=915)
+        window_id = (((win or {}).get("result") or {}).get("windowId"))
+        if window_id is None:
+            return False
+        cdp_call(ws, "Browser.setWindowBounds", {"windowId": window_id, "bounds": {"windowState": state}}, msg_id=916)
+        return True
+    except Exception:
+        return False
+
+
+def park_ebichelchen_browser() -> dict:
+    """v291: Nach dem Lesen den Debug-Browser NICHT schließen, sondern das e-Bichelchen-
+    Fenster nur minimieren. So bleibt der Browser "warm": Der nächste Connect verwendet
+    den Tab weiter (siehe launch_browser) statt einen langsamen Kaltstart zu machen."""
+    try:
+        target = find_ebichelchen_target()
+    except Exception as exc:
+        # Kein e-Bichelchen-Tab (z. B. schon geschlossen) – nichts zu parken.
+        return {"parked": False, "keptOpenForPublishing": True, "reason": str(exc)}
+    minimized = _cdp_set_window_state(target, "minimized")
+    return {"parked": True, "minimized": minimized, "keptWarm": True, "keptOpenForPublishing": True, "targetId": target.get("id")}
+
+
+def park_after_read(focus_app: bool = True) -> dict:
+    result = {"parkedEbichelchen": park_ebichelchen_browser(), "focusedApp": None}
+    if focus_app:
+        try:
+            result["focusedApp"] = focus_app_tab()
+        except Exception as exc:
+            result["focusedApp"] = {"ok": False, "error": str(exc)}
+    return result
 
 
 def cleanup_after_read(close_eb: bool = True, focus_app: bool = True) -> dict:

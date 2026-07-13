@@ -80,6 +80,19 @@ function Open-EbRemoteTab($url) {
     } catch { return $false }
 }
 
+function Set-EbWindowState($target, $state) {
+    # v291: Fenster eines CDP-Targets minimieren/normalisieren – rein über DevTools
+    # (Browser.setWindowBounds), ohne Windows-Fenster-API. state: "minimized" | "normal".
+    try {
+        if (-not $target -or -not $target.webSocketDebuggerUrl -or -not $target.id) { return $false }
+        $win = Invoke-CdpCall $target.webSocketDebuggerUrl "Browser.getWindowForTarget" @{ targetId = $target.id } 915 6
+        $windowId = $win.result.windowId
+        if ($null -eq $windowId) { return $false }
+        $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Browser.setWindowBounds" @{ windowId = $windowId; bounds = @{ windowState = $state } } 916 6
+        return $true
+    } catch { return $false }
+}
+
 function Start-EbBrowser($profile = "default", $preferredBrowser = "auto") {
     $browser = Find-EbBrowserExecutable $preferredBrowser
     $safeProfile = ([regex]::Replace(([string]$profile), '[^A-Za-z0-9_.-]', '_')).Trim('._-')
@@ -95,8 +108,18 @@ function Start-EbBrowser($profile = "default", $preferredBrowser = "auto") {
 
     try {
         $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
+        # v291: Läuft der Browser schon, einen vorhandenen e-Bichelchen-Tab WIEDERVERWENDEN,
+        # statt jedes Mal einen neuen zu öffnen (keine Tab-Flut) und den nach dem Lesen "warm"
+        # gehaltenen, minimierten Tab weiternutzen. Fenster dabei wieder normalisieren.
+        $existing = $null
+        try { $existing = Get-EbTarget } catch { $existing = $null }
+        if ($existing) {
+            Set-EbWindowState $existing "normal" | Out-Null
+            try { $null = Invoke-CdpCall $existing.webSocketDebuggerUrl "Page.bringToFront" @{} 912 6 } catch {}
+            return @{ alreadyRunning=$true; reusedTab=$true; openedTab=$false; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
+        }
         Open-EbRemoteTab $EbUrl | Out-Null
-        return @{ alreadyRunning=$true; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
+        return @{ alreadyRunning=$true; openedTab=$true; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
     } catch {}
 
     # Start-Process in Windows PowerShell quotet Array-Argumente nicht zuverlässig.
@@ -842,6 +865,19 @@ try {
         $expr = New-EbReadExpression $GroupId
         $data = Invoke-CdpEval $expr 35000 610
         @{ ok=$true; data=$data; receivedAt=(Get-Date).ToString("yyyy-MM-dd HH:mm:ss") } | ConvertTo-Json -Depth 30 -Compress
+        exit 0
+    }
+
+    if ($Action -eq "park") {
+        # v291: Browser nach dem Lesen "warm" halten – Fenster nur minimieren, nicht schließen.
+        # Der nächste Connect verwendet den Tab weiter (kein Kaltstart, kein neuer Tab).
+        $parked = $false; $minimized = $false
+        try {
+            $target = Get-EbTarget
+            $minimized = Set-EbWindowState $target "minimized"
+            $parked = $true
+        } catch {}
+        @{ ok=$true; info=@{ parked=$parked; minimized=$minimized; keptWarm=$true; keptOpenForPublishing=$true } } | ConvertTo-Json -Depth 10 -Compress
         exit 0
     }
 

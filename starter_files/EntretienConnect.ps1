@@ -577,6 +577,15 @@ function Handle-EbRequest($stream, $req) {
             return
         }
 
+        if ($req.Method -eq "GET" -and $path -eq "/api/eb/park") {
+            # v291: garder le navigateur au chaud (fenêtre minimisée) au lieu de le fermer,
+            # pour que la prochaine connexion réutilise l'onglet sans redémarrage à froid.
+            $r = Invoke-EbHelper "park"
+            if ($r.ok) { Send-Json $stream @{ ok=$true; info=$r.info } }
+            else { Send-Json $stream @{ ok=$true; info=@{ parked=$false; keptOpenForPublishing=$true } } }
+            return
+        }
+
         if ($req.Method -eq "GET" -and ($path -eq "/api/eb/cleanup" -or $path -eq "/api/eb/close" -or $path -eq "/api/eb/focus-app")) {
             Send-Json $stream @{ ok=$true; info=@{ keptOpenForPublishing=$true; isolatedHelper=$true } }
             return

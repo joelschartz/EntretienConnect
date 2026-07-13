@@ -850,6 +850,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 close_eb = q("closeEb", "1") not in ("0", "false", "False", "no")
                 focus_app = q("focusApp", "1") not in ("0", "false", "False", "no")
                 return self._json(200, {"ok": True, "info": eb.cleanup_after_read(close_eb=close_eb, focus_app=focus_app)})
+            if path == "/api/eb/park":
+                # v291: nach dem Lesen den Browser "warm" halten (Fenster minimieren) statt schließen.
+                focus_app = q("focusApp", "1") not in ("0", "false", "False", "no")
+                return self._json(200, {"ok": True, "info": eb.park_after_read(focus_app=focus_app)})
             if path == "/api/eb/clear":
                 eb.clear_current()
                 return self._json(200, {"ok": True})
