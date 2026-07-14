@@ -705,7 +705,7 @@ function New-EbReadExpression($selectedGroupId = $null) {
   } : null;
 
   const payload = {
-    version: "1.10.22",
+    version: "1.10.23",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -905,15 +905,19 @@ try {
     }
 
     if ($Action -eq "park") {
-        # v291: Browser nach dem Lesen "warm" halten – Fenster nur minimieren, nicht schließen.
-        # Der nächste Connect verwendet den Tab weiter (kein Kaltstart, kein neuer Tab).
-        $parked = $false; $minimized = $false
+        # v297: Kompatibilitätsaktion für gecachte v296-Seiten. Nie das ganze
+        # Browserfenster minimieren; nur den e-Bichelchen-Tab schließen.
+        $closed = $false; $detail = ""
         try {
             $target = Get-EbTarget
-            $minimized = Set-EbWindowState $target "minimized"
-            $parked = $true
-        } catch {}
-        @{ ok=$true; info=@{ parked=$parked; minimized=$minimized; keptWarm=$true; keptOpenForPublishing=$true } } | ConvertTo-Json -Depth 10 -Compress
+            $targetId = [string]$target.id
+            if ($targetId) {
+                $encoded = [uri]::EscapeDataString($targetId)
+                $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/close/$encoded" "GET" 3
+                $closed = $true
+            }
+        } catch { $detail = [string]$_.Exception.Message }
+        @{ ok=$true; info=@{ parked=$false; minimized=$false; closedInstead=$closed; keptOpenForPublishing=$true; detail=$detail } } | ConvertTo-Json -Depth 10 -Compress
         exit 0
     }
 

@@ -851,7 +851,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 focus_app = q("focusApp", "1") not in ("0", "false", "False", "no")
                 return self._json(200, {"ok": True, "info": eb.cleanup_after_read(close_eb=close_eb, focus_app=focus_app)})
             if path == "/api/eb/park":
-                # v291: nach dem Lesen den Browser "warm" halten (Fenster minimieren) statt schließen.
+                # v297: Kompatibilitätsroute für gecachte v296-Seiten; minimiert nie mehr, sondern schließt nur den e-Bichelchen-Tab.
                 focus_app = q("focusApp", "1") not in ("0", "false", "False", "no")
                 return self._json(200, {"ok": True, "info": eb.park_after_read(focus_app=focus_app)})
             if path == "/api/eb/clear":
@@ -1642,8 +1642,8 @@ def main():
         except KeyboardInterrupt:
             print("\nTerminé.")
         finally:
-            # v296: Der e-Bichelchen-Browser bleibt während der App-Sitzung warm,
-            # wird beim echten Beenden von EntretienConnect aber zuverlässig geschlossen.
+            # v297: Beim echten Beenden von EntretienConnect wird ein eventuell noch
+            # offener e-Bichelchen-Hilfstab zuverlässig geschlossen.
             try:
                 if EB_AVAILABLE:
                     eb.force_close_launched_browser()

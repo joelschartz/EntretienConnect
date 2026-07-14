@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v296</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v297</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1571,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 296;
+const APP_VERSION = 297;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6787,12 +6787,12 @@ document.addEventListener("click", function(ev){
   if(c){ ev.preventDefault(); ev.stopPropagation(); ebCancelPending(); }
 }, true);
 async function ebCleanupAfterSuccessfulRead(){
-  // v296: après la lecture, garder le navigateur e-Bichelchen « chaud » au lieu de
-  // tuer complètement son processus. La fenêtre n'est minimisée qu'APRÈS réception
-  // des données; la prochaine connexion réutilise donc le même onglet et les cookies
-  // sans nouveau démarrage à froid.
+  // v297: ne jamais minimiser la fenêtre du navigateur. Si EntretienConnect et
+  // e-Bichelchen sont deux onglets de la même fenêtre, minimiser l'onglet e-Bichelchen
+  // minimisait aussi toute l'application. Après la lecture, on ferme uniquement
+  // l'onglet e-Bichelchen et on remet l'onglet EntretienConnect au premier plan.
   try{
-    await fetch("/api/eb/park?focusApp=1",{cache:"no-store"});
+    await fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"});
   }catch(e){ /* best-effort */ }
 }
 let ebConnectBusy=false;

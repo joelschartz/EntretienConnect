@@ -578,11 +578,11 @@ function Handle-EbRequest($stream, $req) {
         }
 
         if ($req.Method -eq "GET" -and $path -eq "/api/eb/park") {
-            # v291: garder le navigateur au chaud (fenêtre minimisée) au lieu de le fermer,
-            # pour que la prochaine connexion réutilise l'onglet sans redémarrage à froid.
+            # v297: Kompatibilitätsroute für eventuell gecachte v296-Seiten.
+            # Die Helper-Aktion minimiert nie mehr, sondern schließt nur den e-Bichelchen-Tab.
             $r = Invoke-EbHelper "park"
             if ($r.ok) { Send-Json $stream @{ ok=$true; info=$r.info } }
-            else { Send-Json $stream @{ ok=$true; info=@{ parked=$false; keptOpenForPublishing=$true } } }
+            else { Send-Json $stream @{ ok=$true; info=@{ parked=$false; minimized=$false; keptOpenForPublishing=$true } } }
             return
         }
 
@@ -595,7 +595,14 @@ function Handle-EbRequest($stream, $req) {
             return
         }
 
-        if ($req.Method -eq "GET" -and ($path -eq "/api/eb/cleanup" -or $path -eq "/api/eb/close" -or $path -eq "/api/eb/focus-app")) {
+        if ($req.Method -eq "GET" -and ($path -eq "/api/eb/cleanup" -or $path -eq "/api/eb/close")) {
+            $r = Invoke-EbHelper "park"
+            if ($r.ok) { Send-Json $stream @{ ok=$true; info=$r.info } }
+            else { Send-Json $stream @{ ok=$true; info=@{ closedInstead=$false; minimized=$false; keptOpenForPublishing=$true } } }
+            return
+        }
+
+        if ($req.Method -eq "GET" -and $path -eq "/api/eb/focus-app") {
             Send-Json $stream @{ ok=$true; info=@{ keptOpenForPublishing=$true; isolatedHelper=$true } }
             return
         }

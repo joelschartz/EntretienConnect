@@ -911,7 +911,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   } : null;
 
   const payload = {
-    version: "1.10.22",
+    version: "1.10.23",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -962,10 +962,10 @@ def find_ebichelchen_target() -> dict:
 def check_login_ready() -> dict:
     """Sehr leichte Bereitschaftsprüfung für den Login-Polling-Loop.
 
-    v296: nur noch ein DevTools-Listenaufruf pro Poll (statt zuerst /json/version
-    und danach nochmals /json). Sobald die eingeloggten Stores vorhanden sind, wird
-    die vollständige Lesung sofort freigegeben; der API-Probe-Fallback hat ein kurzes
-    Timeout. Dadurch reagiert die Oberfläche nach IAM deutlich schneller.
+    v297: weiterhin nur ein DevTools-Listenaufruf pro Poll. Die Freigabe erfolgt aber
+    nicht mehr allein anhand alter sessionStorage-Werte: e-Bichelchen darf seine Route
+    erst stabilisieren und der echte Klassen-Endpunkt muss antworten. Das verhindert
+    das sichtbare Kalender → Pinnwand → Kalender-Flackern durch eine zu frühe Lesung.
     """
     try:
         targets = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json", timeout=0.8)
@@ -991,20 +991,8 @@ def check_login_ready() -> dict:
   const out = { ready:false, pageUrl:String(location.href || ""), groupCount:0, via:"" };
   if (!out.pageUrl.includes('/ebichelchen/app/')) return JSON.stringify(out);
 
-  // Fast-Path: Nach erfolgreichem IAM sind diese Stores meist schon vorhanden,
-  // noch bevor der Kalender alle Ressourcen geladen hat.
-  try {
-    const user = JSON.parse(sessionStorage.getItem('userStore') || 'null');
-    const groups = JSON.parse(sessionStorage.getItem('groupStore') || 'null');
-    if ((user && user.loggedInUser) || (groups && (groups.selectedGroup || groups.selectedGroupId))) {
-      out.ready = true;
-      out.via = 'storage';
-      return JSON.stringify(out);
-    }
-  } catch (_) {}
-
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 1000);
+  const timer = setTimeout(() => controller.abort(), 1200);
   try {
     const res = await fetch('/ebichelchen/app/api/group/get-groups-from-teacher', {
       method:'GET', credentials:'include', signal:controller.signal,
@@ -1030,7 +1018,7 @@ def check_login_ready() -> dict:
 })()
 """
     try:
-        msg = cdp_eval(ws_url, expr, await_promise=True, msg_id=609, timeout_ms=1600)
+        msg = cdp_eval(ws_url, expr, await_promise=True, msg_id=609, timeout_ms=1900)
         result = msg.get("result", {})
         if result.get("exceptionDetails"):
             return {"ok": True, "ready": False, "browserClosed": False, "stage": "page", "lightweight": True}
@@ -1094,12 +1082,23 @@ def read_from_chrome(selected_group_id: int | None = None) -> dict:
 def focus_app_tab() -> dict:
     """Bringt den bereits geöffneten App-Tab / das App-Fenster nach vorne, ohne eine neue App-URL zu öffnen.
 
-    macOS: sucht den vorhandenen Chrome-Tab per AppleScript.
-    Windows: sucht ein sichtbares Fenster mit "eBichelchen Helper" im Titel und bringt es nach vorne.
-    Wichtig: Diese Funktion öffnet absichtlich KEINE neue App-URL, um doppelte App-Tabs zu vermeiden.
+    v297: Zuerst rein über DevTools nach dem lokalen EntretienConnect-Tab suchen. Das
+    funktioniert ohne AppleScript-Abfrage und ist besonders wichtig, wenn App und
+    e-Bichelchen als Tabs im selben Chrome-/Edge-Fenster laufen.
+    Windows behält zusätzlich den bisherigen Fenster-API-Fallback.
     """
     app_base = f"http://127.0.0.1:{PORT}"
     system = platform.system().lower()
+
+    try:
+        app_targets = [t for t in _list_cdp_targets() if _is_app_target(t) and t.get("webSocketDebuggerUrl")]
+        app_targets.sort(key=lambda t: ("/graph.html" not in str(t.get("url") or ""), str(t.get("url") or "")))
+        if app_targets:
+            target = app_targets[0]
+            cdp_call(target.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=913)
+            return {"method": "cdp", "foundExistingTab": True, "targetId": target.get("id"), "url": target.get("url"), "openedNewTab": False}
+    except Exception:
+        pass
 
     if system == "darwin":
         # Ne pas utiliser AppleScript ici: cela déclenche la demande macOS
@@ -1460,16 +1459,18 @@ def _cdp_set_window_state(target: dict, state: str) -> bool:
 
 
 def park_ebichelchen_browser() -> dict:
-    """v291: Nach dem Lesen den Debug-Browser NICHT schließen, sondern das e-Bichelchen-
-    Fenster nur minimieren. So bleibt der Browser "warm": Der nächste Connect verwendet
-    den Tab weiter (siehe launch_browser) statt einen langsamen Kaltstart zu machen."""
+    """v297 Kompatibilitäts-Alias für alte, eventuell noch gecachte v296-Oberflächen.
+
+    Die frühere Park-Funktion minimierte das gesamte Browserfenster und damit unter
+    Umständen auch EntretienConnect. Sie minimiert deshalb nie wieder. Stattdessen wird
+    nur der e-Bichelchen-Tab sauber geschlossen; ein vorhandener App-Tab hält den
+    Debug-Browser weiterhin warm.
+    """
     try:
-        target = find_ebichelchen_target()
+        closed = close_ebichelchen_target()
+        return {"parked": False, "minimized": False, "closedInstead": True, "closedEbichelchen": closed, "keptOpenForPublishing": True}
     except Exception as exc:
-        # Kein e-Bichelchen-Tab (z. B. schon geschlossen) – nichts zu parken.
-        return {"parked": False, "keptOpenForPublishing": True, "reason": str(exc)}
-    minimized = _cdp_set_window_state(target, "minimized")
-    return {"parked": True, "minimized": minimized, "keptWarm": True, "keptOpenForPublishing": True, "targetId": target.get("id")}
+        return {"parked": False, "minimized": False, "closedInstead": False, "keptOpenForPublishing": True, "reason": str(exc)}
 
 
 def park_after_read(focus_app: bool = True) -> dict:
