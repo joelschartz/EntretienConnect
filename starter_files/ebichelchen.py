@@ -425,122 +425,9 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
 
   async function waitMs(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-  async function clickClassesTabIfVisible() {
-    const log = [];
-    const rxText = /(klassen|classes|classe|classes|groupes|gruppen)/i;
-    const rxRoute = /(class|classe|group|groups|klasse)/i;
-    const nodes = [...document.querySelectorAll('a,button,ion-tab-button,[role="tab"],[routerlink],[href],.tab-button,.nav-link')];
-    const scored = nodes.map(el => {
-      const txt = String((el.innerText || el.textContent || el.getAttribute('aria-label') || el.getAttribute('title') || '')).trim();
-      const route = String(el.getAttribute('href') || el.getAttribute('routerlink') || el.getAttribute('ng-reflect-router-link') || '');
-      const visible = !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-      let score = 0;
-      if (visible) score += 1;
-      if (rxText.test(txt)) score += 10;
-      if (rxRoute.test(route)) score += 5;
-      return { el, txt, route, visible, score };
-    }).filter(x => x.score >= 6).sort((a,b) => b.score - a.score);
-    log.push('visible candidates: ' + scored.slice(0,4).map(x => (x.txt || x.route || '?')).join(' | '));
-    const hit = scored[0];
-    if (!hit) return { clicked:false, log };
-    try {
-      hit.el.scrollIntoView({block:'center', inline:'center'});
-      hit.el.click();
-      await waitMs(1800);
-      return { clicked:true, text:hit.txt, route:hit.route, log };
-    } catch (e) {
-      return { clicked:false, error:String(e.message || e), text:hit.txt, route:hit.route, log };
-    }
-  }
-
-
-
-  function normalizeGroupLabel(value) {
-    return String(value || "")
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase().replace(/\s+/g, " ").trim();
-  }
-
-  async function ensureGroupSelectedInPage(group, rawGroup) {
-    if (!group || !Number.isFinite(Number(group.id))) return { ok:false, reason:"no-group" };
-    const gid = String(group.id);
-    const labels = [group.classAlias, group.name].map(normalizeGroupLabel).filter(Boolean);
-
-    function selectedIdFromStore() {
-      const store = parseStore("groupStore");
-      return String(store?.selectedGroup?.id ?? store?.selectedGroupId ?? "");
-    }
-    if (selectedIdFromStore() === gid) return { ok:true, via:"store", changed:false };
-
-    function isVisible(el) {
-      return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
-    }
-    function textOf(el) {
-      return normalizeGroupLabel(el?.innerText || el?.textContent || el?.getAttribute?.("aria-label") || el?.getAttribute?.("title") || "");
-    }
-
-    // 1) Echte Auswahlfelder bevorzugen: das löst die Frontend-Logik am saubersten aus.
-    for (const select of [...document.querySelectorAll("select")]) {
-      if (!isVisible(select)) continue;
-      const options = [...select.options].map(opt => {
-        const value = String(opt.value || opt.getAttribute("data-id") || opt.getAttribute("data-group-id") || "");
-        const txt = textOf(opt);
-        let score = value === gid ? 100 : 0;
-        for (const label of labels) {
-          if (txt === label) score = Math.max(score, 90);
-          else if (label.length >= 3 && txt.includes(label)) score = Math.max(score, 55);
-        }
-        return { opt, score };
-      }).sort((a,b) => b.score - a.score);
-      if (options[0] && options[0].score >= 55) {
-        select.value = options[0].opt.value;
-        options[0].opt.selected = true;
-        select.dispatchEvent(new Event("input", { bubbles:true }));
-        select.dispatchEvent(new Event("change", { bubbles:true }));
-        await waitMs(900);
-        if (selectedIdFromStore() === gid) return { ok:true, via:"select", changed:true };
-      }
-    }
-
-    // 2) Klassenkarte/-zeile anklicken, falls e-Bichelchen die Auswahl nicht als <select> rendert.
-    const selector = 'button,a,ion-item,[role="button"],[role="option"],[data-id],[data-group-id],[data-groupid],.list-group-item,.mat-list-item';
-    const candidates = [...document.querySelectorAll(selector)].filter(isVisible).map(el => {
-      const txt = textOf(el);
-      const attrs = ["data-id","data-group-id","data-groupid","value","href","routerlink","ng-reflect-router-link"]
-        .map(k => String(el.getAttribute?.(k) || ""));
-      let score = attrs.some(v => v === gid) ? 120 : (attrs.some(v => v.includes(gid)) ? 70 : 0);
-      for (const label of labels) {
-        if (txt === label) score = Math.max(score, 100);
-        else if (label.length >= 3 && txt.includes(label)) score = Math.max(score, 60);
-      }
-      if (/connect|connexion|logout|deconnexion|abmelden/i.test(txt)) score = 0;
-      return { el, txt, score };
-    }).filter(x => x.score >= 60).sort((a,b) => b.score - a.score);
-    if (candidates[0]) {
-      try {
-        candidates[0].el.scrollIntoView({ block:"center", inline:"center" });
-        candidates[0].el.click();
-        await waitMs(1400);
-        if (selectedIdFromStore() === gid) return { ok:true, via:"click", changed:true };
-      } catch (_) {}
-    }
-
-    // 3) Robuster Fallback: denselben groupStore setzen, den e-Bichelchen selbst nutzt,
-    // und anschließend den Kalender neu laden. Der nächste automatische Leseversuch
-    // läuft nach der Navigation weiter; der Nutzer muss die Klasse nicht mehr im
-    // e-Bichelchen-Fenster anklicken.
-    try {
-      const current = parseStore("groupStore");
-      const store = current && typeof current === "object" ? current : {};
-      store.selectedGroup = rawGroup || group;
-      store.selectedGroupId = Number(group.id);
-      sessionStorage.setItem("groupStore", JSON.stringify(store));
-      setTimeout(() => location.replace("/ebichelchen/app/tabs/calendar"), 30);
-      return { ok:true, via:"store-navigation", changed:true, navigating:true };
-    } catch (e) {
-      return { ok:false, reason:String(e.message || e) };
-    }
-  }
+  // v298: EntretienConnect steuert die Klassenwahl ausschließlich über API-Parameter.
+  // Es gibt absichtlich keine DOM-Klicks, Store-Manipulationen oder location.replace()-
+  // Navigationen mehr im sichtbaren e-Bichelchen-Tab.
 
   async function getGroupsFromTeacher() {
     const preferred = "/ebichelchen/app/api/group/get-groups-from-teacher";
@@ -579,15 +466,16 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
     let result = await tryAll('initial');
     if (extractGroupObjects(result.json).length) return result;
 
-    // 2) Bei Lehrpersonen mit mehreren Klassen lädt e-Bichelchen die Klassenliste manchmal erst,
-    // wenn man links/unten den Reiter „Klassen“ öffnet. Das macht die App jetzt selbst im Tab.
-    const nudge1 = await clickClassesTabIfVisible();
-    attempts.push({label:'auto-click-classes-tab', ok:!!nudge1.clicked, detail:nudge1});
-    result = await tryAll('after-class-tab-click');
+    // 2) v298: Die App klickt in e-Bichelchen keinerlei Reiter mehr an. Ein sichtbarer
+    // Seitenwechsel (Kalender → Pinnwand/Klassen → Kalender) kann den laufenden CDP-
+    // JavaScript-Kontext zerstören. Wir warten stattdessen kurz und fragen denselben
+    // authentifizierten API-Endpunkt erneut ab.
+    await waitMs(650);
+    result = await tryAll('after-short-wait');
     if (extractGroupObjects(result.json).length) return result;
 
-    // 3) Noch einmal kurz warten: IAM/e-Bichelchen füllt Stores manchmal verzögert.
-    await waitMs(1800);
+    // 3) Letzter stiller Versuch: IAM/e-Bichelchen füllt die Sitzung manchmal verzögert.
+    await waitMs(1300);
     result = await tryAll('after-wait');
     result.attempts = attempts;
     return result;
@@ -722,7 +610,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
     return (subjects || []).find(s => rx.test([s.labelDeu, s.labelFra, s.label, s.icon].map(x => String(x || "")).join(" "))) || null;
   }
 
-  async function tryReadSubjects(group) {
+  async function tryReadSubjects(group, strictGroup = false) {
     const gid = group && Number(group.id);
     const attempts = [];
     const triedKeys = new Set();
@@ -778,11 +666,14 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
       return results.find(r => r.subjects && r.subjects.length) || null;
     }
 
-    // 1) Den echten Frontend-Aufruf bevorzugen, falls e-Bichelchen ihn bereits geladen hat.
-    // Das ist normalerweise der schnellste und genaueste Weg.
-    for (const url of knownUrls) {
-      const subjects = await tryFetch("known-resource", url, { timeoutMs:1800 });
-      if (subjects.length) return { subjects, source:"known-resource", attempts, knownSubjectUrls: knownUrls };
+    // 1) Den echten Frontend-Aufruf nur dann bevorzugen, wenn keine Klasse explizit
+    // in EntretienConnect gewählt wurde. Bei strictGroup könnte die Resource-URL noch
+    // zur zuvor in e-Bichelchen sichtbaren Klasse gehören.
+    if (!strictGroup) {
+      for (const url of knownUrls) {
+        const subjects = await tryFetch("known-resource", url, { timeoutMs:1800 });
+        if (subjects.length) return { subjects, source:"known-resource", attempts, knownSubjectUrls: knownUrls };
+      }
     }
 
     // 2) v296 Fast-Path: die wahrscheinlichsten GET-Varianten parallel statt Dutzende
@@ -795,15 +686,15 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
     const fastGet = Number.isFinite(gid) ? [
       { url:v6 + "?groupId=" + gidQ },
       { url:v6 + "?groupIds=" + gidQ },
-      { url:v6 },
-      { url:groupApi + "?groupId=" + gidQ }
+      { url:groupApi + "?groupId=" + gidQ },
+      ...(strictGroup ? [] : [{ url:v6 }])
     ] : [{ url:v6 }, { url:groupApi }, { url:legacy }];
     let hit = await tryBatch("fast-get", fastGet);
     if (hit) return { subjects:hit.subjects, source:"fast-get " + hit.spec.url, attempts, knownSubjectUrls: knownUrls };
 
     // 3) Seltenere GET-Varianten ebenfalls parallel und mit kurzem Timeout prüfen.
     const baseUrls = [v6, groupApi, legacy];
-    const queryParts = [""];
+    const queryParts = strictGroup && Number.isFinite(gid) ? [] : [""];
     if (Number.isFinite(gid)) {
       queryParts.unshift("?groupId=" + gidQ, "?groupIds=" + gidQ);
       queryParts.push("?ids=" + gidQ);
@@ -856,31 +747,19 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   const userStore = parseStore("userStore");
   const selectedFromStore = Number(groupStore?.selectedGroup?.id);
 
+  // v298: EntretienConnect ist bei mehreren Klassen die einzige maßgebliche Auswahl.
+  // Die in der sichtbaren e-Bichelchen-Oberfläche zuletzt gewählte Klasse wird bewusst
+  // ignoriert. Dadurch erscheint immer zuerst die Klassenwahl in EntretienConnect und
+  // ein Klick dort arbeitet direkt mit der angeforderten groupId — ohne DOM-Klick,
+  // sessionStorage-Manipulation oder Navigation im e-Bichelchen-Tab.
   let group = null;
   let groupChosenAutomatically = false;
-  if (requestedGroupId !== null) group = groups.find(g => Number(g.id) === Number(requestedGroupId)) || null;
-  if (!group && Number.isFinite(selectedFromStore)) group = groups.find(g => Number(g.id) === selectedFromStore) || null;
-  if (!group && groups.length === 1) { group = groups[0]; groupChosenAutomatically = true; }
-  if (!group) {
-    const activeGroups = groups.filter(g => g.isActivatedByTeacher && !g.isInactive && !g.isTestClass);
-    if (activeGroups.length === 1) { group = activeGroups[0]; groupChosenAutomatically = true; }
-  }
-
-  // v286: e-Bichelchen landet nach IAM teilweise auf « Neuigkeiten / Affiches ».
-  // Bei einer eindeutig bestimmbaren Klasse (oder nach expliziter Wahl in der App)
-  // wird sie im e-Bichelchen-Tab automatisch aktiviert und der Kalender geöffnet.
-  // v296: Eine eindeutig automatisch erkannte Klasse muss nicht erst im sichtbaren
-  // Frontend angeklickt und der Kalender neu geladen werden. Gruppen-/Schülerdaten sind
-  // bereits vorhanden; die Kategorie wird direkt per API gelesen. Nur eine ausdrückliche
-  // Klassenwahl des Nutzers synchronisiert weiterhin den e-Bichelchen-Tab.
-  const shouldPrepareGroup = !!(group && Number(group.id) !== Number(selectedFromStore) && requestedGroupId !== null);
-  if (shouldPrepareGroup) {
-    const rawGroup = groupObjects.find(g => Number(g?.id ?? g?.groupId) === Number(group.id)) || group;
-    const prepared = await ensureGroupSelectedInPage(group, rawGroup);
-    if (prepared && prepared.navigating) {
-      await waitMs(90);
-      throw new Error("Classe e-Bichelchen sélectionnée automatiquement. Relecture en cours.");
-    }
+  if (requestedGroupId !== null) {
+    group = groups.find(g => Number(g.id) === Number(requestedGroupId)) || null;
+    if (!group) throw new Error("Die in EntretienConnect gewählte Klasse wurde in e-Bichelchen nicht gefunden (groupId " + requestedGroupId + ").");
+  } else if (groups.length === 1) {
+    group = groups[0];
+    groupChosenAutomatically = true;
   }
 
   const subjectsT0 = performance.now();
@@ -889,15 +768,30 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   let subjectsSource = subjects.length ? "storage" : null;
   let subjectAttempts = [];
   let messageSubject = detectMessageSubject(subjects);
+
+  // v298: Nach einem Klick in EntretienConnect wird die Kategorie zuerst mit der
+  // ausdrücklich gewählten groupId abgefragt. Die aktuell sichtbare Klasse bzw. ein
+  // alter Store in e-Bichelchen darf die Auswahl nicht mehr beeinflussen.
+  if (requestedGroupId !== null && group) {
+    const explicitApiSubj = await tryReadSubjects(group, true);
+    const explicitMessage = detectMessageSubject(explicitApiSubj.subjects);
+    subjectAttempts = explicitApiSubj.attempts || [];
+    storageSubjects.knownSubjectUrls = explicitApiSubj.knownSubjectUrls || [];
+    if (explicitMessage) {
+      subjects = explicitApiSubj.subjects;
+      subjectsSource = explicitApiSubj.source;
+      messageSubject = explicitMessage;
+    }
+  }
   if (!messageSubject) {
-    const apiSubj = await tryReadSubjects(group);
+    const apiSubj = await tryReadSubjects(group, requestedGroupId !== null);
     if (apiSubj.subjects.length) {
       subjects = apiSubj.subjects;
       subjectsSource = apiSubj.source;
       messageSubject = detectMessageSubject(subjects);
     }
-    subjectAttempts = apiSubj.attempts || [];
-    storageSubjects.knownSubjectUrls = apiSubj.knownSubjectUrls || [];
+    subjectAttempts = subjectAttempts.concat(apiSubj.attempts || []);
+    storageSubjects.knownSubjectUrls = apiSubj.knownSubjectUrls || storageSubjects.knownSubjectUrls || [];
   }
 
   timing.subjectsMs = Math.round(performance.now() - subjectsT0);
@@ -911,7 +805,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   } : null;
 
   const payload = {
-    version: "1.10.23",
+    version: "1.10.24",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -1038,31 +932,91 @@ def check_login_ready() -> dict:
         return {"ok": True, "ready": False, "browserClosed": False, "stage": "probe", "detail": str(exc), "lightweight": True}
 
 
-def read_from_chrome(selected_group_id: int | None = None) -> dict:
-    target = find_ebichelchen_target()
+def _is_transient_context_error(text: str) -> bool:
+    """Erkennt CDP-Fehler, die bei einer natürlichen Angular-/Ionic-Navigation entstehen.
 
-    # v1.7: Hauptquelle ist get-groups-from-teacher. Dadurch kann die App auch auf Pinwand/Klassenauswahl
-    # lesen und muss nicht zuerst blind zum Kalender springen.
+    e-Bichelchen kann direkt nach dem Login selbst noch einmal von Kalender zu Pinnwand
+    (oder umgekehrt) wechseln. Der alte Code gab dann sofort den technischen Fehler
+    ``Execution context was destroyed`` an den Nutzer weiter. v298 liest nach dem
+    Seitenwechsel automatisch erneut — ohne selbst eine Navigation auszulösen.
+    """
+    t = str(text or "").lower()
+    markers = (
+        "execution context was destroyed",
+        "cannot find context with specified id",
+        "inspected target navigated or closed",
+        "target closed",
+        "websocket wurde geschlossen",
+        "websocket was closed",
+        "no frame with given id",
+    )
+    return any(m in t for m in markers)
+
+
+def read_from_chrome(selected_group_id: int | None = None) -> dict:
     expr = build_read_expression(selected_group_id)
-    msg = cdp_eval(target["webSocketDebuggerUrl"], expr, await_promise=True, timeout_ms=18000)
-    if "error" in msg:
-        raise RuntimeError("CDP-Fehler: " + json.dumps(msg["error"], ensure_ascii=False))
-    result = msg.get("result", {})
-    if result.get("exceptionDetails"):
-        details = result["exceptionDetails"]
-        text = details.get("text") or "JavaScript-Fehler"
-        exc = details.get("exception", {}).get("description") or details.get("exception", {}).get("value") or ""
-        raise RuntimeError(f"Fehler im e-Bichelchen-Tab: {text} {exc}")
-    remote = result.get("result", {})
-    value = remote.get("value")
-    if not value:
-        raise RuntimeError("Keine Daten aus dem e-Bichelchen-Tab erhalten. Ist e-Bichelchen nach dem Login sichtbar?")
-    try:
-        payload = json.loads(value)
-    except Exception as exc:
-        raise RuntimeError(f"Antwort konnte nicht gelesen werden: {exc}; Wert: {str(value)[:300]}")
+    last_error: Exception | None = None
+    target: dict | None = None
+    payload: dict | None = None
+    retries_used = 0
+
+    # v298: Ein von e-Bichelchen selbst ausgelöster Route-Wechsel darf die Auswahl in
+    # EntretienConnect nicht mehr abbrechen. Bei genau diesen transienten CDP-Fehlern
+    # wird das aktuelle Target neu gesucht und die reine API-Lesung wiederholt.
+    for attempt in range(3):
+        try:
+            target = find_ebichelchen_target()
+            msg = cdp_eval(target["webSocketDebuggerUrl"], expr, await_promise=True, timeout_ms=18000)
+            if "error" in msg:
+                err_text = "CDP-Fehler: " + json.dumps(msg["error"], ensure_ascii=False)
+                if _is_transient_context_error(err_text) and attempt < 2:
+                    retries_used += 1
+                    time.sleep(0.35 + 0.25 * attempt)
+                    continue
+                raise RuntimeError(err_text)
+            result = msg.get("result", {})
+            if result.get("exceptionDetails"):
+                details = result["exceptionDetails"]
+                text = details.get("text") or "JavaScript-Fehler"
+                exc = details.get("exception", {}).get("description") or details.get("exception", {}).get("value") or ""
+                err_text = f"Fehler im e-Bichelchen-Tab: {text} {exc}"
+                if _is_transient_context_error(err_text) and attempt < 2:
+                    retries_used += 1
+                    time.sleep(0.35 + 0.25 * attempt)
+                    continue
+                raise RuntimeError(err_text)
+            remote = result.get("result", {})
+            value = remote.get("value")
+            if not value:
+                err_text = "Keine Daten aus dem e-Bichelchen-Tab erhalten. Ist e-Bichelchen nach dem Login sichtbar?"
+                if attempt < 2:
+                    retries_used += 1
+                    time.sleep(0.35 + 0.25 * attempt)
+                    continue
+                raise RuntimeError(err_text)
+            try:
+                payload = json.loads(value)
+            except Exception as exc:
+                raise RuntimeError(f"Antwort konnte nicht gelesen werden: {exc}; Wert: {str(value)[:300]}")
+            break
+        except Exception as exc:
+            last_error = exc
+            if _is_transient_context_error(str(exc)) and attempt < 2:
+                retries_used += 1
+                time.sleep(0.35 + 0.25 * attempt)
+                continue
+            raise
+
+    if payload is None or target is None:
+        raise last_error or RuntimeError("e-Bichelchen-Daten konnten nicht gelesen werden.")
+
     payload.setdefault("source", {})
-    payload["source"].update({"targetTitle": target.get("title"), "targetUrl": target.get("url")})
+    payload["source"].update({
+        "targetTitle": target.get("title"),
+        "targetUrl": target.get("url"),
+        "contextRetries": retries_used,
+        "selectionAuthority": "EntretienConnect" if selected_group_id is not None else "automatic-only-for-single-group",
+    })
     # Session-Cookies zwischenspeichern, damit spätere Schreib-/Löschtests unsichtbar direkt
     # vom lokalen Helfer ausgeführt werden können, ohne e-Bichelchen erneut sichtbar zu öffnen.
     try:

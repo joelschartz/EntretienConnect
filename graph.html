@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v297</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v298</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -6518,7 +6518,9 @@ function ebGroupChoiceHtml(){
   if(groups.length<2) return "";
   const selectedId=ebSelectedGroupId();
   const title=ebReady() ? "Classe e-Bichelchen utilisée" : "Plusieurs classes e-Bichelchen trouvées.";
-  const text=ebReady() ? "Vous pouvez changer de classe si besoin ; la liste des élèves sera alors relue." : "Choisissez la classe à utiliser pour importer les élèves et publier les messages.";
+  const text=ebReady()
+    ? "Vous pouvez changer de classe ici ; le choix effectué dans EntretienConnect reste prioritaire."
+    : "Choisissez la classe ici. La classe éventuellement affichée ou sélectionnée dans e-Bichelchen est ignorée.";
   return '<div class="eb-inline-classes"><b>'+esc(title)+'</b><div class="hint" style="margin:4px 0 8px">'+esc(text)+'</div>'+
     groups.map(g=>{ const gid=String(g.id); const selected=selectedId && gid===selectedId; return `<div class="eb-classbox${selected?' selected':''}"><div><strong>${esc(String(g.classAlias||g.name||g.id))}</strong><div class="hint" style="margin:0">ID ${esc(gid)} · ${esc(String(g.classGrade||""))} · ${esc(String((g.students&&g.students.length)||0))} élèves</div></div><button class="ghost sm${selected?' selected-class-btn':''}" type="button" data-eb-group-id="${esc(gid)}" ${selected?'aria-pressed="true" disabled':''}>${selected?'✓ Sélectionné':'Choisir cette classe'}</button></div>`; }).join("")+
   '</div>';
@@ -6786,11 +6788,17 @@ document.addEventListener("click", function(ev){
   var c = ev.target && ev.target.closest ? ev.target.closest("[data-eb-cancel]") : null;
   if(c){ ev.preventDefault(); ev.stopPropagation(); ebCancelPending(); }
 }, true);
+async function ebFocusAppForGroupChoice(){
+  // v298: Bei mehreren Klassen bleibt der e-Bichelchen-Tab nur technisch offen,
+  // damit die anschließende Auswahl direkt per API gelesen werden kann. Sichtbar soll
+  // aber sofort wieder EntretienConnect mit seiner eigenen Klassenwahl im Vordergrund sein.
+  try{
+    await fetch("/api/eb/focus-app",{cache:"no-store"});
+  }catch(e){ /* best-effort */ }
+}
 async function ebCleanupAfterSuccessfulRead(){
-  // v297: ne jamais minimiser la fenêtre du navigateur. Si EntretienConnect et
-  // e-Bichelchen sont deux onglets de la même fenêtre, minimiser l'onglet e-Bichelchen
-  // minimisait aussi toute l'application. Après la lecture, on ferme uniquement
-  // l'onglet e-Bichelchen et on remet l'onglet EntretienConnect au premier plan.
+  // v297+: ne jamais minimiser la fenêtre du navigateur. Après la lecture complète,
+  // on ferme uniquement l'onglet e-Bichelchen et on remet EntretienConnect au premier plan.
   try{
     await fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"});
   }catch(e){ /* best-effort */ }
@@ -6919,7 +6927,13 @@ async function ebAutoAttempt(){
     const _parts=_timing.totalMs ? " | intern: Gruppen "+(_timing.groupsMs||0)+" ms, Fächer "+(_timing.subjectsMs||0)+" ms, gesamt "+_timing.totalMs+" ms" : "";
     console.log("[eb] Verbindung fertig in "+_total+"s (davon Lesen "+_read+"s) — Rest = Login/IAM + Laden von e-Bichelchen."+_parts);
     ebApplyRead(j.data);
-    if(!j.data.needsGroupSelection){ ebCleanupAfterSuccessfulRead(); }
+    if(j.data.needsGroupSelection){
+      // v298: e-Bichelchens zuletzt aktive Klasse wird nicht übernommen. Die App zeigt
+      // ihre eigene Auswahl und holt sich sofort wieder den Vordergrund.
+      ebFocusAppForGroupChoice();
+    }else{
+      ebCleanupAfterSuccessfulRead();
+    }
     return;
   }
 
@@ -6962,7 +6976,7 @@ function ebApplyRead(data){
   autofillEbMap();
   let imported=0;
   if(ebReady()) imported=importEbStudentsToList(true);
-  if(ebData && ebData.needsGroupSelection){ setEbStatus("Plusieurs classes trouvées. Choisissez la bonne classe dans la liste affichée.","warn"); }
+  if(ebData && ebData.needsGroupSelection){ setEbStatus("Plusieurs classes trouvées. Choisissez la classe directement dans EntretienConnect ; le choix affiché dans e-Bichelchen n’est pas utilisé.","warn"); }
   else if(ebReady()){ setEbStatus("Connecté ✓ — classe « "+esc(String(ebData.group.classAlias||ebData.group.name||ebData.group.id))+" », "+ebStudents().length+" élève(s) lus."+(imported?" "+imported+" nouvel élève importé.":"")+"","ok"); }
   else if(ebData){ setEbStatus("Données lues, mais la catégorie « Message » est introuvable. La publication restera bloquée.","warn"); }
   renderSetup(); renderStudents(); renderEbPanel(); applyChannelVisibility(); renderMails();
