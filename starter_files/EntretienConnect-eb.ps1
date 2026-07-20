@@ -7,7 +7,8 @@ param(
     [string]$Action = "open",
     [string]$GroupId = "",
     [string]$PayloadFile = "",
-    [string]$Browser = "auto"
+    [string]$Browser = "auto",
+    [string]$AppUrl = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -77,6 +78,17 @@ function Get-EbTargets {
         $targets = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json" "GET" 3
         return @($targets)
     } catch { return @() }
+}
+
+function Test-IsAppTarget($target) {
+    $u = [string]$target.url
+    return ($target.type -eq "page" -and ($u -match '^https?://(127\.0\.0\.1|localhost)(:\d+)?/' ))
+}
+
+function Get-AppTarget {
+    $hits = @(Get-EbTargets | Where-Object { Test-IsAppTarget $_ })
+    if ($hits.Count -eq 0) { return $null }
+    return ($hits | Sort-Object @{Expression={ if (([string]$_.url) -match '/graph\.html') {0} else {1} }} | Select-Object -First 1)
 }
 
 function Close-EbTargetById($targetId) {
@@ -177,7 +189,7 @@ public static class EntretienConnectWin32 {
 }
 
 function Close-EbHelperBrowser {
-    # v301: Nur den e-Bichelchen-Tab schließen. Der kontrollierte Browserprozess
+    # v302: Nur den e-Bichelchen-Tab schließen. Der kontrollierte Browserprozess
     # bleibt ohne sichtbares Fenster vorgewärmt, damit der nächste Connect keinen
     # langsamen Kaltstart mehr benötigt. Beim echten Beenden der App wird er über
     # Stop-EbControlledBrowser vollständig beendet.
@@ -190,13 +202,21 @@ function Close-EbHelperBrowser {
     foreach ($t in $ebTargets) {
         if (Close-EbTargetById $t.id) { $closedTabs++ }
     }
-    Start-Sleep -Milliseconds 220
-    $rewarm = $null
-    try { $rewarm = Start-EbPrewarm "default" "auto" } catch {}
-    return @{ closed=($closedTabs -gt 0); method="tabs-only"; wholeHelperBrowser=$false; closedTabs=$closedTabs; browserKeptWarm=$true; rewarm=$rewarm }
+    Start-Sleep -Milliseconds 120
+    return @{ closed=($closedTabs -gt 0); method="tabs-only"; wholeHelperBrowser=$false; closedTabs=$closedTabs; browserKeptOpenByApp=$true; sharedBrowser=$true }
 }
 
 function Open-EbRemoteTab($url) {
+    # v302: Target.createTarget + newWindow=false garantiert einen zweiten Tab
+    # im bereits geöffneten EntretienConnect-Browserfenster.
+    try {
+        $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 2
+        $ws = [string]$version.webSocketDebuggerUrl
+        if ($ws) {
+            $r = Invoke-CdpCall $ws "Target.createTarget" @{ url=$url; newWindow=$false; background=$false } 906 5
+            if ($r.result.targetId) { return $true }
+        }
+    } catch {}
     try {
         $encoded = [Uri]::EscapeDataString($url)
         Invoke-WebRequest -Uri ("http://127.0.0.1:$EbCdpPort/json/new?" + $encoded) -Method Put -TimeoutSec 3 | Out-Null
@@ -215,6 +235,52 @@ function Set-EbWindowState($target, $state) {
         $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Browser.setWindowBounds" @{ windowId = $windowId; bounds = @{ windowState = $state } } 916 6
         return $true
     } catch { return $false }
+}
+
+function Start-EbAppBrowser($appUrl, $profile = "default", $preferredBrowser = "auto") {
+    if (-not $appUrl) { throw "AppUrl fehlt." }
+    $browser = Find-EbBrowserExecutable $preferredBrowser
+    $safeProfile = ([regex]::Replace(([string]$profile), '[^A-Za-z0-9_.-]', '_')).Trim('._-')
+    if (-not $safeProfile) { $safeProfile = "default" }
+    $baseProfileRoot = $env:LOCALAPPDATA
+    if (-not $baseProfileRoot) { $baseProfileRoot = $ScriptDir }
+    $profileDir = Join-Path $baseProfileRoot ("EntretienConnect\profiles\" + $browser.id + "\" + $safeProfile)
+    New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+    $pidFile = Join-Path $profileDir "entretienconnect-browser.pid"
+
+    try {
+        $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
+        $target = Get-AppTarget
+        if (-not $target) {
+            if (-not (Open-EbRemoteTab $appUrl)) { throw "EntretienConnect-Tab konnte nicht geöffnet werden." }
+            for ($i=0; $i -lt 24 -and -not $target; $i++) { Start-Sleep -Milliseconds 100; $target = Get-AppTarget }
+        }
+        if ($target) {
+            Set-EbWindowState $target "normal" | Out-Null
+            try { $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Page.bringToFront" @{} 907 6 } catch {}
+        }
+        $savedPid = 0
+        try { $savedPid = [int](Get-Content -LiteralPath $pidFile -Raw -ErrorAction Stop) } catch {}
+        $activated = Activate-EbBrowserWindow $savedPid
+        return @{ opened=$true; alreadyRunning=$true; reusedAppTab=($null -ne $target); active=$activated; profile=$safeProfile; profileDir=$profileDir; url=$appUrl; browser=$browser.name; port=$EbCdpPort; devtoolsBrowser=$version.Browser }
+    } catch {}
+
+    $argLine = "--remote-debugging-port=$EbCdpPort --user-data-dir=`"$profileDir`" --no-first-run --no-default-browser-check `"$appUrl`""
+    $proc = Start-Process -FilePath $browser.path -ArgumentList $argLine -PassThru
+    try { Set-Content -LiteralPath $pidFile -Value ([string]$proc.Id) -Encoding ASCII } catch {}
+    for ($i=0; $i -lt 70; $i++) {
+        Start-Sleep -Milliseconds 150
+        try {
+            $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
+            $target = Get-AppTarget
+            if ($target) {
+                try { $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Page.bringToFront" @{} 908 6 } catch {}
+                $activated = Activate-EbBrowserWindow $proc.Id
+                return @{ opened=$true; alreadyRunning=$false; active=$activated; profile=$safeProfile; profileDir=$profileDir; url=$appUrl; browser=$browser.name; processId=$proc.Id; port=$EbCdpPort; devtoolsBrowser=$version.Browser }
+            }
+        } catch {}
+    }
+    throw "Der kontrollierte Browser wurde gestartet, aber EntretienConnect erschien nicht rechtzeitig."
 }
 
 function Start-EbPrewarm($profile = "default", $preferredBrowser = "auto") {
@@ -293,7 +359,7 @@ function Start-EbBrowser($profile = "default", $preferredBrowser = "auto") {
         # v299: Läuft am Hilfsport nur noch eine alte IAM-/Zwischenseite, die
         # verwaiste Instanz vollständig beenden und danach genau ein neues Fenster
         # starten. So sammeln sich nach abgebrochenen Logins keine Chrome-Fenster an.
-        $stalePages = @(Get-EbTargets | Where-Object { $_.type -eq "page" })
+        $stalePages = @(Get-EbTargets | Where-Object { $_.type -eq "page" -and -not (Test-IsAppTarget $_) -and ([string]$_.url) -notmatch '/ebichelchen/app/' -and ([string]$_.url) -notmatch '^(about:blank|(chrome|edge)://newtab/?)$' })
         if ($stalePages.Count -gt 0) {
             $ws = [string]$stalePages[0].webSocketDebuggerUrl
             if (-not $ws) { $ws = [string]$version.webSocketDebuggerUrl }
@@ -981,6 +1047,22 @@ function Verify-EbSaveResponse($resp, $payload) {
 
 
 try {
+    if ($Action -eq "open-app") {
+        $info = Start-EbAppBrowser $AppUrl "default" $Browser
+        @{ ok=$true; info=$info } | ConvertTo-Json -Depth 20 -Compress
+        exit 0
+    }
+
+    if ($Action -eq "focus-app") {
+        $target = Get-AppTarget
+        if (-not $target) { throw "Kein EntretienConnect-Tab im kontrollierten Browser gefunden." }
+        Set-EbWindowState $target "normal" | Out-Null
+        try { $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Page.bringToFront" @{} 909 6 } catch {}
+        $active = Activate-EbBrowserWindow (Get-EbOwnerProcessId)
+        @{ ok=$true; info=@{ focused=$true; active=$active; method="cdp"; targetId=$target.id; url=$target.url } } | ConvertTo-Json -Depth 10 -Compress
+        exit 0
+    }
+
     if ($Action -eq "prewarm") {
         $info = Start-EbPrewarm "default" $Browser
         @{ ok=$true; info=$info } | ConvertTo-Json -Depth 20 -Compress

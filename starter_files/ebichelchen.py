@@ -174,12 +174,27 @@ def debug_browser_running() -> bool:
 
 
 def open_remote_tab(url: str) -> bool:
-    """Öffnet zuverlässig einen neuen CDP-Tab.
+    """Öffnet einen neuen Tab im bereits kontrollierten Chrome-/Edge-Fenster.
 
-    Aktuelle Chrome-/Edge-Versionen erwarten PUT; einige ältere Builds akzeptieren
-    nur GET. Beide Varianten werden unterstützt. Ein fehlgeschlagener Aufruf darf
-    nicht mehr fälschlich als erfolgreicher Browserstart gemeldet werden.
+    v302: Zuerst wird ``Target.createTarget`` mit ``newWindow=False`` verwendet.
+    Dadurch erscheint e-Bichelchen als zweiter Tab neben EntretienConnect und nicht
+    als weiteres Browserfenster. Die ältere HTTP-DevTools-Route bleibt Fallback.
     """
+    try:
+        version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=2)
+        ws = version.get("webSocketDebuggerUrl") if isinstance(version, dict) else None
+        if ws:
+            msg = cdp_call(ws, "Target.createTarget", {
+                "url": url,
+                "newWindow": False,
+                "background": False,
+            }, msg_id=906, timeout=4)
+            target_id = (((msg or {}).get("result") or {}).get("targetId"))
+            if target_id:
+                return True
+    except Exception:
+        pass
+
     target = f"http://127.0.0.1:{CDP_PORT}/json/new?" + urllib.parse.quote(url, safe="")
     for method in ("PUT", "GET"):
         try:
@@ -239,10 +254,69 @@ def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0) ->
     return {"focused": False, "method": "cdp", "error": last_error or "Target not ready"}
 
 
+def launch_app_browser(app_url: str, profile: str = "default", preferred_browser: str = "auto", timeout_s: float = 18.0) -> dict:
+    """Startet EntretienConnect selbst im kontrollierten Chromium-Browser.
+
+    v302: App und e-Bichelchen teilen damit denselben Browserprozess, dasselbe
+    Fenster und dasselbe isolierte Profil. Beim Verbinden wird nur ein zweiter Tab
+    angelegt; ein separater Chrome-Kaltstart entfällt vollständig. Ein beliebiger
+    bereits laufender Standardbrowser (insbesondere Firefox) kann nicht nachträglich
+    sicher über DevTools übernommen werden, daher wird die App von Beginn an in der
+    kontrollierten Chrome-/Edge-Instanz geöffnet.
+    """
+    browser = find_browser_executable(preferred_browser)
+    if not browser:
+        raise RuntimeError("Kein unterstützter Browser gefunden. Installiert sein muss Google Chrome oder Microsoft Edge.")
+
+    profile = sanitize_profile_name(profile)
+    profile_dir = PROFILE_ROOT / browser["id"] / profile
+    profile_dir.mkdir(parents=True, exist_ok=True)
+
+    with BROWSER_LAUNCH_LOCK:
+        if debug_browser_running():
+            try:
+                targets = [t for t in _list_cdp_targets() if _is_app_target(t)]
+                if targets:
+                    target = targets[0]
+                    _cdp_set_window_state(target, "normal")
+                    cdp_call(target.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=907, timeout=3)
+                    return {"opened": True, "alreadyRunning": True, "reusedAppTab": True, "browser": browser.get("name"), "profileDir": str(profile_dir), "url": target.get("url")}
+            except Exception:
+                pass
+            if not open_remote_tab(app_url):
+                raise RuntimeError("Der EntretienConnect-Tab konnte im kontrollierten Browser nicht geöffnet werden.")
+        else:
+            args = [
+                browser["path"],
+                f"--remote-debugging-port={CDP_PORT}",
+                f"--user-data-dir={profile_dir}",
+                "--no-first-run",
+                "--no-default-browser-check",
+                app_url,
+            ]
+            proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            BROWSER_PROCESSES[profile] = proc
+
+    deadline = time.time() + max(4.0, float(timeout_s))
+    last_error = ""
+    while time.time() < deadline:
+        try:
+            targets = [t for t in _list_cdp_targets() if _is_app_target(t)]
+            if targets:
+                target = targets[0]
+                _cdp_set_window_state(target, "normal")
+                cdp_call(target.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=908, timeout=3)
+                return {"opened": True, "alreadyRunning": False, "reusedAppTab": False, "browser": browser.get("name"), "profileDir": str(profile_dir), "url": target.get("url"), "targetId": target.get("id")}
+        except Exception as exc:
+            last_error = str(exc)
+        time.sleep(0.12)
+    raise RuntimeError("Der kontrollierte Browser wurde gestartet, aber EntretienConnect erschien nicht rechtzeitig." + ((" " + last_error) if last_error else ""))
+
+
 def prewarm_browser(profile: str = "default", preferred_browser: str = "auto", wait_ready_s: float = 0.0) -> dict:
     """Startet den isolierten Chromium-Prozess ohne sichtbares Fenster.
 
-    v301: Der langsame Browser-Kaltstart läuft bereits im Hintergrund, sobald
+    Legacy-Prewarm-Fallback: Der Browser-Kaltstart kann im Hintergrund laufen, falls
     EntretienConnect geöffnet wird. Beim Klick auf « Connecter » muss dadurch nur
     noch der direkte Login-Tab angelegt werden. Das normale Chrome-Profil des
     Benutzers bleibt unangetastet; die automatische Klassen-/Schülerlesung behält
@@ -299,7 +373,7 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     profile_dir = PROFILE_ROOT / browser_id / profile
     profile_dir.mkdir(parents=True, exist_ok=True)
 
-    # v301: Der Browser wird beim App-Start unsichtbar vorgewärmt. Falls der Klick
+    # v302: Der Browser läuft bereits, weil EntretienConnect selbst darin geöffnet ist. Falls der Klick
     # sehr schnell erfolgt, kurz auf dessen DevTools-Port warten, statt einen zweiten
     # Kaltstart mit demselben Profil anzustoßen.
     warm_proc = BROWSER_PROCESSES.get(profile)
@@ -1265,7 +1339,7 @@ def _cdp_close_tab(target_id: str) -> bool:
 def close_ebichelchen_target() -> dict:
     """Schließt nur den e-Bichelchen-Tab, niemals den vorgewärmten Browserprozess.
 
-    v301: Der kontrollierte Browser bleibt ohne sichtbares Fenster im Hintergrund
+    v302: Der kontrollierte Browser bleibt durch den EntretienConnect-App-Tab geöffnet
     bereit. Dadurch ist die nächste Verbindung ebenso schnell wie das Öffnen eines
     neuen Tabs in einem bereits laufenden Chrome. Beim echten Beenden der App räumt
     ``force_close_launched_browser`` den Prozess weiterhin vollständig auf.
@@ -1296,15 +1370,15 @@ def close_ebichelchen_target() -> dict:
         raise RuntimeError("Der e-Bichelchen-Tab konnte nicht geschlossen werden.")
     return {"closed": True, "method": "tabs-only", "closedTabs": closed, "browserKeptWarm": True, "targets": details}
 
-def force_close_launched_browser() -> dict:
+def force_close_launched_browser(force: bool = False) -> dict:
     """v155: Schließt den vom Helfer gestarteten Browser komplett – egal welche Seite
     gerade offen ist (auch IAM-/EduKey-Login). Betrifft ausschließlich den Browser am
     lokalen CDP-Port mit App-Profil; der normale Browser des Benutzers bleibt unberührt."""
     result = {"closed": False, "method": None}
     targets = _list_cdp_targets()
-    if any(_is_app_target(t) for t in targets):
-        # v1.10.17: der App-Tab läuft in diesem Browser — Browser niemals komplett beenden,
-        # sonst verschwindet die App mitsamt Fenster. Nur die übrigen Tabs schließen.
+    if any(_is_app_target(t) for t in targets) and not force:
+        # Während eines Session-Resets bleibt der App-Tab geschützt. Beim echten
+        # Programmende darf die dedizierte v302-Browserinstanz dagegen komplett schließen.
         closed_tabs = 0
         for t in targets:
             if t.get("type") == "page" and not _is_app_target(t) and t.get("id"):
@@ -1552,7 +1626,7 @@ def park_after_read(focus_app: bool = True) -> dict:
 
 
 def cleanup_after_read(close_eb: bool = True, focus_app: bool = True) -> dict:
-    result = {"closedEbichelchen": None, "focusedApp": None, "prewarmScheduled": False}
+    result = {"closedEbichelchen": None, "focusedApp": None, "prewarmScheduled": False, "sharedBrowser": True}
     if close_eb:
         try:
             result["closedEbichelchen"] = close_ebichelchen_target()
@@ -1563,17 +1637,8 @@ def cleanup_after_read(close_eb: bool = True, focus_app: bool = True) -> dict:
             result["focusedApp"] = focus_app_tab()
         except Exception as exc:
             result["focusedApp"] = {"ok": False, "error": str(exc)}
-    # Chrome/Edge kann auf einzelnen Systemen nach dem letzten geschlossenen Fenster
-    # den Prozess beenden. Eine kurze, unsichtbare Nachwärmung stellt sicher, dass der
-    # nächste Connect trotzdem keinen Kaltstart braucht.
-    try:
-        def _rewarm():
-            time.sleep(0.35)
-            prewarm_browser("default", "auto", wait_ready_s=0.0)
-        threading.Thread(target=_rewarm, daemon=True).start()
-        result["prewarmScheduled"] = True
-    except Exception:
-        pass
+    # v302: Der App-Tab selbst hält den kontrollierten Browser bereits offen.
+    # Ein separater Prewarm-/Hintergrundprozess ist deshalb weder nötig noch erwünscht.
     return result
 
 

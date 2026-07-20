@@ -471,7 +471,7 @@ function Start-EbPlainBrowser {
     }
 }
 
-function Invoke-EbHelper($action, $groupId = "", $payloadFile = "", $browser = "auto") {
+function Invoke-EbHelper($action, $groupId = "", $payloadFile = "", $browser = "auto", $appUrl = "") {
     $helper = Join-Path $ScriptDir "EntretienConnect-eb.ps1"
     if (-not (Test-Path $helper -PathType Leaf)) {
         return @{ ok=$false; error="EntretienConnect-eb.ps1 fehlt im App-Ordner." }
@@ -483,6 +483,7 @@ function Invoke-EbHelper($action, $groupId = "", $payloadFile = "", $browser = "
     if ($groupId) { $args += @("-GroupId",$groupId) }
     if ($payloadFile) { $args += @("-PayloadFile",$payloadFile) }
     if ($browser) { $args += @("-Browser",$browser) }
+    if ($appUrl) { $args += @("-AppUrl",$appUrl) }
 
     try {
         $out = & $ps @args 2>&1
@@ -509,7 +510,13 @@ function Start-EbPrewarmAsync {
 
 
 function Focus-EntretienConnectWindow {
-    # v299: Das App-Fenster nach der e-Bichelchen-Lesung wieder sichtbar nach vorne
+    # v302: App und e-Bichelchen sind Tabs desselben kontrollierten Browsers.
+    # Zuerst den konkreten App-Tab per DevTools aktivieren; Fenster-API nur als Fallback.
+    try {
+        $cdp = Invoke-EbHelper "focus-app"
+        if ($cdp.ok -and $cdp.info.focused) { return $cdp.info }
+    } catch {}
+    # Windows-Fenster-Fallback, falls DevTools kurzzeitig nicht erreichbar ist.
     # holen. Keine neue URL / kein zusätzlicher Tab wird geöffnet.
     $candidates = @()
     try {
@@ -1112,9 +1119,17 @@ Write-Host ("  EntretienConnect est lancé.   [Version : v" + $script:HelperVers
 Write-Host "  Dans le navigateur :  $url"
 Write-Host "  Laissez cette fenêtre ouverte. La fermer = quitter."
 Write-Host "============================================================"
-if (-not $NoAutoOpen) { try { Start-Process $url } catch {} }
-# v301: Browser-Kaltstart unsichtbar im Hintergrund vorziehen.
-Start-EbPrewarmAsync
+if (-not $NoAutoOpen) {
+    try {
+        $opened = Invoke-EbHelper "open-app" "" "" "auto" $url
+        if (-not $opened.ok) { throw ([string]$opened.error) }
+    } catch {
+        Log ("Kontrollierter Browser nicht verfügbar; Standardbrowser-Fallback: " + $_.Exception.Message)
+        try { Start-Process $url } catch {}
+    }
+}
+# v302: Kein separater Prewarm-Prozess. Der App-Tab hält denselben Browser offen,
+# in dem e-Bichelchen später als zweiter Tab erscheint.
 
 while (-not $script:ShutdownRequested) {
     $client = $null

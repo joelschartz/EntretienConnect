@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v301</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v302</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1571,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 301;
+const APP_VERSION = 302;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6708,7 +6708,7 @@ function renderEbPanel(){
     connectBtn.textContent = ebReady() ? "Reconnecter e-Bichelchen" : "Connecter e-Bichelchen";
     connectBtn.title = ebReady()
       ? "Utile seulement si la session e-Bichelchen a expiré, ou pour changer de classe/compte ou relire la liste des élèves. Rouvre la fenêtre de connexion."
-      : "Ouvre une petite fenêtre de connexion e-Bichelchen, puis lit la classe, les élèves et la catégorie « Message ».";
+      : "Ouvre un deuxième onglet e-Bichelchen dans le même navigateur, puis lit la classe, les élèves et la catégorie « Message ».";
   }
   // Browser-Auswahl nur vor dem Verbinden zeigen (danach irrelevant).
   if(browserSel) browserSel.style.display = ebReady() ? "none" : "";
@@ -6816,7 +6816,7 @@ async function ebConnectFlow(){
   ebLoginPending=true;
   ebBrowserMissingCount=0;
   renderSetup();
-  setEbStatus("Ouverture de la fenêtre e-Bichelchen…","info");
+  setEbStatus("Ouverture de l’onglet e-Bichelchen…","info");
   ebStopAuto();
 
   // Le profil du navigateur est conservé pour éviter un démarrage à froid très lent.
@@ -6826,7 +6826,7 @@ async function ebConnectFlow(){
   state.ebichelchenSelectedGroupId="";
   state.ebichelchenMap=state.ebichelchenMap||{};
 
-  // v301: Beim Verbinden wird keine e-Bichelchen-Seite ausgewählt oder neu geladen; das konkrete isolierte Login-Fenster bleibt auf macOS im Vordergrund.
+  // v302: e-Bichelchen öffnet als zweiter Tab im selben kontrollierten Browser; keine Seite oder Klasse wird dort von EntretienConnect ausgewählt.
   // Die App öffnet nur das isolierte Login-Fenster. e-Bichelchen darf auf seiner eigenen
   // Startseite (z. B. Pinnwand) bleiben; gültige Cookies werden beibehalten.
   saveState();
@@ -6836,7 +6836,7 @@ async function ebConnectFlow(){
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebConnectBusy=false;
     renderSetup();
-    setEbStatus(ebWaitingStatusHtml("La fenêtre e-Bichelchen reste ouverte au premier plan pour la connexion."),"info");
+    setEbStatus(ebWaitingStatusHtml("L’onglet e-Bichelchen est ouvert dans le même navigateur. Terminez la connexion dans cet onglet."),"info");
     ebAutoStart=Date.now();
     // v288: zuerst nur leicht prüfen, ob IAM/e-Bichelchen wirklich bereit ist.
     // Die teure Klassen-/Schüleranalyse wird erst dann einmalig gestartet.
