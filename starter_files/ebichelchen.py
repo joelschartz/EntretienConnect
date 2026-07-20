@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.28 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.29 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -70,6 +70,7 @@ LATEST_SESSION: dict | None = None
 LATEST_SESSION_AT: str | None = None
 ACTIVE_BROWSER_MODE = "cdp"  # cdp | firefox-current
 ACTIVE_BROWSER_USER_AGENT = ""
+FIREFOX_SESSIONSTORE_CACHE: dict[str, tuple[float, int, list[dict], dict]] = {}
 
 
 def _json_response(handler: BaseHTTPRequestHandler, data, status: int = 200):
@@ -1107,14 +1108,186 @@ def _firefox_profile_dirs() -> list[pathlib.Path]:
             pass
 
     def score(path: pathlib.Path):
-        db = path / "cookies.sqlite"
-        try:
-            return db.stat().st_mtime
-        except Exception:
-            return 0
+        # v304: Session-Cookies werden von Firefox häufig nicht in cookies.sqlite
+        # geschrieben. Das aktive Profil erkennt man zuverlässiger an der neuesten
+        # Session-Restore-Datei (recovery.jsonlz4).
+        mtimes = []
+        for candidate in (
+            path / "cookies.sqlite",
+            path / "sessionstore-backups" / "recovery.jsonlz4",
+            path / "sessionstore-backups" / "recovery.baklz4",
+            path / "sessionstore.jsonlz4",
+        ):
+            try:
+                mtimes.append(candidate.stat().st_mtime)
+            except Exception:
+                pass
+        return max(mtimes, default=0)
     found.sort(key=score, reverse=True)
     return found
 
+
+
+def _lz4_block_decompress_with_size(data: bytes) -> bytes:
+    """Kleiner, dependency-freier Decoder für Mozillas LZ4-Blockformat.
+
+    Nach dem 8-Byte-Header ``mozLz40\0`` folgen vier Bytes mit der
+    unkomprimierten Länge und anschließend ein normaler LZ4-Block. Die App darf
+    sich nicht darauf verlassen, dass beim Benutzer das optionale Python-Paket
+    ``lz4`` installiert ist.
+    """
+    if len(data) < 4:
+        raise ValueError("LZ4-Block ist zu kurz.")
+    expected = struct.unpack_from("<I", data, 0)[0]
+    src = memoryview(data)[4:]
+    out = bytearray()
+    i = 0
+    n = len(src)
+    while i < n:
+        token = int(src[i]); i += 1
+        literal_len = token >> 4
+        if literal_len == 15:
+            while True:
+                if i >= n: raise ValueError("Ungültige LZ4-Literallänge.")
+                value = int(src[i]); i += 1
+                literal_len += value
+                if value != 255: break
+        if i + literal_len > n:
+            raise ValueError("LZ4-Literale überschreiten den Eingabeblock.")
+        out.extend(src[i:i + literal_len])
+        i += literal_len
+        if i >= n:
+            break
+        if i + 2 > n:
+            raise ValueError("LZ4-Match-Offset fehlt.")
+        offset = int(src[i]) | (int(src[i + 1]) << 8)
+        i += 2
+        if offset <= 0 or offset > len(out):
+            raise ValueError("Ungültiger LZ4-Match-Offset.")
+        match_len = token & 0x0F
+        if match_len == 15:
+            while True:
+                if i >= n: raise ValueError("Ungültige LZ4-Matchlänge.")
+                value = int(src[i]); i += 1
+                match_len += value
+                if value != 255: break
+        match_len += 4
+        start = len(out) - offset
+        for _ in range(match_len):
+            out.append(out[start])
+            start += 1
+    if expected and len(out) != expected:
+        raise ValueError(f"LZ4-Länge stimmt nicht ({len(out)} statt {expected}).")
+    return bytes(out)
+
+
+def _read_mozlz4_json(path: pathlib.Path):
+    raw = path.read_bytes()
+    magic = b"mozLz40\x00"
+    if not raw.startswith(magic):
+        raise ValueError("Kein Firefox-JSONLZ4-Format.")
+    decoded = _lz4_block_decompress_with_size(raw[len(magic):])
+    return json.loads(decoded.decode("utf-8"))
+
+
+def _firefox_sessionstore_cookie_rows(profile_dir: pathlib.Path) -> tuple[list[dict], dict]:
+    """Liest nur die education.lu-Cookies aus Firefox' Session-Restore-Datei.
+
+    Firefox hält echte Session-Cookies im Arbeitsspeicher; sie fehlen daher oft
+    in cookies.sqlite. recovery.jsonlz4 enthält diese Cookies für die
+    Sitzungswiederherstellung und wird während des Browsens regelmäßig erneuert.
+    Alle anderen Sessiondaten werden unmittelbar verworfen.
+    """
+    paths = [
+        profile_dir / "sessionstore-backups" / "recovery.jsonlz4",
+        profile_dir / "sessionstore-backups" / "recovery.baklz4",
+        profile_dir / "sessionstore.jsonlz4",
+    ]
+    existing = []
+    for path in paths:
+        try:
+            existing.append((path.stat().st_mtime, path))
+        except Exception:
+            pass
+    existing.sort(reverse=True)
+    last_error = ""
+    for mtime, path in existing:
+        try:
+            try:
+                size = path.stat().st_size
+            except Exception:
+                size = -1
+            cached = FIREFOX_SESSIONSTORE_CACHE.get(str(path))
+            if cached and cached[0] == mtime and cached[1] == size:
+                return [dict(r) for r in cached[2]], dict(cached[3])
+            data = _read_mozlz4_json(path)
+            raw_cookies = data.get("cookies") if isinstance(data, dict) else None
+            if not isinstance(raw_cookies, list):
+                raw_cookies = []
+            rows = []
+            for cookie in raw_cookies:
+                if not isinstance(cookie, dict):
+                    continue
+                host = str(cookie.get("host") or "")
+                normalized = host.lower().lstrip(".")
+                if not (normalized == "education.lu" or normalized.endswith(".education.lu")):
+                    continue
+                name = str(cookie.get("name") or "")
+                value = str(cookie.get("value") or "")
+                if not name:
+                    continue
+                origin = cookie.get("originAttributes") or {}
+                rows.append({
+                    "name": name,
+                    "value": value,
+                    "domain": host,
+                    "path": str(cookie.get("path") or "/"),
+                    "expiry": int(cookie.get("expiry") or 0),
+                    "lastAccessed": int(mtime * 1_000_000),
+                    "creationTime": int(mtime * 1_000_000),
+                    "originAttributes": origin,
+                    "source": "sessionstore",
+                })
+            meta = {
+                "file": str(path),
+                "mtime": mtime,
+                "ageSeconds": max(0.0, time.time() - mtime),
+                "cookieCount": len(rows),
+                "error": "",
+            }
+            FIREFOX_SESSIONSTORE_CACHE[str(path)] = (mtime, size, [dict(r) for r in rows], dict(meta))
+            return rows, meta
+        except Exception as exc:
+            last_error = str(exc)
+    return [], {"file": "", "mtime": 0, "ageSeconds": None, "cookieCount": 0, "error": last_error}
+
+
+def _origin_attr_key(value) -> str:
+    if isinstance(value, dict):
+        try:
+            return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+        except Exception:
+            return str(value)
+    return str(value or "")
+
+
+def _is_default_firefox_context(value) -> bool:
+    if not value:
+        return True
+    if isinstance(value, dict):
+        return not any(value.get(k) for k in ("userContextId", "privateBrowsingId", "partitionKey", "firstPartyDomain"))
+    text = str(value)
+    return not any(marker in text for marker in ("userContextId=", "privateBrowsingId=", "partitionKey=", "firstPartyDomain="))
+
+
+def _cookie_applies_to_ssl_ebichelchen(row: dict) -> bool:
+    target_host = "ssl.education.lu"
+    target_path = "/ebichelchen/app/api/"
+    domain = str(row.get("domain") or "").lower().lstrip(".")
+    if not domain or not (target_host == domain or target_host.endswith("." + domain)):
+        return False
+    cookie_path = str(row.get("path") or "/")
+    return target_path.startswith(cookie_path.rstrip("/") + "/") or target_path == cookie_path or cookie_path == "/"
 
 def _query_firefox_cookie_db(db_path: pathlib.Path) -> list[dict]:
     sql = """
@@ -1175,44 +1348,84 @@ def _query_firefox_cookie_db(db_path: pathlib.Path) -> list[dict]:
 
 
 def capture_firefox_session() -> dict:
-    """Liest ausschließlich Cookies der Domain education.lu aus dem aktuellen
-    Firefox-Profil. Andere Browserdaten werden weder gelesen noch gespeichert."""
+    """Erfasst ausschließlich die für ssl.education.lu relevanten Cookies.
+
+    v303 las nur ``cookies.sqlite``. Das ist bei Firefox unzuverlässig, weil
+    Session-Cookies dort während eines laufenden Browsers oft überhaupt nicht
+    erscheinen. v304 kombiniert deshalb persistente Cookies mit den
+    Session-Cookies aus ``recovery.jsonlz4``.
+    """
     now = int(time.time())
     candidates = []
+    diagnostics = []
     for profile_dir in _firefox_profile_dirs():
+        persistent = []
         db = profile_dir / "cookies.sqlite"
-        if not db.exists():
-            continue
-        rows = _query_firefox_cookie_db(db)
-        valid = [r for r in rows if r.get("name") and (not r.get("expiry") or int(r.get("expiry") or 0) > now)]
-        if valid:
-            newest = max(int(r.get("lastAccessed") or 0) for r in valid)
-            candidates.append((newest, profile_dir, valid))
+        if db.exists():
+            persistent = _query_firefox_cookie_db(db)
+            persistent = [r for r in persistent if r.get("name") and (not r.get("expiry") or int(r.get("expiry") or 0) > now)]
+            for row in persistent:
+                row.setdefault("source", "cookies.sqlite")
+        session_rows, session_meta = _firefox_sessionstore_cookie_rows(profile_dir)
+        rows = persistent + session_rows
+        applicable = [r for r in rows if _cookie_applies_to_ssl_ebichelchen(r)]
+        diagnostics.append({
+            "profile": str(profile_dir),
+            "persistent": len(persistent),
+            "session": len(session_rows),
+            "applicable": len(applicable),
+            "sessionFile": session_meta.get("file"),
+            "sessionFileAgeSeconds": session_meta.get("ageSeconds"),
+            "sessionError": session_meta.get("error"),
+        })
+        if applicable:
+            newest = max([int(r.get("lastAccessed") or 0) for r in applicable] + [int((session_meta.get("mtime") or 0) * 1_000_000)])
+            candidates.append((newest, profile_dir, applicable, session_meta))
     if not candidates:
-        raise RuntimeError("Noch keine e-Bichelchen-Sitzung im aktuellen Firefox gefunden. Bitte Login abschließen.")
+        raise RuntimeError("Noch keine verwendbare e-Bichelchen-Sitzung in Firefox gefunden. Bitte Login abschließen; Firefox kann die Sitzung mit kurzer Verzögerung speichern.")
 
-    _, profile_dir, rows = max(candidates, key=lambda item: item[0])
-    # Standard-Container bevorzugen. Firefox Total Cookie Protection kann zusätzliche
-    # partitionierte Kopien anlegen; die normale Top-Level-Anmeldung hat leere Attribute.
-    plain = [r for r in rows if not r.get("originAttributes")]
-    use_rows = plain or rows
-    use_rows.sort(key=lambda r: (int(r.get("lastAccessed") or 0), int(r.get("creationTime") or 0)))
-    cookies: dict[str, str] = {}
-    for row in use_rows:
-        cookies[row["name"]] = row["value"]
-    if not cookies:
+    _, profile_dir, rows, session_meta = max(candidates, key=lambda item: item[0])
+
+    # Der von EntretienConnect geöffnete Tab läuft normalerweise im Standard-Container.
+    # Partitionierte/Container-Cookies nur verwenden, wenn keine Standardkopie existiert.
+    default_rows = [r for r in rows if _is_default_firefox_context(r.get("originAttributes"))]
+    use_rows = default_rows or rows
+
+    # Gleiche Cookies aus cookies.sqlite und recovery.jsonlz4 zusammenführen. Die
+    # Session-Restore-Kopie gewinnt, da sie die aktuelle Login-Sitzung enthält.
+    merged: dict[tuple, dict] = {}
+    for row in sorted(use_rows, key=lambda r: (0 if r.get("source") == "cookies.sqlite" else 1, int(r.get("lastAccessed") or 0))):
+        key = (
+            str(row.get("name") or ""),
+            str(row.get("domain") or "").lower(),
+            str(row.get("path") or "/"),
+            _origin_attr_key(row.get("originAttributes")),
+        )
+        merged[key] = row
+    final_rows = list(merged.values())
+    final_rows.sort(key=lambda r: (-len(str(r.get("path") or "/")), str(r.get("name") or "")))
+    cookie_header = "; ".join(f"{r['name']}={r.get('value','')}" for r in final_rows if r.get("name"))
+    if not cookie_header:
         raise RuntimeError("Keine verwendbaren education.lu-Cookies in Firefox gefunden.")
+
     ua = ACTIVE_BROWSER_USER_AGENT or "Mozilla/5.0 (Macintosh; Intel Mac OS X) Gecko/20100101 Firefox"
+    source_counts = {
+        "sessionstore": sum(1 for r in final_rows if r.get("source") == "sessionstore"),
+        "cookiesSqlite": sum(1 for r in final_rows if r.get("source") == "cookies.sqlite"),
+    }
     return {
-        "cookieHeader": "; ".join(f"{k}={v}" for k, v in cookies.items()),
-        "cookieNames": sorted(cookies),
+        "cookieHeader": cookie_header,
+        "cookieNames": sorted({str(r.get("name")) for r in final_rows if r.get("name")}),
+        "cookieSources": source_counts,
         "userAgent": ua,
         "capturedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
         "targetUrl": EB_URL,
         "browser": "firefox-current",
         "profileDir": str(profile_dir),
+        "sessionStoreFile": session_meta.get("file") or "",
+        "sessionStoreAgeSeconds": session_meta.get("ageSeconds"),
+        "profileDiagnostics": diagnostics,
     }
-
 
 def _session_request(session: dict, method: str, path: str, json_body=None, timeout: float = 5.0) -> dict:
     url = path if str(path).startswith("http") else "https://ssl.education.lu" + str(path)
@@ -1430,7 +1643,15 @@ def firefox_check_login_ready() -> dict:
                 LATEST_SESSION = session
                 LATEST_SESSION_AT = session.get("capturedAt")
             return {"ok": True, "ready": True, "browserClosed": False, "stage": "ready", "groupCount": len(groups), "status": result.get("status"), "via": "firefox-cookie-api", "lightweight": True}
-        return {"ok": True, "ready": False, "browserClosed": False, "stage": "login", "status": result.get("status"), "lightweight": True}
+        cookie_sources = session.get("cookieSources") or {}
+        stage = "session-sync" if sum(int(v or 0) for v in cookie_sources.values()) > 0 else "login"
+        return {
+            "ok": True, "ready": False, "browserClosed": False, "stage": stage,
+            "status": result.get("status"), "via": "firefox-session-api",
+            "cookieSources": cookie_sources,
+            "sessionStoreAgeSeconds": session.get("sessionStoreAgeSeconds"),
+            "lightweight": True,
+        }
     except Exception as exc:
         return {"ok": True, "ready": False, "browserClosed": False, "stage": "login", "detail": str(exc), "lightweight": True}
 
