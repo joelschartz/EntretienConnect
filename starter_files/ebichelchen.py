@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.25 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.26 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -193,13 +193,19 @@ def open_remote_tab(url: str) -> bool:
 
 
 def _activate_browser_app(browser_name: str) -> bool:
-    """Bringt das isolierte Login-Fenster sichtbar nach vorne, ohne eine Seite zu wechseln."""
+    """Best-effort OS activation without changing the e-Bichelchen route.
+
+    v300 (macOS): do *not* call ``open -a Google Chrome`` here. EntretienConnect
+    usually runs in the user's normal Chrome instance while e-Bichelchen runs in a
+    second isolated Chrome process. ``open -a`` activates the bundle, not that exact
+    process, and therefore often brings the EntretienConnect window back to the
+    foreground immediately after the white helper window appears. The isolated
+    window is focused through its concrete CDP target instead.
+    """
     system = platform.system().lower()
     try:
         if system == "darwin":
-            # `open -a` aktiviert die Anwendung ohne den Browser per AppleScript zu steuern.
-            subprocess.run(["open", "-a", browser_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
-            return True
+            return False
         if system == "windows":
             # Beim Python-Starter reicht normalerweise der neue Browserprozess; der
             # Windows-PowerShell-Starter besitzt zusätzlich eine stärkere user32-Fokussierung.
@@ -207,6 +213,29 @@ def _activate_browser_app(browser_name: str) -> bool:
     except Exception:
         pass
     return False
+
+
+def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0) -> dict:
+    """Activate the exact isolated e-Bichelchen tab/window via DevTools.
+
+    This is deliberately target-specific. It never opens or activates the user's
+    normal Chrome window and it never navigates to calendar/pinboard.
+    """
+    deadline = time.time() + max(0.2, float(wait_s))
+    last_error = ""
+    while time.time() < deadline:
+        try:
+            target = find_ebichelchen_target()
+            _cdp_set_window_state(target, "normal")
+            cdp_call(target.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=912, timeout=2)
+            # On Windows this remains a harmless best-effort activation. On macOS
+            # Page.bringToFront is intentionally the only activation mechanism.
+            os_active = _activate_browser_app(browser_name)
+            return {"focused": True, "method": "cdp", "targetId": target.get("id"), "url": target.get("url"), "osActive": os_active}
+        except Exception as exc:
+            last_error = str(exc)
+            time.sleep(0.10)
+    return {"focused": False, "method": "cdp", "error": last_error or "Target not ready"}
 
 def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     browser = find_browser_executable(preferred_browser)
@@ -239,13 +268,8 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
         except Exception:
             existing = None
         if existing:
-            _cdp_set_window_state(existing, "normal")
-            try:
-                cdp_call(existing.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=912)
-            except Exception:
-                pass
-            active = _activate_browser_app(browser_name)
-            return {"alreadyRunning": True, "reusedTab": True, "openedTab": False, "active": active, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=1.0)
+            return {"alreadyRunning": True, "reusedTab": True, "openedTab": False, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
 
         # v299: Eine verwaiste IAM-/Zwischenseite aus einem abgebrochenen Login
         # nicht neben einem neuen e-Bichelchen-Fenster stehen lassen. Der Browser am
@@ -271,8 +295,8 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
                 break
             time.sleep(0.25)
         if opened:
-            active = _activate_browser_app(browser_name)
-            return {"alreadyRunning": True, "openedTab": True, "active": active, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=2.5)
+            return {"alreadyRunning": True, "openedTab": True, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
         # Fallback: URL über den Browser-Prozess an die bereits laufende Instanz geben.
         # Chrome/Edge leitet dies normalerweise an dieselbe Profilinstanz weiter.
         try:
@@ -281,8 +305,8 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
             pass
         for _ in range(16):
             if open_remote_tab(EB_URL):
-                active = _activate_browser_app(browser_name)
-                return {"alreadyRunning": True, "openedTab": True, "active": active, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+                focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=2.5)
+                return {"alreadyRunning": True, "openedTab": True, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
             time.sleep(0.25)
         raise RuntimeError("Le navigateur est ouvert, mais l’onglet e-Bichelchen n’a pas pu être créé. Réessayez une fois.")
     except RuntimeError:
@@ -309,8 +333,8 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     for _ in range(48):
         try:
             version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=0.5)
-            active = _activate_browser_app(browser_name)
-            return {"alreadyRunning": False, "active": active, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=3.0)
+            return {"alreadyRunning": False, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
         except Exception:
             if proc.poll() is not None:
                 raise RuntimeError(f"{browser_name} s’est fermé avant l’ouverture de la fenêtre e-Bichelchen.")
@@ -845,7 +869,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   } : null;
 
   const payload = {
-    version: "1.10.25",
+    version: "1.10.26",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
