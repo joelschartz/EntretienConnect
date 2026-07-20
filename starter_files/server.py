@@ -1293,6 +1293,7 @@ HELPER_ALLOWED_TARGETS = {
     "EntretienConnect-eb.ps1",
     "EntretienConnect-Start.bat",
     "EntretienConnect-Start-Hidden.bat",
+    "EntretienConnect-WKWebView.js",
     "cacert.pem",
     "VERSION.txt",
 }

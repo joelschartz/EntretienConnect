@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.31 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.32 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -1008,7 +1008,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   } : null;
 
   const payload = {
-    version: "1.10.26",
+    version: "1.10.32",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -3580,7 +3580,7 @@ def _read_direct_with_session(session: dict, selected_group_id: int) -> dict:
     if not message_subject:
         raise RuntimeError("Die Kategorie « Nachricht / Message » konnte für die gewählte Klasse nicht gelesen werden.")
     return {
-        "version": "1.10.31",
+        "version": "1.10.32",
         "importedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "pageUrl": EB_URL,
         "groups": groups,
@@ -3664,7 +3664,7 @@ def read_from_firefox_bidi(selected_group_id: int | None = None) -> dict:
             ),
         }
     )
-    payload["version"] = "1.10.31"
+    payload["version"] = "1.10.32"
     payload["pageUrl"] = url
     return payload
 
@@ -3755,3 +3755,352 @@ def reset_login_session(profile: str = "default", preserve_profile: bool = False
         }
     return _reset_login_legacy_v304(profile, preserve_profile)
 
+
+# ===================================================================
+# v307 – native macOS login window (WKWebView / Safari WebKit)
+# -------------------------------------------------------------------
+# The main EntretienConnect UI remains in the user's default browser.
+# On macOS, e-Bichelchen is opened in a small native WKWebView window,
+# so Google Chrome, Microsoft Edge and remotely controlled Firefox are
+# no longer required. The native window exports only education.lu
+# cookies and the already parsed class payload to this local helper.
+# Windows keeps the proven v306 Chromium/WebView path for now.
+# ===================================================================
+
+_launch_browser_v306 = launch_browser
+_check_login_ready_v306 = check_login_ready
+_read_browser_and_store_v306 = read_browser_and_store
+_debug_browser_running_v306 = debug_browser_running
+_focus_app_tab_v306 = focus_app_tab
+_close_ebichelchen_target_v306 = close_ebichelchen_target
+_force_close_launched_browser_v306 = force_close_launched_browser
+_soft_reset_login_v306 = soft_reset_login
+_reset_login_session_v306 = reset_login_session
+
+MAC_WK_STATE_FILE = DATA_ROOT / "native-wkwebview-state.json"
+MAC_WK_EXPRESSION_FILE = DATA_ROOT / "native-wkwebview-read.js"
+MAC_WK_SCRIPT_FILE = ROOT / "EntretienConnect-WKWebView.js"
+MAC_WK_PROCESS: subprocess.Popen | None = None
+MAC_WK_LOCK = threading.RLock()
+
+
+def _mac_wk_read_state() -> dict:
+    try:
+        if not MAC_WK_STATE_FILE.exists():
+            return {}
+        raw = MAC_WK_STATE_FILE.read_text(encoding="utf-8")
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _mac_wk_write_state(data: dict) -> None:
+    try:
+        MAC_WK_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = MAC_WK_STATE_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data or {}, ensure_ascii=False), encoding="utf-8")
+        os.replace(str(tmp), str(MAC_WK_STATE_FILE))
+    except Exception:
+        pass
+
+
+def _mac_wk_process_alive() -> bool:
+    with MAC_WK_LOCK:
+        return bool(MAC_WK_PROCESS and MAC_WK_PROCESS.poll() is None)
+
+
+def _mac_wk_terminate(mark_closed: bool = False) -> dict:
+    global MAC_WK_PROCESS
+    result = {"closed": False, "method": "macos-wkwebview", "alreadyClosed": False}
+    with MAC_WK_LOCK:
+        proc = MAC_WK_PROCESS
+        if proc and proc.poll() is None:
+            try:
+                proc.terminate()
+                proc.wait(timeout=3)
+                result["closed"] = True
+            except Exception:
+                try:
+                    proc.kill()
+                    result["closed"] = True
+                except Exception as exc:
+                    result["error"] = str(exc)
+        else:
+            result["alreadyClosed"] = True
+        MAC_WK_PROCESS = None
+    if mark_closed:
+        state = _mac_wk_read_state()
+        if str(state.get("status") or "") != "ready":
+            _mac_wk_write_state({"status": "closed", "engine": "WKWebView"})
+    return result
+
+
+def _mac_wk_launch(profile: str = "default", user_agent: str = "") -> dict:
+    global MAC_WK_PROCESS, ACTIVE_BROWSER_MODE, ACTIVE_BROWSER_USER_AGENT
+    if platform.system().lower() != "darwin":
+        raise RuntimeError("WKWebView ist nur auf macOS verfügbar.")
+    if not MAC_WK_SCRIPT_FILE.exists():
+        raise RuntimeError(
+            "Das interne WKWebView-Loginmodul fehlt. Bitte den Starter vollständig neu entpacken."
+        )
+    if not pathlib.Path("/usr/bin/osascript").exists():
+        raise RuntimeError("Die macOS-Systemkomponente osascript wurde nicht gefunden.")
+
+    _mac_wk_terminate(mark_closed=False)
+    try:
+        MAC_WK_STATE_FILE.unlink(missing_ok=True)
+    except TypeError:  # Python < 3.8 compatibility
+        try:
+            if MAC_WK_STATE_FILE.exists():
+                MAC_WK_STATE_FILE.unlink()
+        except Exception:
+            pass
+    MAC_WK_EXPRESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+    MAC_WK_EXPRESSION_FILE.write_text(build_read_expression(None), encoding="utf-8")
+    _mac_wk_write_state({
+        "status": "starting",
+        "engine": "WKWebView",
+        "startedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
+    })
+
+    args = [
+        "/usr/bin/osascript",
+        "-l", "JavaScript",
+        str(MAC_WK_SCRIPT_FILE),
+        str(MAC_WK_STATE_FILE),
+        str(MAC_WK_EXPRESSION_FILE),
+        EB_URL,
+    ]
+    env = os.environ.copy()
+    env.setdefault("LANG", "en_US.UTF-8")
+    with MAC_WK_LOCK:
+        MAC_WK_PROCESS = subprocess.Popen(
+            args,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=env,
+        )
+    ACTIVE_BROWSER_MODE = "mac-wkwebview"
+    ACTIVE_BROWSER_USER_AGENT = user_agent or "Mozilla/5.0 (Macintosh) AppleWebKit WKWebView"
+    return {
+        "alreadyRunning": False,
+        "openedWindow": True,
+        "active": True,
+        "sameBrowser": False,
+        "browser": "macOS WKWebView",
+        "browserId": "mac-wkwebview",
+        "systemEngine": True,
+        "requiresInstalledBrowser": False,
+        "url": EB_URL,
+        "profile": sanitize_profile_name(profile),
+    }
+
+
+def _mac_wk_state_session(state: dict) -> dict:
+    session = state.get("session") if isinstance(state, dict) else None
+    if not isinstance(session, dict) or not session.get("cookieHeader"):
+        raise RuntimeError(
+            "Die WKWebView-Sitzung ist noch nicht verfügbar. Bitte die Anmeldung vollständig abschließen."
+        )
+    return dict(session)
+
+
+def _mac_wk_read_payload(selected_group_id: int | None = None) -> dict:
+    global LATEST_SESSION, LATEST_SESSION_AT
+    state = _mac_wk_read_state()
+
+    # After the first successful transfer the disk state is deleted for security.
+    # A later class choice therefore uses the in-memory session captured during
+    # that first transfer instead of reopening the native login window.
+    session = None
+    if selected_group_id is not None:
+        with LOCK:
+            if isinstance(LATEST_SESSION, dict) and LATEST_SESSION.get("cookieHeader"):
+                session = dict(LATEST_SESSION)
+    if session is None:
+        if str(state.get("status") or "") != "ready":
+            detail = state.get("error") or state.get("detail") or "Anmeldung noch nicht abgeschlossen."
+            raise RuntimeError(str(detail))
+        session = _mac_wk_state_session(state)
+        with LOCK:
+            LATEST_SESSION = session
+            LATEST_SESSION_AT = session.get("capturedAt") or time.strftime("%Y-%m-%d %H:%M:%S")
+
+    if selected_group_id is not None:
+        payload = _read_direct_with_session(session, int(selected_group_id))
+        payload.setdefault("source", {})
+        payload["source"].update({
+            "browser": "macos-wkwebview-direct",
+            "engine": "WKWebView",
+            "selectionAuthority": "EntretienConnect",
+            "requiresInstalledBrowser": False,
+        })
+        payload["version"] = "1.10.32"
+        return payload
+
+    payload = state.get("data")
+    if not isinstance(payload, dict):
+        raise RuntimeError("WKWebView hat keine gültigen e-Bichelchen-Daten zurückgegeben.")
+    payload = json.loads(json.dumps(payload, ensure_ascii=False))
+    payload.setdefault("source", {})
+    payload["source"].update({
+        "browser": "macos-wkwebview",
+        "engine": "WKWebView",
+        "sessionCaptured": True,
+        "sessionCookieNames": session.get("cookieNames", []),
+        "selectionAuthority": "EntretienConnect",
+        "requiresInstalledBrowser": False,
+    })
+    payload["version"] = "1.10.32"
+    return payload
+
+
+def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: str = "") -> dict:
+    if platform.system().lower() == "darwin":
+        return _mac_wk_launch(profile, user_agent)
+    return _launch_browser_v306(profile, preferred_browser, user_agent)
+
+
+def debug_browser_running() -> bool:
+    if ACTIVE_BROWSER_MODE == "mac-wkwebview":
+        state = _mac_wk_read_state()
+        # A completed native login is still readable even though its window has
+        # already closed. This prevents /read-browser?quiet=1 from reporting a
+        # false "browserClosed" between login and data transfer.
+        return _mac_wk_process_alive() or str(state.get("status") or "") == "ready"
+    return _debug_browser_running_v306()
+
+
+def check_login_ready() -> dict:
+    if ACTIVE_BROWSER_MODE != "mac-wkwebview":
+        return _check_login_ready_v306()
+    state = _mac_wk_read_state()
+    status = str(state.get("status") or "starting")
+    if status == "ready":
+        data = state.get("data") if isinstance(state.get("data"), dict) else {}
+        groups = data.get("groups") if isinstance(data, dict) else []
+        return {
+            "ok": True,
+            "ready": True,
+            "browserClosed": False,
+            "stage": "ready",
+            "groupCount": len(groups or []),
+            "pageUrl": state.get("pageUrl") or EB_URL,
+            "via": "macos-wkwebview",
+            "lightweight": True,
+        }
+    if status == "error":
+        return {
+            "ok": True,
+            "ready": False,
+            "browserClosed": True,
+            "stage": "error",
+            "detail": state.get("error") or state.get("detail") or "WKWebView error",
+            "lightweight": True,
+        }
+    if status == "closed" or not _mac_wk_process_alive():
+        return {
+            "ok": True,
+            "ready": False,
+            "browserClosed": True,
+            "stage": "closed",
+            "detail": state.get("detail") or state.get("message") or "Das native Loginfenster wurde beendet.",
+            "lightweight": True,
+        }
+    return {
+        "ok": True,
+        "ready": False,
+        "browserClosed": False,
+        "stage": state.get("stage") or "login",
+        "pageUrl": state.get("pageUrl") or EB_URL,
+        "detail": state.get("detail") or state.get("message") or "",
+        "via": "macos-wkwebview",
+        "lightweight": True,
+    }
+
+
+def read_browser_and_store(selected_group_id=None) -> dict:
+    global LATEST_DATA, LATEST_AT
+    if ACTIVE_BROWSER_MODE != "mac-wkwebview":
+        return _read_browser_and_store_v306(selected_group_id)
+    if not READ_BROWSER_LOCK.acquire(blocking=False):
+        raise RuntimeError("Lecture déjà en cours – merci de patienter.")
+    try:
+        payload = _mac_wk_read_payload(selected_group_id)
+    finally:
+        READ_BROWSER_LOCK.release()
+    with LOCK:
+        LATEST_DATA = payload
+        LATEST_AT = time.strftime("%Y-%m-%d %H:%M:%S")
+    return payload
+
+
+def focus_app_tab() -> dict:
+    if ACTIVE_BROWSER_MODE == "mac-wkwebview":
+        # The native window is placed in front of the standard browser. Once it
+        # closes, the user's original EntretienConnect window is revealed again.
+        # Avoid AppleScript browser automation permission prompts.
+        return {"method": "native-window-closed", "foundExistingTab": True, "openedNewTab": False}
+    return _focus_app_tab_v306()
+
+
+def close_ebichelchen_target() -> dict:
+    if ACTIVE_BROWSER_MODE == "mac-wkwebview":
+        result = _mac_wk_terminate(mark_closed=False)
+        # The authenticated cookie header is now held only in process memory.
+        # Remove the short-lived transfer file as soon as the UI has read it.
+        with LOCK:
+            have_session = bool(isinstance(LATEST_SESSION, dict) and LATEST_SESSION.get("cookieHeader"))
+        if have_session:
+            try:
+                MAC_WK_STATE_FILE.unlink(missing_ok=True)
+                result["transferFileRemoved"] = True
+            except Exception:
+                result["transferFileRemoved"] = False
+        return result
+    return _close_ebichelchen_target_v306()
+
+
+def force_close_launched_browser(force: bool = False) -> dict:
+    if ACTIVE_BROWSER_MODE == "mac-wkwebview" or _mac_wk_process_alive():
+        return _mac_wk_terminate(mark_closed=False)
+    return _force_close_launched_browser_v306(force=force)
+
+
+def soft_reset_login() -> dict:
+    global LATEST_SESSION, LATEST_SESSION_AT
+    if ACTIVE_BROWSER_MODE == "mac-wkwebview" or platform.system().lower() == "darwin":
+        closed = _mac_wk_terminate(mark_closed=True)
+        clear_current()
+        with LOCK:
+            LATEST_SESSION = None
+            LATEST_SESSION_AT = None
+        try:
+            MAC_WK_STATE_FILE.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return {
+            "softReset": True,
+            "browserRunning": False,
+            "cookiesCleared": False,
+            "closedEbichelchen": closed,
+            "profilePreserved": True,
+            "engine": "WKWebView",
+        }
+    return _soft_reset_login_v306()
+
+
+def reset_login_session(profile: str = "default", preserve_profile: bool = False) -> dict:
+    if ACTIVE_BROWSER_MODE == "mac-wkwebview" or platform.system().lower() == "darwin":
+        info = soft_reset_login()
+        return {
+            "closed": bool((info.get("closedEbichelchen") or {}).get("closed")),
+            "profilesRemoved": [],
+            "sessionDataRemoved": [],
+            "cookiesCleared": False,
+            "profilePreserved": True,
+            "browserRunning": False,
+            "engine": "WKWebView",
+        }
+    return _reset_login_session_v306(profile, preserve_profile)
