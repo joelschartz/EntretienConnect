@@ -701,7 +701,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -1618,10 +1618,21 @@ def main():
                     eb.force_close_launched_browser(force=True)
             except Exception:
                 pass
-        # v303: Die App bleibt im vom Benutzer gewählten Standardbrowser. In Firefox
-        # öffnet e-Bichelchen als normaler zweiter Tab; der lokale Helfer liest danach
-        # ausschließlich die education.lu-Sitzung aus dem lokalen Firefox-Profil.
-        threading.Timer(0.6, lambda: _open_in_browser(url)).start()
+        # v305: App und e-Bichelchen laufen in genau EINER kontrollierten Firefox-
+        # Instanz. Der App-Tab wird beim Start angelegt; « Connecter » öffnet später
+        # lediglich einen zweiten Tab im selben Fenster. Kein Chrome und kein
+        # paralleler Standardbrowser-Tab.
+        def _launch_v305_firefox():
+            try:
+                if not EB_AVAILABLE:
+                    raise RuntimeError("Module e-Bichelchen indisponible")
+                eb.launch_firefox_app(url, profile="default")
+            except Exception as exc:
+                print("Firefox-BiDi-Start fehlgeschlagen:", exc)
+                # Nur die Oberfläche als Fallback öffnen; der Connect-Aufruf bleibt
+                # trotzdem auf Firefox-BiDi festgelegt und startet niemals Chrome parallel.
+                _open_in_browser(url)
+        threading.Timer(0.45, _launch_v305_firefox).start()
         def _watchdog():
             global last_heartbeat_time
             last_tick = time.time()

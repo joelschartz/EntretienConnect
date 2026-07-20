@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v304</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v305</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 304;
+const APP_VERSION = 305;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6775,7 +6775,7 @@ function ebScheduleAuto(delay){
   ebAutoTimer=setTimeout(()=>{ ebAutoTimer=null; ebAutoAttempt(); },ms);
 }
 function ebResetAfterClosedBrowser(){
-  if(ebSameBrowserMode || ebSameBrowserPopup) ebCloseSameBrowserPopup();
+  if(ebSameBrowserPopup) ebCloseSameBrowserPopup();
   // v287: si l’utilisateur ferme la fenêtre de connexion avant la fin, revenir
   // immédiatement à un état réessayable au lieu de rester bloqué sur « Connexion en cours ».
   ebStopAuto();
@@ -6806,11 +6806,11 @@ document.addEventListener("click", function(ev){
   if(c){ ev.preventDefault(); ev.stopPropagation(); ebCancelPending(); }
 }, true);
 async function ebFocusAppForGroupChoice(){
-  // v303: Der von dieser Seite geöffnete Firefox-Tab kann direkt geschlossen werden.
-  // Die weitere Klassenwahl erfolgt nur in EntretienConnect und braucht den Tab nicht mehr.
-  if(ebSameBrowserMode){ ebCloseSameBrowserPopup(); return; }
+  // v305: Sobald die Klassenliste gelesen ist, wird der Login-Tab geschlossen.
+  // Die konkrete Klasse wird danach ausschließlich in EntretienConnect gewählt;
+  // die zweite Lesung nutzt die bereits sicher gespeicherte Sitzung.
   try{
-    await fetch("/api/eb/focus-app",{cache:"no-store"});
+    await fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"});
   }catch(e){ /* best-effort */ }
 }
 async function ebCleanupAfterSuccessfulRead(){
@@ -6842,23 +6842,13 @@ async function ebConnectFlow(){
   state.ebichelchenSelectedGroupId="";
   state.ebichelchenMap=state.ebichelchenMap||{};
 
-  // v303: Im normalen Firefox wird der Login synchron aus dem Klick heraus geöffnet.
-  // Dadurch nutzt er garantiert denselben bereits laufenden Browser und erscheint sofort.
-  const _browserPref=ebBrowserPref();
-  ebSameBrowserMode=(_browserPref==="firefox-current");
+  // v305: EntretienConnect läuft bereits in einer kontrollierten Firefox-Instanz.
+  // WebDriver BiDi legt den zweiten Tab im selben Fenster an, liest die Live-Sitzung
+  // direkt dort und kann den Tab danach zuverlässig schließen.
+  const _caps=await graphCapabilities();
+  const _browserPref=(_caps&&_caps.firefoxBidi) ? "firefox-bidi" : ebBrowserPref();
+  ebSameBrowserMode=false;
   ebSameBrowserPopup=null;
-  if(ebSameBrowserMode){
-    try{
-      ebSameBrowserPopup=window.open(EB_LOGIN_URL,"_blank");
-      if(!ebSameBrowserPopup) throw new Error("Firefox a bloqué le nouvel onglet.");
-      try{ ebSameBrowserPopup.focus(); }catch(_){ }
-    }catch(e){
-      ebConnectBusy=false; ebLoginPending=false; ebSameBrowserMode=false;
-      renderSetup();
-      setEbStatus("Impossible d’ouvrir l’onglet e-Bichelchen : "+esc(e.message||e),"err");
-      return;
-    }
-  }
   saveState();
 
   try{
@@ -6866,8 +6856,8 @@ async function ebConnectFlow(){
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebConnectBusy=false;
     renderSetup();
-    const msg=ebSameBrowserMode
-      ? "L’onglet e-Bichelchen est ouvert dans ce Firefox. Terminez la connexion dans cet onglet."
+    const msg=(j.info&&j.info.sameBrowser)
+      ? "L’onglet e-Bichelchen est actif dans ce Firefox. Terminez la connexion dans cet onglet."
       : "La fenêtre e-Bichelchen est ouverte. Terminez la connexion.";
     setEbStatus(ebWaitingStatusHtml(msg),"info");
     ebAutoStart=Date.now();
@@ -6875,7 +6865,7 @@ async function ebConnectFlow(){
     // Die teure Klassen-/Schüleranalyse wird erst dann einmalig gestartet.
     ebScheduleAuto(320);
   }catch(e){
-    if(ebSameBrowserMode || ebSameBrowserPopup) ebCloseSameBrowserPopup();
+    if(ebSameBrowserPopup) ebCloseSameBrowserPopup();
     ebConnectBusy=false;
     ebLoginPending=false;
     renderSetup();
@@ -6922,13 +6912,7 @@ async function ebAutoAttempt(){
     if(!probe.ready){
       ebReadBusy=false;
       const age=Date.now()-ebAutoStart;
-      // v304: Firefox hält neue Login-Cookies zunächst im Arbeitsspeicher. Sobald
-      // EntretienConnect bereits Cookies sieht, aber die Klassen-API noch nicht
-      // antwortet, erklären wir die kurze Session-Restore-Synchronisation statt
-      // scheinbar endlos nur „Connexion en cours“ anzuzeigen.
-      if(ebSameBrowserMode && probe.stage==="session-sync" && age>2500){
-        setEbStatus('Identification détectée. Firefox transmet encore la session à EntretienConnect… <a href="#" data-eb-cancel style="white-space:nowrap">Annuler</a>',"info");
-      }
+      // v305 liest die Live-Sitzung direkt im kontrollierten Firefox-Tab.
       ebScheduleAuto(age<30000 ? 850 : 1400);
       return;
     }

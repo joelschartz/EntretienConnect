@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.29 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.30 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -548,7 +548,8 @@ class SimpleWebSocket:
     def recv_text(self) -> str:
         chunks = []
         while True:
-            b1, b2 = self.sock.recv(2)
+            head = self._recvn(2)
+            b1, b2 = head[0], head[1]
             opcode = b1 & 0x0F
             masked = bool(b2 & 0x80)
             length = b2 & 0x7F
@@ -562,12 +563,22 @@ class SimpleWebSocket:
                 payload = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
             if opcode == 0x8:  # close
                 raise RuntimeError("WebSocket wurde geschlossen")
-            if opcode == 0x9:  # ping -> ignore
+            if opcode == 0x9:  # ping -> pong (persistente Firefox-BiDi-Sitzung)
+                self.send_pong(payload)
+                continue
+            if opcode == 0xA:  # pong
                 continue
             if opcode in (0x1, 0x0):
                 chunks.append(payload)
                 if b1 & 0x80:
                     return b"".join(chunks).decode("utf-8")
+
+    def send_pong(self, payload: bytes = b""):
+        payload = bytes(payload or b"")[:125]
+        mask = secrets.token_bytes(4)
+        header = bytearray([0x8A, 0x80 | len(payload)])
+        masked = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+        self.sock.sendall(bytes(header) + mask + masked)
 
     def _recvn(self, n: int) -> bytes:
         data = b""
@@ -2986,3 +2997,786 @@ def clear_current() -> None:
     with LOCK:
         LATEST_DATA = None
         LATEST_AT = None
+
+# ===================================================================
+# v305 – ein kontrolliertes Firefox-Fenster mit WebDriver BiDi
+# App und e-Bichelchen laufen als zwei Tabs derselben Firefox-Instanz.
+# Die sichtbare e-Bichelchen-Seite wird nicht umgeschaltet; die Klasse
+# wird ausschließlich über die von EntretienConnect gewählte groupId gelesen.
+# ===================================================================
+
+# Referenzen auf v304-Fallbacks, bevor die v305-Funktionen sie überschreiben.
+_launch_browser_legacy_v304 = launch_browser
+_check_login_ready_legacy_v304 = check_login_ready
+_focus_app_legacy_v304 = focus_app_tab
+_close_eb_legacy_v304 = close_ebichelchen_target
+_force_close_legacy_v304 = force_close_launched_browser
+_soft_reset_legacy_v304 = soft_reset_login
+_reset_login_legacy_v304 = reset_login_session
+
+BIDI_PORT = 9224
+FIREFOX_BIDI = None
+FIREFOX_BIDI_START_ERROR = ""
+
+
+def _is_local_app_url(url: str) -> bool:
+    u = str(url or "").lower()
+    return (
+        u.startswith("http://127.0.0.1:")
+        or u.startswith("http://localhost:")
+        or u.startswith("http://[::1]:")
+    )
+
+
+def find_firefox_executable() -> dict | None:
+    system = platform.system().lower()
+    candidates: list[str] = []
+    if system == "darwin":
+        candidates = [
+            "/Applications/Firefox.app/Contents/MacOS/firefox",
+            os.path.expanduser("~/Applications/Firefox.app/Contents/MacOS/firefox"),
+            "/Applications/Firefox Developer Edition.app/Contents/MacOS/firefox",
+        ]
+    elif system == "windows":
+        pf = os.environ.get("PROGRAMFILES", "")
+        pfx86 = os.environ.get("PROGRAMFILES(X86)", "")
+        local = os.environ.get("LOCALAPPDATA", "")
+        candidates = [
+            os.path.join(pf, "Mozilla Firefox", "firefox.exe"),
+            os.path.join(pfx86, "Mozilla Firefox", "firefox.exe"),
+            os.path.join(local, "Mozilla Firefox", "firefox.exe"),
+            shutil.which("firefox.exe") or "",
+        ]
+    else:
+        candidates = [shutil.which("firefox") or "", shutil.which("firefox-esr") or ""]
+    for path in candidates:
+        if path and pathlib.Path(path).exists():
+            return {"path": path, "id": "firefox", "name": "Mozilla Firefox"}
+    return None
+
+
+def _free_loopback_port(preferred: int = BIDI_PORT) -> int:
+    for port in list(range(preferred, preferred + 20)) + [0]:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind(("127.0.0.1", port))
+            return int(sock.getsockname()[1])
+        except OSError:
+            pass
+        finally:
+            sock.close()
+    raise RuntimeError("Kein freier lokaler Port für Firefox WebDriver BiDi gefunden.")
+
+
+def _write_firefox_profile_prefs(profile_dir: pathlib.Path) -> None:
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    prefs = (
+        '// EntretienConnect v305 – ruhiger, dauerhafter Firefox-Hilfsprofilstart\n'
+        'user_pref("browser.shell.checkDefaultBrowser", false);\n'
+        'user_pref("browser.aboutwelcome.enabled", false);\n'
+        'user_pref("browser.startup.page", 0);\n'
+        'user_pref("browser.tabs.warnOnClose", false);\n'
+        'user_pref("browser.tabs.warnOnCloseOtherTabs", false);\n'
+        'user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);\n'
+        'user_pref("toolkit.telemetry.reportingpolicy.firstRun", false);\n'
+        'user_pref("browser.newtabpage.activity-stream.showSponsored", false);\n'
+        'user_pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);\n'
+    )
+    try:
+        (profile_dir / "user.js").write_text(prefs, encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _bidi_remote_value(remote):
+    if not isinstance(remote, dict):
+        return remote
+    typ = remote.get("type")
+    if typ in ("string", "number", "boolean", "bigint"):
+        return remote.get("value")
+    if typ in ("null", "undefined"):
+        return None
+    if typ in ("array", "set"):
+        return [_bidi_remote_value(v) for v in (remote.get("value") or [])]
+    if typ in ("object", "map"):
+        out = {}
+        for pair in remote.get("value") or []:
+            if isinstance(pair, list) and len(pair) == 2:
+                key = _bidi_remote_value(pair[0]) if isinstance(pair[0], dict) else pair[0]
+                out[str(key)] = _bidi_remote_value(pair[1])
+        return out
+    return remote.get("value")
+
+
+def _bidi_bytes_value(value) -> str:
+    if isinstance(value, str):
+        return value
+    if not isinstance(value, dict):
+        return str(value or "")
+    typ = value.get("type")
+    raw = value.get("value") or ""
+    if typ == "base64":
+        try:
+            return base64.b64decode(raw).decode("utf-8", "replace")
+        except Exception:
+            return ""
+    return str(raw)
+
+
+class FirefoxBiDiController:
+    def __init__(self):
+        self.process: subprocess.Popen | None = None
+        self.ws: SimpleWebSocket | None = None
+        self.lock = threading.RLock()
+        self.next_id = 1
+        self.session_id = None
+        self.capabilities: dict = {}
+        self.port: int | None = None
+        self.profile_dir: pathlib.Path | None = None
+        self.firefox_path: str | None = None
+        self.app_context: str | None = None
+        self.eb_context: str | None = None
+
+    def alive(self) -> bool:
+        return bool(self.ws and self.process and self.process.poll() is None)
+
+    def _command_locked(self, method: str, params: dict | None = None, timeout: float = 15.0) -> dict:
+        if not self.ws:
+            raise RuntimeError("Firefox-BiDi ist nicht verbunden.")
+        msg_id = self.next_id
+        self.next_id += 1
+        self.ws.sock.settimeout(max(1.0, float(timeout)))
+        self.ws.send_text(json.dumps({"id": msg_id, "method": method, "params": params or {}}, ensure_ascii=False))
+        deadline = time.time() + max(1.0, float(timeout))
+        while time.time() < deadline:
+            raw = self.ws.recv_text()
+            msg = json.loads(raw)
+            if msg.get("id") != msg_id:
+                # Events gehören nicht zu dieser Anfrage und werden hier bewusst ignoriert.
+                continue
+            if msg.get("type") == "error" or msg.get("error"):
+                err = msg.get("error") or "error"
+                detail = msg.get("message") or ""
+                raise RuntimeError(f"Firefox BiDi {method}: {err} – {detail}".strip())
+            return msg.get("result") or {}
+        raise RuntimeError(f"Firefox BiDi {method}: keine Antwort erhalten.")
+
+    def command(self, method: str, params: dict | None = None, timeout: float = 15.0) -> dict:
+        with self.lock:
+            return self._command_locked(method, params, timeout)
+
+    def start(self, app_url: str, profile: str = "default", timeout_s: float = 30.0) -> dict:
+        global ACTIVE_BROWSER_MODE, ACTIVE_BROWSER_USER_AGENT
+        with self.lock:
+            if self.alive():
+                self._refresh_contexts()
+                if self.app_context:
+                    self._command_locked("browsingContext.activate", {"context": self.app_context}, 5)
+                    ACTIVE_BROWSER_MODE = "firefox-bidi"
+                    return {
+                        "opened": True,
+                        "alreadyRunning": True,
+                        "browser": "Mozilla Firefox",
+                        "sameBrowser": True,
+                        "appContext": self.app_context,
+                    }
+                self.shutdown(close_browser=True)
+
+            browser = find_firefox_executable()
+            if not browser:
+                raise RuntimeError("Mozilla Firefox wurde nicht gefunden. Bitte Firefox installieren und EntretienConnect erneut starten.")
+            self.firefox_path = browser["path"]
+            self.port = _free_loopback_port(BIDI_PORT)
+            self.profile_dir = PROFILE_ROOT / "firefox-bidi" / sanitize_profile_name(profile)
+            _write_firefox_profile_prefs(self.profile_dir)
+
+            args = [
+                self.firefox_path,
+                "--no-remote",
+                "--profile", str(self.profile_dir),
+                "--remote-debugging-port", str(self.port),
+                "--new-window", app_url,
+            ]
+            env = os.environ.copy()
+            env.setdefault("MOZ_CRASHREPORTER_DISABLE", "1")
+            self.process = subprocess.Popen(
+                args,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=env,
+            )
+            BROWSER_PROCESSES["firefox-bidi"] = self.process
+
+            deadline = time.time() + max(10.0, float(timeout_s))
+            last_error = ""
+            while time.time() < deadline:
+                if self.process.poll() is not None:
+                    raise RuntimeError("Firefox wurde beendet, bevor EntretienConnect geöffnet werden konnte.")
+                try:
+                    self.ws = SimpleWebSocket(f"ws://127.0.0.1:{self.port}/session", timeout=3.0)
+                    result = self._command_locked(
+                        "session.new",
+                        {
+                            "capabilities": {
+                                "alwaysMatch": {"browserName": "firefox"}
+                            }
+                        },
+                        12,
+                    )
+                    self.session_id = result.get("sessionId")
+                    self.capabilities = result.get("capabilities") or {}
+                    ACTIVE_BROWSER_USER_AGENT = str(self.capabilities.get("userAgent") or "Mozilla/5.0 Firefox")
+                    break
+                except Exception as exc:
+                    last_error = str(exc)
+                    if self.ws:
+                        try:
+                            self.ws.close()
+                        except Exception:
+                            pass
+                    self.ws = None
+                    time.sleep(0.22)
+            if not self.ws:
+                raise RuntimeError("Firefox WebDriver BiDi wurde nicht rechtzeitig verfügbar. " + last_error)
+
+            while time.time() < deadline:
+                self._refresh_contexts()
+                if self.app_context:
+                    try:
+                        self._command_locked("browsingContext.activate", {"context": self.app_context}, 5)
+                    except Exception:
+                        pass
+                    ACTIVE_BROWSER_MODE = "firefox-bidi"
+                    return {
+                        "opened": True,
+                        "alreadyRunning": False,
+                        "browser": "Mozilla Firefox",
+                        "sameBrowser": True,
+                        "profileDir": str(self.profile_dir),
+                        "port": self.port,
+                        "appContext": self.app_context,
+                    }
+                time.sleep(0.16)
+            raise RuntimeError("Firefox läuft, aber der EntretienConnect-Tab wurde nicht gefunden.")
+
+    def _refresh_contexts(self) -> list[dict]:
+        tree = self._command_locked("browsingContext.getTree", {"maxDepth": 0}, 6)
+        contexts = tree.get("contexts") or []
+        ids = {str(c.get("context")) for c in contexts}
+        app = next((c for c in contexts if _is_local_app_url(str(c.get("url") or ""))), None)
+        if app:
+            self.app_context = str(app.get("context"))
+        elif self.app_context not in ids:
+            self.app_context = None
+        if self.eb_context not in ids:
+            self.eb_context = None
+        if not self.eb_context:
+            eb = next(
+                (
+                    c
+                    for c in contexts
+                    if "education.lu" in str(c.get("url") or "").lower()
+                    and not _is_local_app_url(str(c.get("url") or ""))
+                ),
+                None,
+            )
+            if not eb and self.app_context:
+                eb = next(
+                    (
+                        c
+                        for c in contexts
+                        if str(c.get("originalOpener") or "") == self.app_context
+                        and not _is_local_app_url(str(c.get("url") or ""))
+                    ),
+                    None,
+                )
+            if eb:
+                self.eb_context = str(eb.get("context"))
+        return contexts
+
+    def context_info(self, context_id: str | None) -> dict | None:
+        if not context_id:
+            return None
+        with self.lock:
+            for context in self._refresh_contexts():
+                if str(context.get("context")) == str(context_id):
+                    return context
+        return None
+
+    def open_ebichelchen(self) -> dict:
+        with self.lock:
+            contexts = self._refresh_contexts()
+            if self.eb_context and any(str(c.get("context")) == self.eb_context for c in contexts):
+                self._command_locked("browsingContext.activate", {"context": self.eb_context}, 5)
+                current_url = next((c.get("url") for c in contexts if str(c.get("context")) == self.eb_context), "")
+                return {
+                    "alreadyRunning": True,
+                    "reusedTab": True,
+                    "sameBrowser": True,
+                    "active": True,
+                    "browser": "Mozilla Firefox",
+                    "url": current_url,
+                }
+            params: dict = {"type": "tab", "background": False}
+            if self.app_context:
+                params["referenceContext"] = self.app_context
+            created = self._command_locked("browsingContext.create", params, 8)
+            self.eb_context = str(created.get("context") or "")
+            if not self.eb_context:
+                raise RuntimeError("Firefox konnte keinen zweiten Tab anlegen.")
+            self._command_locked(
+                "browsingContext.navigate",
+                {"context": self.eb_context, "url": EB_URL, "wait": "none"},
+                8,
+            )
+            self._command_locked("browsingContext.activate", {"context": self.eb_context}, 5)
+            return {
+                "alreadyRunning": False,
+                "openedTab": True,
+                "active": True,
+                "sameBrowser": True,
+                "browser": "Mozilla Firefox",
+                "url": EB_URL,
+                "context": self.eb_context,
+            }
+
+    def evaluate_json(self, context_id: str, expression: str, timeout: float = 20.0):
+        result = self.command(
+            "script.evaluate",
+            {
+                "expression": expression,
+                "target": {"context": context_id},
+                "awaitPromise": True,
+                "resultOwnership": "none",
+                "serializationOptions": {"maxObjectDepth": 2, "maxDomDepth": 0},
+            },
+            timeout,
+        )
+        if result.get("type") == "exception":
+            details = result.get("exceptionDetails") or {}
+            raise RuntimeError(details.get("text") or "JavaScript-Auswertung in Firefox fehlgeschlagen.")
+        remote = result.get("result") or {}
+        value = _bidi_remote_value(remote)
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except Exception:
+                return value
+        return value
+
+    def capture_session(self, context_id: str) -> dict:
+        result = self.command(
+            "storage.getCookies",
+            {"partition": {"type": "context", "context": context_id}},
+            10,
+        )
+        merged: dict[str, str] = {}
+        for cookie in result.get("cookies") or []:
+            domain = str(cookie.get("domain") or "").lower()
+            name = str(cookie.get("name") or "")
+            if not name or "education.lu" not in domain:
+                continue
+            merged[name] = _bidi_bytes_value(cookie.get("value"))
+        if not merged:
+            raise RuntimeError("Keine e-Bichelchen-Sitzungscookies in Firefox gefunden.")
+        return {
+            "cookieHeader": "; ".join(f"{key}={value}" for key, value in merged.items()),
+            "cookieNames": sorted(merged),
+            "userAgent": str(self.capabilities.get("userAgent") or ACTIVE_BROWSER_USER_AGENT or "Mozilla/5.0 Firefox"),
+            "capturedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "targetUrl": (self.context_info(context_id) or {}).get("url") or EB_URL,
+            "browser": "firefox-bidi",
+            "profileDir": str(self.profile_dir or ""),
+        }
+
+    def close_eb(self) -> dict:
+        with self.lock:
+            self._refresh_contexts()
+            context = self.eb_context
+            if not context:
+                return {"closed": True, "alreadyClosed": True, "method": "firefox-bidi"}
+            try:
+                self._command_locked("browsingContext.close", {"context": context, "promptUnload": False}, 8)
+            finally:
+                self.eb_context = None
+            return {"closed": True, "method": "firefox-bidi", "context": context}
+
+    def focus_app(self) -> dict:
+        with self.lock:
+            self._refresh_contexts()
+            if not self.app_context:
+                raise RuntimeError("EntretienConnect-Tab wurde in Firefox nicht gefunden.")
+            self._command_locked("browsingContext.activate", {"context": self.app_context}, 6)
+            return {
+                "method": "firefox-bidi",
+                "foundExistingTab": True,
+                "context": self.app_context,
+                "openedNewTab": False,
+            }
+
+    def delete_education_cookies(self) -> int:
+        deleted = 0
+        for domain in ("ssl.education.lu", ".education.lu", "education.lu"):
+            try:
+                self.command("storage.deleteCookies", {"filter": {"domain": domain}}, 7)
+                deleted += 1
+            except Exception:
+                pass
+        return deleted
+
+    def shutdown(self, close_browser: bool = True) -> dict:
+        result = {"closed": False, "method": "firefox-bidi"}
+        with self.lock:
+            if self.ws and close_browser:
+                try:
+                    self._command_locked("browser.close", {}, 6)
+                    result["closed"] = True
+                except Exception:
+                    pass
+            if self.ws:
+                try:
+                    self.ws.close()
+                except Exception:
+                    pass
+            self.ws = None
+            if self.process and self.process.poll() is None:
+                try:
+                    self.process.terminate()
+                    self.process.wait(timeout=5)
+                    result["closed"] = True
+                except Exception:
+                    try:
+                        self.process.kill()
+                    except Exception:
+                        pass
+            self.process = None
+            self.session_id = None
+            self.app_context = None
+            self.eb_context = None
+            BROWSER_PROCESSES.pop("firefox-bidi", None)
+        return result
+
+
+def launch_firefox_app(app_url: str, profile: str = "default", timeout_s: float = 30.0) -> dict:
+    global FIREFOX_BIDI, FIREFOX_BIDI_START_ERROR
+    if FIREFOX_BIDI is None:
+        FIREFOX_BIDI = FirefoxBiDiController()
+    try:
+        info = FIREFOX_BIDI.start(app_url, profile=profile, timeout_s=timeout_s)
+        FIREFOX_BIDI_START_ERROR = ""
+        return info
+    except Exception as exc:
+        FIREFOX_BIDI_START_ERROR = str(exc)
+        raise
+
+
+def supports_firefox_bidi() -> bool:
+    # Feature-capability, nicht nur momentaner Verbindungsstatus. So versucht die
+    # Oberfläche nie, als Fallback noch Chrome parallel zu öffnen.
+    return True
+
+
+def debug_browser_running() -> bool:
+    if ACTIVE_BROWSER_MODE == "firefox-bidi" or (FIREFOX_BIDI and FIREFOX_BIDI.alive()):
+        return bool(FIREFOX_BIDI and FIREFOX_BIDI.alive())
+    if ACTIVE_BROWSER_MODE == "firefox-current":
+        return True
+    try:
+        data = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1.0)
+        return isinstance(data, dict)
+    except Exception:
+        return False
+
+
+def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: str = "") -> dict:
+    global ACTIVE_BROWSER_MODE, ACTIVE_BROWSER_USER_AGENT
+    pref = str(preferred_browser or "").lower()
+    if pref == "firefox-bidi" or (FIREFOX_BIDI and FIREFOX_BIDI.alive()):
+        if not FIREFOX_BIDI or not FIREFOX_BIDI.alive():
+            raise RuntimeError(
+                FIREFOX_BIDI_START_ERROR
+                or "Der kontrollierte Firefox ist nicht verfügbar. EntretienConnect bitte vollständig beenden und neu starten."
+            )
+        ACTIVE_BROWSER_MODE = "firefox-bidi"
+        ACTIVE_BROWSER_USER_AGENT = str(
+            FIREFOX_BIDI.capabilities.get("userAgent") or user_agent or "Mozilla/5.0 Firefox"
+        )
+        return FIREFOX_BIDI.open_ebichelchen()
+    return _launch_browser_legacy_v304(profile, preferred_browser, user_agent)
+
+
+def _firefox_bidi_probe_expression() -> str:
+    return r'''(async () => {
+      const out={ready:false,pageUrl:String(location.href||""),groupCount:0,via:"firefox-bidi"};
+      if(!out.pageUrl.includes('/ebichelchen/app/')) return JSON.stringify(out);
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),1800);
+      try{
+        const res=await fetch('/ebichelchen/app/api/group/get-groups-from-teacher',{
+          method:'GET',credentials:'include',signal:controller.signal,
+          headers:{'accept':'application/json, text/plain, */*','mobileappversion':'web'}
+        });
+        out.status=res.status;
+        if(!res.ok) return JSON.stringify(out);
+        const json=await res.json();
+        const lists=[json,json&&json.objects,json&&json.groups,json&&json.data,
+          json&&json.data&&json.data.objects,json&&json.result,
+          json&&json.result&&json.result.objects];
+        const arr=lists.find(Array.isArray)||[];
+        out.groupCount=arr.length;
+        out.ready=arr.length>0;
+        return JSON.stringify(out);
+      }catch(e){
+        out.error=String(e&&e.message||e);
+        return JSON.stringify(out);
+      }finally{ clearTimeout(timer); }
+    })()'''
+
+
+def check_login_ready() -> dict:
+    if ACTIVE_BROWSER_MODE != "firefox-bidi":
+        return _check_login_ready_legacy_v304()
+    if not FIREFOX_BIDI or not FIREFOX_BIDI.alive():
+        return {"ok": True, "ready": False, "browserClosed": True, "stage": "closed", "lightweight": True}
+    try:
+        info = FIREFOX_BIDI.context_info(FIREFOX_BIDI.eb_context)
+        if not info:
+            return {"ok": True, "ready": False, "browserClosed": True, "stage": "tab-closed", "lightweight": True}
+        url = str(info.get("url") or "")
+        if "/ebichelchen/app/" not in url:
+            return {
+                "ok": True,
+                "ready": False,
+                "browserClosed": False,
+                "stage": "login",
+                "pageUrl": url,
+                "lightweight": True,
+            }
+        probe = FIREFOX_BIDI.evaluate_json(
+            FIREFOX_BIDI.eb_context,
+            _firefox_bidi_probe_expression(),
+            timeout=8,
+        )
+        if not isinstance(probe, dict):
+            probe = {}
+        return {
+            "ok": True,
+            "ready": bool(probe.get("ready")),
+            "browserClosed": False,
+            "stage": "ready" if probe.get("ready") else "loading",
+            "groupCount": int(probe.get("groupCount") or 0),
+            "status": probe.get("status"),
+            "pageUrl": probe.get("pageUrl") or url,
+            "via": "firefox-bidi",
+            "lightweight": True,
+            "detail": probe.get("error") or "",
+        }
+    except Exception as exc:
+        # Ein interner Route-Wechsel von e-Bichelchen zerstört kurz den Realm. Das ist
+        # während des Logins normal und wird beim nächsten Poll erneut geprüft.
+        return {
+            "ok": True,
+            "ready": False,
+            "browserClosed": False,
+            "stage": "loading",
+            "detail": str(exc),
+            "lightweight": True,
+        }
+
+
+def _read_direct_with_session(session: dict, selected_group_id: int) -> dict:
+    t0 = time.perf_counter()
+    groups_t0 = time.perf_counter()
+    groups, group_result = _firefox_groups(session)
+    groups_ms = round((time.perf_counter() - groups_t0) * 1000)
+    if not groups:
+        raise RuntimeError(
+            "Die Klassen konnten aus der gespeicherten e-Bichelchen-Sitzung nicht gelesen werden. Bitte neu verbinden."
+        )
+    group = next((g for g in groups if int(g.get("id")) == int(selected_group_id)), None)
+    if group is None:
+        raise RuntimeError(
+            f"Die in EntretienConnect gewählte Klasse wurde nicht gefunden (groupId {selected_group_id})."
+        )
+    subjects_t0 = time.perf_counter()
+    subjects, subjects_source, subject_attempts = _read_subjects_direct(session, group)
+    message_subject = _detect_message_subject_py(subjects)
+    subjects_ms = round((time.perf_counter() - subjects_t0) * 1000)
+    if not message_subject:
+        raise RuntimeError("Die Kategorie « Nachricht / Message » konnte für die gewählte Klasse nicht gelesen werden.")
+    return {
+        "version": "1.10.30",
+        "importedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "pageUrl": EB_URL,
+        "groups": groups,
+        "needsGroupSelection": False,
+        "group": {key: group.get(key) for key in ("id", "classAlias", "name", "classGrade", "entityCode")},
+        "loggedInUser": None,
+        "students": group.get("students", []),
+        "teachers": group.get("teachers", []),
+        "tutors": group.get("tutors", []),
+        "excluded": group.get("excluded", []),
+        "subjects": subjects,
+        "messageSubject": {
+            "id": message_subject.get("id"),
+            "labelDeu": message_subject.get("labelDeu", ""),
+            "labelFra": message_subject.get("labelFra", ""),
+            "label": message_subject.get("label", ""),
+            "source": message_subject.get("source", subjects_source or ""),
+        },
+        "endpoints": {
+            "groupsUrl": group_result.get("url"),
+            "subjectsSource": subjects_source,
+            "scannedStorageKeys": [],
+            "knownSubjectUrls": [],
+            "subjectAttempts": subject_attempts,
+        },
+        "timing": {
+            "groupsMs": groups_ms,
+            "subjectsMs": subjects_ms,
+            "totalMs": round((time.perf_counter() - t0) * 1000),
+        },
+        "summary": {
+            "groups": len(groups),
+            "students": len(group.get("students", [])),
+            "teachers": len(group.get("teachers", [])),
+            "tutors": len(group.get("tutors", [])),
+            "excluded": len(group.get("excluded", [])),
+            "subjects": len(subjects),
+            "messageSubjectId": message_subject.get("id"),
+        },
+        "source": {
+            "browser": "firefox-bidi-direct",
+            "sessionCaptured": True,
+            "sessionCookieNames": session.get("cookieNames", []),
+            "selectionAuthority": "EntretienConnect",
+            "groupChosenAutomatically": False,
+        },
+    }
+
+
+def read_from_firefox_bidi(selected_group_id: int | None = None) -> dict:
+    global LATEST_SESSION, LATEST_SESSION_AT
+    if not FIREFOX_BIDI or not FIREFOX_BIDI.alive():
+        raise RuntimeError("Der kontrollierte Firefox ist nicht mehr geöffnet.")
+    info = FIREFOX_BIDI.context_info(FIREFOX_BIDI.eb_context)
+    if not info:
+        if selected_group_id is not None:
+            return _read_direct_with_session(get_saved_session(), int(selected_group_id))
+        raise RuntimeError("Der e-Bichelchen-Tab wurde geschlossen. Bitte erneut verbinden.")
+    url = str(info.get("url") or "")
+    if "/ebichelchen/app/" not in url:
+        raise RuntimeError("e-Bichelchen ist noch nicht vollständig angemeldet.")
+    payload = FIREFOX_BIDI.evaluate_json(
+        FIREFOX_BIDI.eb_context,
+        build_read_expression(selected_group_id),
+        timeout=36,
+    )
+    if not isinstance(payload, dict):
+        raise RuntimeError("Firefox hat keine gültigen e-Bichelchen-Daten zurückgegeben.")
+    session = FIREFOX_BIDI.capture_session(FIREFOX_BIDI.eb_context)
+    with LOCK:
+        LATEST_SESSION = session
+        LATEST_SESSION_AT = session.get("capturedAt")
+    payload.setdefault("source", {})
+    payload["source"].update(
+        {
+            "browser": "firefox-bidi",
+            "sessionCaptured": True,
+            "sessionCookieNames": session.get("cookieNames", []),
+            "selectionAuthority": (
+                "EntretienConnect" if selected_group_id is not None else "automatic-only-for-single-group"
+            ),
+        }
+    )
+    payload["version"] = "1.10.30"
+    payload["pageUrl"] = url
+    return payload
+
+
+def read_browser_and_store(selected_group_id=None) -> dict:
+    global LATEST_DATA, LATEST_AT
+    if not READ_BROWSER_LOCK.acquire(blocking=False):
+        raise RuntimeError("Lecture déjà en cours – merci de patienter.")
+    try:
+        if ACTIVE_BROWSER_MODE == "firefox-bidi":
+            payload = read_from_firefox_bidi(selected_group_id)
+        elif ACTIVE_BROWSER_MODE == "firefox-current":
+            payload = read_from_firefox(selected_group_id)
+        else:
+            payload = read_from_chrome(selected_group_id)
+    finally:
+        READ_BROWSER_LOCK.release()
+    with LOCK:
+        LATEST_DATA = payload
+        LATEST_AT = time.strftime("%Y-%m-%d %H:%M:%S")
+    return payload
+
+
+def focus_app_tab() -> dict:
+    if ACTIVE_BROWSER_MODE == "firefox-bidi":
+        if not FIREFOX_BIDI:
+            raise RuntimeError("Firefox-BiDi ist nicht verfügbar.")
+        return FIREFOX_BIDI.focus_app()
+    return _focus_app_legacy_v304()
+
+
+def close_ebichelchen_target() -> dict:
+    if ACTIVE_BROWSER_MODE == "firefox-bidi":
+        if not FIREFOX_BIDI:
+            return {"closed": True, "alreadyClosed": True, "method": "firefox-bidi"}
+        return FIREFOX_BIDI.close_eb()
+    return _close_eb_legacy_v304()
+
+
+def force_close_launched_browser(force: bool = False) -> dict:
+    global FIREFOX_BIDI
+    if ACTIVE_BROWSER_MODE == "firefox-bidi" or (FIREFOX_BIDI and FIREFOX_BIDI.alive()):
+        return FIREFOX_BIDI.shutdown(close_browser=True) if FIREFOX_BIDI else {
+            "closed": False,
+            "method": "firefox-bidi",
+        }
+    return _force_close_legacy_v304(force=force)
+
+
+def soft_reset_login() -> dict:
+    global LATEST_SESSION, LATEST_SESSION_AT
+    if ACTIVE_BROWSER_MODE == "firefox-bidi":
+        closed = None
+        cleared = 0
+        if FIREFOX_BIDI:
+            try:
+                closed = FIREFOX_BIDI.close_eb()
+            except Exception:
+                pass
+            try:
+                cleared = FIREFOX_BIDI.delete_education_cookies()
+            except Exception:
+                pass
+        clear_current()
+        with LOCK:
+            LATEST_SESSION = None
+            LATEST_SESSION_AT = None
+        return {
+            "softReset": True,
+            "browserRunning": debug_browser_running(),
+            "cookiesCleared": bool(cleared),
+            "closedEbichelchen": closed,
+            "profilePreserved": True,
+        }
+    return _soft_reset_legacy_v304()
+
+
+def reset_login_session(profile: str = "default", preserve_profile: bool = False) -> dict:
+    if ACTIVE_BROWSER_MODE == "firefox-bidi":
+        info = soft_reset_login()
+        return {
+            "closed": False,
+            "profilesRemoved": [],
+            "sessionDataRemoved": [],
+            "cookiesCleared": info.get("cookiesCleared", False),
+            "profilePreserved": True,
+            "browserRunning": info.get("browserRunning", False),
+        }
+    return _reset_login_legacy_v304(profile, preserve_profile)
+
