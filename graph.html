@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v305</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v306</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 305;
+const APP_VERSION = 306;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6530,17 +6530,12 @@ function ebGroupChoiceHtml(){
 }
 function ebBrowserPref(){
   const s=document.getElementById("ebBrowser");
-  let v = s ? s.value : "auto";
-  const ua = navigator.userAgent || "";
-  const isFirefox=/Firefox\//.test(ua);
-  if(v==="auto"){
-    // v303: Der normale, bereits geöffnete Firefox wird verwendet. Der
-    // Login erscheint als zweiter Tab desselben Fensters; kein Chrome-Kaltstart.
-    if(isFirefox) return "firefox-current";
-    if(/Edg\//.test(ua)) return "edge";
-    if(/Chrome\//.test(ua) && !/Edg\//.test(ua)) return "chrome";
-  }
-  return v;
+  const v=s ? s.value : "auto";
+  // v306: Der Standardbrowser der Haupt-App ist absichtlich unabhängig vom
+  // Loginfenster. « auto » lässt den lokalen Helfer Chrome bzw. Edge nur als
+  // eingebettetes app-artiges Fenster verwenden; Firefox/Safari werden nicht
+  // ferngesteuert und es entsteht kein zusätzlicher normaler Browser-Tab.
+  return v || "auto";
 }
 function ebCloseSameBrowserPopup(){
   const pop=ebSameBrowserPopup;
@@ -6806,9 +6801,9 @@ document.addEventListener("click", function(ev){
   if(c){ ev.preventDefault(); ev.stopPropagation(); ebCancelPending(); }
 }, true);
 async function ebFocusAppForGroupChoice(){
-  // v305: Sobald die Klassenliste gelesen ist, wird der Login-Tab geschlossen.
-  // Die konkrete Klasse wird danach ausschließlich in EntretienConnect gewählt;
-  // die zweite Lesung nutzt die bereits sicher gespeicherte Sitzung.
+  // v306: Sobald die Klassenliste gelesen ist, wird das eigene Loginfenster
+  // vollständig geschlossen. Die konkrete Klasse wird danach ausschließlich in
+  // EntretienConnect gewählt; die zweite Lesung nutzt die gespeicherte Sitzung.
   try{
     await fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"});
   }catch(e){ /* best-effort */ }
@@ -6832,7 +6827,7 @@ async function ebConnectFlow(){
   ebLoginPending=true;
   ebBrowserMissingCount=0;
   renderSetup();
-  setEbStatus("Ouverture de l’onglet e-Bichelchen…","info");
+  setEbStatus("Ouverture de la fenêtre de connexion e-Bichelchen…","info");
   ebStopAuto();
 
   // Le profil du navigateur est conservé pour éviter un démarrage à froid très lent.
@@ -6842,11 +6837,9 @@ async function ebConnectFlow(){
   state.ebichelchenSelectedGroupId="";
   state.ebichelchenMap=state.ebichelchenMap||{};
 
-  // v305: EntretienConnect läuft bereits in einer kontrollierten Firefox-Instanz.
-  // WebDriver BiDi legt den zweiten Tab im selben Fenster an, liest die Live-Sitzung
-  // direkt dort und kann den Tab danach zuverlässig schließen.
-  const _caps=await graphCapabilities();
-  const _browserPref=(_caps&&_caps.firefoxBidi) ? "firefox-bidi" : ebBrowserPref();
+  // v306: Die Haupt-App bleibt im Standardbrowser. Der lokale Helfer öffnet
+  // e-Bichelchen separat in einem kleinen app-artigen Loginfenster.
+  const _browserPref=ebBrowserPref();
   ebSameBrowserMode=false;
   ebSameBrowserPopup=null;
   saveState();
@@ -6856,9 +6849,7 @@ async function ebConnectFlow(){
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebConnectBusy=false;
     renderSetup();
-    const msg=(j.info&&j.info.sameBrowser)
-      ? "L’onglet e-Bichelchen est actif dans ce Firefox. Terminez la connexion dans cet onglet."
-      : "La fenêtre e-Bichelchen est ouverte. Terminez la connexion.";
+    const msg="La fenêtre de connexion e-Bichelchen est ouverte. Terminez l’identification dans cette fenêtre.";
     setEbStatus(ebWaitingStatusHtml(msg),"info");
     ebAutoStart=Date.now();
     // v288: zuerst nur leicht prüfen, ob IAM/e-Bichelchen wirklich bereit ist.
@@ -6912,7 +6903,7 @@ async function ebAutoAttempt(){
     if(!probe.ready){
       ebReadBusy=false;
       const age=Date.now()-ebAutoStart;
-      // v305 liest die Live-Sitzung direkt im kontrollierten Firefox-Tab.
+      // v306 prüft die Live-Sitzung direkt im separaten Loginfenster.
       ebScheduleAuto(age<30000 ? 850 : 1400);
       return;
     }

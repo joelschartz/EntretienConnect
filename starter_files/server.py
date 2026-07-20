@@ -1618,21 +1618,11 @@ def main():
                     eb.force_close_launched_browser(force=True)
             except Exception:
                 pass
-        # v305: App und e-Bichelchen laufen in genau EINER kontrollierten Firefox-
-        # Instanz. Der App-Tab wird beim Start angelegt; « Connecter » öffnet später
-        # lediglich einen zweiten Tab im selben Fenster. Kein Chrome und kein
-        # paralleler Standardbrowser-Tab.
-        def _launch_v305_firefox():
-            try:
-                if not EB_AVAILABLE:
-                    raise RuntimeError("Module e-Bichelchen indisponible")
-                eb.launch_firefox_app(url, profile="default")
-            except Exception as exc:
-                print("Firefox-BiDi-Start fehlgeschlagen:", exc)
-                # Nur die Oberfläche als Fallback öffnen; der Connect-Aufruf bleibt
-                # trotzdem auf Firefox-BiDi festgelegt und startet niemals Chrome parallel.
-                _open_in_browser(url)
-        threading.Timer(0.45, _launch_v305_firefox).start()
+        # v306: Die Haupt-App öffnet wieder ganz normal im Standardbrowser des
+        # Benutzers. e-Bichelchen wird erst beim Klick auf « Connecter » in einem
+        # separaten, app-artigen Loginfenster geöffnet. Dadurch ist EntretienConnect
+        # weder an Firefox noch an Chrome/Safari als Standardbrowser gebunden.
+        threading.Timer(0.45, lambda: _open_in_browser(url)).start()
         def _watchdog():
             global last_heartbeat_time
             last_tick = time.time()

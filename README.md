@@ -1,12 +1,16 @@
-# EntretienConnect v305
+# EntretienConnect v306
 
-## e-Bichelchen / Firefox
+## Browserunabhängiger Hauptablauf
 
-Auf macOS startet EntretienConnect in einer kontrollierten Firefox-Instanz.
-Beim Verbinden wird e-Bichelchen als zweiter, aktiver Tab desselben Fensters
-geöffnet. Die Live-Sitzung wird direkt im eingeloggten Tab gelesen; danach wird
-nur dieser Tab geschlossen und EntretienConnect wieder aktiviert.
+EntretienConnect öffnet sich wieder im normalen Standardbrowser des Computers
+(Firefox, Chrome, Safari oder Edge). Die App startet keinen ferngesteuerten
+Firefox mehr.
 
-Die sichtbare e-Bichelchen-Seite wird nicht verändert: Kalender oder Pinnwand
-dürfen stehen bleiben. Bei mehreren Klassen erfolgt die Auswahl ausschließlich
-in EntretienConnect; die im Browser sichtbare Klasse wird ignoriert.
+Beim Verbinden öffnet der lokale Helfer e-Bichelchen separat in einem kleinen,
+app-artigen Loginfenster auf Basis von Chrome bzw. Microsoft Edge. Dieses Fenster
+hat keine normale Tab-/Adressleisten-Navigation, dient nur der Anmeldung und wird
+nach dem sicheren Einlesen der Sitzung vollständig geschlossen.
+
+Kalender oder Pinnwand dürfen unverändert angezeigt werden. Bei mehreren Klassen
+findet die Auswahl ausschließlich in EntretienConnect statt; die im Loginfenster
+sichtbare Klasse wird ignoriert.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.30 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.31 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -401,68 +401,42 @@ def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: st
                 break
             time.sleep(0.10)
 
-    # Falls schon ein Browser mit CDP-Port läuft, einen neuen e-Bichelchen-Tab öffnen.
-    # v285: Nur Erfolg melden, wenn /json/new den Tab wirklich angelegt hat. Zuvor
-    # wurde ein Fehler hier ignoriert; die Oberfläche wartete dann endlos auf einen
-    # Tab, der nie geöffnet worden war.
+    # v306: Es darf nur EIN kontrolliertes Loginfenster existieren. Wenn bereits
+    # genau ein e-Bichelchen-Target läuft, wird es wieder nach vorne geholt. Ein
+    # verwaister/leer gebliebener CDP-Browser wird vollständig beendet und danach
+    # sauber im App-Modus neu gestartet; dadurch entstehen keine normalen Tabs.
     try:
         version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1)
-        # v291: Läuft der Browser bereits, zuerst einen vorhandenen e-Bichelchen-Tab
-        # WIEDERVERWENDEN, statt jedes Mal einen neuen zu öffnen. Das verhindert die
-        # Tab-Flut und nutzt den nach dem Lesen "warm" (minimiert) gehaltenen Tab weiter,
-        # sodass kein langsamer Kaltstart nötig ist. Fenster wird dabei wieder normalisiert.
         try:
             existing = find_ebichelchen_target()
         except Exception:
             existing = None
         if existing:
-            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=1.0)
-            return {"alreadyRunning": True, "reusedTab": True, "openedTab": False, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=1.5)
+            return {"alreadyRunning": True, "reusedWindow": True, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
 
-        # v299: Eine verwaiste IAM-/Zwischenseite aus einem abgebrochenen Login
-        # nicht neben einem neuen e-Bichelchen-Fenster stehen lassen. Der Browser am
-        # CDP-Port verwendet ausschließlich das isolierte EntretienConnect-Profil.
-        all_pages = [t for t in _list_cdp_targets() if t.get("type") == "page"]
-        for blank in [t for t in all_pages if str(t.get("url") or "") in ("", "about:blank") or str(t.get("url") or "").startswith(("chrome://newtab", "edge://newtab"))]:
-            if blank.get("id"):
-                _cdp_close_tab(blank.get("id"))
-        stale_pages = [t for t in _list_cdp_targets() if t.get("type") == "page" and not _is_app_target(t) and "/ebichelchen/app/" not in str(t.get("url") or "")]
-        if stale_pages:
-            ws = stale_pages[0].get("webSocketDebuggerUrl") or (version.get("webSocketDebuggerUrl") if isinstance(version, dict) else None)
-            if ws:
-                try:
-                    cdp_call(ws, "Browser.close", {}, msg_id=929, timeout=2)
-                except Exception:
-                    pass
-            for _ in range(12):
-                if not debug_browser_running():
-                    break
-                time.sleep(0.1)
-            raise OSError("Stale helper browser restarted")
-
-        opened = False
-        for _ in range(8):
-            if open_remote_tab(EB_URL):
-                opened = True
+        # Kein verwendbares Loginfenster: den isolierten Helferbrowser schließen.
+        ws = version.get("webSocketDebuggerUrl") if isinstance(version, dict) else None
+        if ws:
+            try:
+                cdp_call(ws, "Browser.close", {}, msg_id=930, timeout=2)
+            except Exception:
+                pass
+        for proc_key, old_proc in list(BROWSER_PROCESSES.items()):
+            try:
+                if old_proc and old_proc.poll() is None:
+                    old_proc.terminate()
+                    try:
+                        old_proc.wait(timeout=3)
+                    except Exception:
+                        old_proc.kill()
+            except Exception:
+                pass
+            BROWSER_PROCESSES.pop(proc_key, None)
+        for _ in range(20):
+            if not debug_browser_running():
                 break
-            time.sleep(0.25)
-        if opened:
-            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=2.5)
-            return {"alreadyRunning": True, "openedTab": True, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
-        # Fallback: URL über den Browser-Prozess an die bereits laufende Instanz geben.
-        # Chrome/Edge leitet dies normalerweise an dieselbe Profilinstanz weiter.
-        try:
-            subprocess.Popen([browser_path, f"--remote-debugging-port={CDP_PORT}", f"--user-data-dir={profile_dir}", EB_URL], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
-        for _ in range(16):
-            if open_remote_tab(EB_URL):
-                focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=2.5)
-                return {"alreadyRunning": True, "openedTab": True, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
-            time.sleep(0.25)
-        raise RuntimeError("Le navigateur est ouvert, mais l’onglet e-Bichelchen n’a pas pu être créé. Réessayez une fois.")
-    except RuntimeError:
-        raise
+            time.sleep(0.10)
     except Exception:
         pass
 
@@ -472,8 +446,10 @@ def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: st
         f"--user-data-dir={profile_dir}",
         "--no-first-run",
         "--no-default-browser-check",
-        "--new-window",
-        EB_URL,
+        "--disable-session-crashed-bubble",
+        "--window-size=1120,820",
+        "--window-position=120,80",
+        f"--app={EB_URL}",
     ]
 
     proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -486,13 +462,13 @@ def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: st
         try:
             version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=0.5)
             focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=3.0)
-            return {"alreadyRunning": False, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            return {"alreadyRunning": False, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
         except Exception:
             if proc.poll() is not None:
                 raise RuntimeError(f"{browser_name} s’est fermé avant l’ouverture de la fenêtre e-Bichelchen.")
             time.sleep(0.25)
 
-    return {"alreadyRunning": False, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "warning": "Le navigateur a été lancé, mais sa préparation prend plus de temps que prévu."}
+    return {"alreadyRunning": False, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "warning": "La fenêtre de connexion a été lancée, mais sa préparation prend plus de temps que prévu."}
 
 
 class SimpleWebSocket:
@@ -2213,44 +2189,37 @@ def soft_reset_login() -> dict:
             clear_current()
         except Exception:
             pass
-        return {"softReset": True, "browserRunning": True, "cookiesCleared": False, "navigated": False, "normalBrowserProtected": True}
-    """v292: Verwirft eine halbfertige/abgebrochene IAM-Sitzung, OHNE den Browser zu
-    schließen. Die Cookies werden per DevTools gelöscht (browserweit) und der
-    e-Bichelchen-Tab frisch geladen, sodass ein sauberer Login startet. Der Browser
-    bleibt "warm": Der nächste Connect verwendet ihn weiter, statt einen langsamen
-    neuen Browser zu starten. Läuft kein Debug-Browser, passiert nichts (open-browser
-    macht dann ohnehin einen Kaltstart)."""
-    if not debug_browser_running():
-        try:
-            clear_current()
-        except Exception:
-            pass
-        return {"softReset": True, "browserRunning": False, "cookiesCleared": False, "navigated": False}
+        return {"softReset": True, "browserRunning": True, "cookiesCleared": False, "normalBrowserProtected": True}
+    # v306: Ein abgebrochener Login darf kein unsichtbares oder verwaistes
+    # Loginfenster zurücklassen. Cookies werden nach Möglichkeit gelöscht und die
+    # komplette isolierte App-Instanz anschließend beendet; das Profil selbst bleibt.
     cleared = False
-    for t in _list_cdp_targets():
-        ws = t.get("webSocketDebuggerUrl")
-        if not ws:
-            continue
-        try:
-            cdp_call(ws, "Network.clearBrowserCookies", {}, msg_id=720)
-            cleared = True
-            break
-        except Exception:
-            continue
-    navigated = False
+    if debug_browser_running():
+        for t in _list_cdp_targets():
+            ws = t.get("webSocketDebuggerUrl")
+            if not ws:
+                continue
+            try:
+                cdp_call(ws, "Network.clearBrowserCookies", {}, msg_id=720)
+                cleared = True
+                break
+            except Exception:
+                continue
     try:
-        target = find_ebichelchen_target()
-        ws = target.get("webSocketDebuggerUrl")
-        if ws:
-            cdp_call(ws, "Page.navigate", {"url": EB_URL}, msg_id=721)
-            navigated = True
-    except Exception:
-        pass
+        closed = force_close_launched_browser(force=True)
+    except Exception as exc:
+        closed = {"closed": False, "error": str(exc)}
     try:
         clear_current()
     except Exception:
         pass
-    return {"softReset": True, "browserRunning": True, "cookiesCleared": cleared, "navigated": navigated}
+    return {
+        "softReset": True,
+        "browserRunning": debug_browser_running(),
+        "cookiesCleared": cleared,
+        "closedLoginWindow": closed,
+        "profilePreserved": True,
+    }
 
 
 def reset_login_session(profile: str = "default", preserve_profile: bool = False) -> dict:
@@ -2348,19 +2317,24 @@ def park_after_read(focus_app: bool = True) -> dict:
 
 
 def cleanup_after_read(close_eb: bool = True, focus_app: bool = True) -> dict:
-    result = {"closedEbichelchen": None, "focusedApp": None, "prewarmScheduled": False, "sharedBrowser": True}
+    # v306: Das Login läuft in einer eigenen app-artigen Chromium/Edge-Instanz,
+    # während EntretienConnect im normalen Standardbrowser bleibt. Nach dem sicheren
+    # Erfassen der Sitzung wird deshalb das komplette Loginfenster beendet.
+    result = {"closedEbichelchen": None, "closedLoginWindow": None, "focusedApp": None, "prewarmScheduled": False, "sharedBrowser": False}
     if close_eb:
         try:
             result["closedEbichelchen"] = close_ebichelchen_target()
         except Exception as exc:
             result["closedEbichelchen"] = {"closed": False, "error": str(exc)}
+        try:
+            result["closedLoginWindow"] = force_close_launched_browser(force=True)
+        except Exception as exc:
+            result["closedLoginWindow"] = {"closed": False, "error": str(exc)}
     if focus_app:
         try:
             result["focusedApp"] = focus_app_tab()
         except Exception as exc:
             result["focusedApp"] = {"ok": False, "error": str(exc)}
-    # v302: Der App-Tab selbst hält den kontrollierten Browser bereits offen.
-    # Ein separater Prewarm-/Hintergrundprozess ist deshalb weder nötig noch erwünscht.
     return result
 
 
@@ -2999,13 +2973,13 @@ def clear_current() -> None:
         LATEST_AT = None
 
 # ===================================================================
-# v305 – ein kontrolliertes Firefox-Fenster mit WebDriver BiDi
+# Legacy v305 – deaktivierter Firefox-WebDriver-BiDi-Code
 # App und e-Bichelchen laufen als zwei Tabs derselben Firefox-Instanz.
 # Die sichtbare e-Bichelchen-Seite wird nicht umgeschaltet; die Klasse
 # wird ausschließlich über die von EntretienConnect gewählte groupId gelesen.
 # ===================================================================
 
-# Referenzen auf v304-Fallbacks, bevor die v305-Funktionen sie überschreiben.
+# Legacy-Referenzen; v306 verwendet standardmäßig ausschließlich den CDP-Loginfensterpfad.
 _launch_browser_legacy_v304 = launch_browser
 _check_login_ready_legacy_v304 = check_login_ready
 _focus_app_legacy_v304 = focus_app_tab
@@ -3071,7 +3045,7 @@ def _free_loopback_port(preferred: int = BIDI_PORT) -> int:
 def _write_firefox_profile_prefs(profile_dir: pathlib.Path) -> None:
     profile_dir.mkdir(parents=True, exist_ok=True)
     prefs = (
-        '// EntretienConnect v305 – ruhiger, dauerhafter Firefox-Hilfsprofilstart\n'
+        '// Legacy Firefox-BiDi-Profil (v306 nicht automatisch verwendet)\n'
         'user_pref("browser.shell.checkDefaultBrowser", false);\n'
         'user_pref("browser.aboutwelcome.enabled", false);\n'
         'user_pref("browser.startup.page", 0);\n'
@@ -3471,9 +3445,10 @@ def launch_firefox_app(app_url: str, profile: str = "default", timeout_s: float 
 
 
 def supports_firefox_bidi() -> bool:
-    # Feature-capability, nicht nur momentaner Verbindungsstatus. So versucht die
-    # Oberfläche nie, als Fallback noch Chrome parallel zu öffnen.
-    return True
+    # v306: Die App wird nicht mehr in einem ferngesteuerten Firefox gestartet.
+    # Der BiDi-Code bleibt nur als stiller Rückfall im Modul, wird aber von der
+    # Oberfläche nicht angeboten oder automatisch aktiviert.
+    return False
 
 
 def debug_browser_running() -> bool:
@@ -3605,7 +3580,7 @@ def _read_direct_with_session(session: dict, selected_group_id: int) -> dict:
     if not message_subject:
         raise RuntimeError("Die Kategorie « Nachricht / Message » konnte für die gewählte Klasse nicht gelesen werden.")
     return {
-        "version": "1.10.30",
+        "version": "1.10.31",
         "importedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "pageUrl": EB_URL,
         "groups": groups,
@@ -3689,7 +3664,7 @@ def read_from_firefox_bidi(selected_group_id: int | None = None) -> dict:
             ),
         }
     )
-    payload["version"] = "1.10.30"
+    payload["version"] = "1.10.31"
     payload["pageUrl"] = url
     return payload
 
