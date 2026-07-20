@@ -816,7 +816,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 data, at = eb.get_current()
                 return self._json(200, {"ok": True, "hasData": bool(data), "receivedAt": at, "data": data})
             if path == "/api/eb/open-browser":
-                info = eb.launch_browser(q("profile", "default"), preferred_browser=q("browser", "auto"))
+                info = eb.launch_browser(q("profile", "default"), preferred_browser=q("browser", "auto"), user_agent=q("ua", ""))
                 return self._json(200, {"ok": True, "info": info})
             if path == "/api/eb/login-ready":
                 return self._json(200, eb.check_login_ready())
@@ -1606,18 +1606,22 @@ def main():
         print("  Pour quitter : fermez le navigateur. Le helper local s’arrête ensuite automatiquement.")
         print("=" * 56)
         _write_pid_file(actual_port)
-        # v302: EntretienConnect selbst im kontrollierten Chrome-/Edge-Browser öffnen.
-        # e-Bichelchen wird später als zweiter Tab desselben Fensters angelegt. Dadurch
-        # gibt es beim Verbinden keinen separaten Browser-Kaltstart mehr.
-        def _open_app_window():
-            if EB_AVAILABLE:
-                try:
-                    eb.launch_app_browser(url, "default", "auto")
-                    return
-                except Exception as exc:
-                    print("Navigateur contrôlé indisponible, ouverture dans le navigateur par défaut :", exc)
-            _open_in_browser(url)
-        threading.Timer(0.6, _open_app_window).start()
+        # Ein eventuell von v302 übrig gebliebenes kontrolliertes Chrome-Fenster
+        # gehört nur zum EntretienConnect-Hilfsprofil und wird einmalig entfernt.
+        if EB_AVAILABLE:
+            try:
+                # Nur eine von v302 kontrollierte Chromium-Instanz schließen. Ein
+                # fremder Browser, der zufällig einen DevTools-Port verwendet, bleibt
+                # unangetastet.
+                stale_targets = eb._list_cdp_targets()
+                if any(eb._is_app_target(t) for t in stale_targets):
+                    eb.force_close_launched_browser(force=True)
+            except Exception:
+                pass
+        # v303: Die App bleibt im vom Benutzer gewählten Standardbrowser. In Firefox
+        # öffnet e-Bichelchen als normaler zweiter Tab; der lokale Helfer liest danach
+        # ausschließlich die education.lu-Sitzung aus dem lokalen Firefox-Profil.
+        threading.Timer(0.6, lambda: _open_in_browser(url)).start()
         def _watchdog():
             global last_heartbeat_time
             last_tick = time.time()

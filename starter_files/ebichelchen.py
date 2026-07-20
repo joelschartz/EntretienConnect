@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.27 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.28 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import base64
+import configparser
 import json
 import mimetypes
 import os
@@ -14,11 +15,13 @@ import pathlib
 import platform
 import secrets
 import shutil
+import sqlite3
 import socket
 import ssl
 import struct
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.parse
@@ -65,6 +68,8 @@ BROWSER_LAUNCH_LOCK = threading.Lock()
 CREATED_TEST_ENTRIES: list[dict] = []
 LATEST_SESSION: dict | None = None
 LATEST_SESSION_AT: str | None = None
+ACTIVE_BROWSER_MODE = "cdp"  # cdp | firefox-current
+ACTIVE_BROWSER_USER_AGENT = ""
 
 
 def _json_response(handler: BaseHTTPRequestHandler, data, status: int = 200):
@@ -162,6 +167,8 @@ def read_url_json(url: str, timeout: float = 4.0):
 
 
 def debug_browser_running() -> bool:
+    if ACTIVE_BROWSER_MODE == "firefox-current":
+        return True
     """True only while the isolated Chrome/Edge instance used for e-Bichelchen
     still exposes its DevTools endpoint. A normal Chrome window is intentionally
     not considered here because it cannot be read safely without remote debugging.
@@ -357,7 +364,17 @@ def prewarm_browser(profile: str = "default", preferred_browser: str = "auto", w
     return {"prewarmed": True, "alreadyRunning": False, "ready": debug_browser_running(), "port": CDP_PORT, "browser": browser.get("name"), "profileDir": str(profile_dir)}
 
 
-def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
+def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: str = "") -> dict:
+    global ACTIVE_BROWSER_MODE, ACTIVE_BROWSER_USER_AGENT
+    if str(preferred_browser or "").lower() == "firefox-current":
+        # Firefox speichert die education.lu-Sitzung im lokalen Profil. Dadurch kann
+        # EntretienConnect denselben bereits geöffneten Firefox verwenden, ohne eine
+        # zweite kontrollierte Chromium-Instanz zu starten.
+        ACTIVE_BROWSER_MODE = "firefox-current"
+        ACTIVE_BROWSER_USER_AGENT = str(user_agent or "Mozilla/5.0 Firefox")[:500]
+        return {"alreadyRunning": True, "openedByPage": True, "sameBrowser": True, "browser": "Firefox", "browserId": "firefox-current", "url": EB_URL}
+    ACTIVE_BROWSER_MODE = "cdp"
+    ACTIVE_BROWSER_USER_AGENT = str(user_agent or "")[:500]
     browser = find_browser_executable(preferred_browser)
     if not browser:
         raise RuntimeError(
@@ -1051,7 +1068,462 @@ def find_ebichelchen_target() -> dict:
 
 
 
+def _firefox_profile_dirs() -> list[pathlib.Path]:
+    """Findet Firefox-Profile, ohne den Browser zu steuern oder zu beenden."""
+    system = platform.system().lower()
+    if system == "darwin":
+        root = pathlib.Path.home() / "Library" / "Application Support" / "Firefox"
+    elif system == "windows":
+        root = pathlib.Path(os.environ.get("APPDATA") or pathlib.Path.home()) / "Mozilla" / "Firefox"
+    else:
+        root = pathlib.Path.home() / ".mozilla" / "firefox"
+    profiles_root = root / "Profiles"
+    found: list[pathlib.Path] = []
+
+    ini = root / "profiles.ini"
+    if ini.exists():
+        cp = configparser.RawConfigParser()
+        try:
+            cp.read(ini, encoding="utf-8")
+            for section in cp.sections():
+                if not section.lower().startswith("profile"):
+                    continue
+                raw = cp.get(section, "Path", fallback="").strip()
+                if not raw:
+                    continue
+                is_relative = cp.get(section, "IsRelative", fallback="1").strip() != "0"
+                path = (root / raw) if is_relative else pathlib.Path(os.path.expanduser(raw))
+                if path.is_dir() and path not in found:
+                    found.append(path)
+        except Exception:
+            pass
+
+    if profiles_root.is_dir():
+        try:
+            for path in profiles_root.iterdir():
+                if path.is_dir() and path not in found:
+                    found.append(path)
+        except Exception:
+            pass
+
+    def score(path: pathlib.Path):
+        db = path / "cookies.sqlite"
+        try:
+            return db.stat().st_mtime
+        except Exception:
+            return 0
+    found.sort(key=score, reverse=True)
+    return found
+
+
+def _query_firefox_cookie_db(db_path: pathlib.Path) -> list[dict]:
+    sql = """
+        SELECT name, value, host, path, expiry, lastAccessed, creationTime,
+               COALESCE(originAttributes, '')
+        FROM moz_cookies
+        WHERE lower(host) IN ('education.lu', '.education.lu')
+           OR lower(host) LIKE '%.education.lu'
+    """
+    rows = []
+    conn = None
+    try:
+        conn = sqlite3.connect(f"file:{urllib.parse.quote(str(db_path), safe='/:')}?mode=ro", uri=True, timeout=0.4)
+        rows = conn.execute(sql).fetchall()
+    except Exception:
+        # Firefox nutzt WAL. Wenn ein Virenscanner/eine alte SQLite-Version den direkten
+        # Reader blockiert, eine kurze lokale Momentaufnahme inklusive WAL verwenden.
+        try:
+            with tempfile.TemporaryDirectory(prefix="entretienconnect_ff_") as td:
+                dst = pathlib.Path(td) / "cookies.sqlite"
+                shutil.copy2(db_path, dst)
+                for suffix in ("-wal", "-shm"):
+                    src_extra = pathlib.Path(str(db_path) + suffix)
+                    if src_extra.exists():
+                        try:
+                            shutil.copy2(src_extra, pathlib.Path(str(dst) + suffix))
+                        except Exception:
+                            pass
+                conn2 = sqlite3.connect(str(dst), timeout=0.4)
+                try:
+                    rows = conn2.execute(sql).fetchall()
+                finally:
+                    conn2.close()
+        except Exception:
+            rows = []
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+    out = []
+    for row in rows:
+        try:
+            out.append({
+                "name": str(row[0] or ""),
+                "value": str(row[1] or ""),
+                "domain": str(row[2] or ""),
+                "path": str(row[3] or "/"),
+                "expiry": int(row[4] or 0),
+                "lastAccessed": int(row[5] or 0),
+                "creationTime": int(row[6] or 0),
+                "originAttributes": str(row[7] or ""),
+            })
+        except Exception:
+            continue
+    return out
+
+
+def capture_firefox_session() -> dict:
+    """Liest ausschließlich Cookies der Domain education.lu aus dem aktuellen
+    Firefox-Profil. Andere Browserdaten werden weder gelesen noch gespeichert."""
+    now = int(time.time())
+    candidates = []
+    for profile_dir in _firefox_profile_dirs():
+        db = profile_dir / "cookies.sqlite"
+        if not db.exists():
+            continue
+        rows = _query_firefox_cookie_db(db)
+        valid = [r for r in rows if r.get("name") and (not r.get("expiry") or int(r.get("expiry") or 0) > now)]
+        if valid:
+            newest = max(int(r.get("lastAccessed") or 0) for r in valid)
+            candidates.append((newest, profile_dir, valid))
+    if not candidates:
+        raise RuntimeError("Noch keine e-Bichelchen-Sitzung im aktuellen Firefox gefunden. Bitte Login abschließen.")
+
+    _, profile_dir, rows = max(candidates, key=lambda item: item[0])
+    # Standard-Container bevorzugen. Firefox Total Cookie Protection kann zusätzliche
+    # partitionierte Kopien anlegen; die normale Top-Level-Anmeldung hat leere Attribute.
+    plain = [r for r in rows if not r.get("originAttributes")]
+    use_rows = plain or rows
+    use_rows.sort(key=lambda r: (int(r.get("lastAccessed") or 0), int(r.get("creationTime") or 0)))
+    cookies: dict[str, str] = {}
+    for row in use_rows:
+        cookies[row["name"]] = row["value"]
+    if not cookies:
+        raise RuntimeError("Keine verwendbaren education.lu-Cookies in Firefox gefunden.")
+    ua = ACTIVE_BROWSER_USER_AGENT or "Mozilla/5.0 (Macintosh; Intel Mac OS X) Gecko/20100101 Firefox"
+    return {
+        "cookieHeader": "; ".join(f"{k}={v}" for k, v in cookies.items()),
+        "cookieNames": sorted(cookies),
+        "userAgent": ua,
+        "capturedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "targetUrl": EB_URL,
+        "browser": "firefox-current",
+        "profileDir": str(profile_dir),
+    }
+
+
+def _session_request(session: dict, method: str, path: str, json_body=None, timeout: float = 5.0) -> dict:
+    url = path if str(path).startswith("http") else "https://ssl.education.lu" + str(path)
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://ssl.education.lu/ebichelchen/app/",
+        "Cookie": session.get("cookieHeader") or "",
+        "User-Agent": session.get("userAgent") or "Mozilla/5.0",
+        "mobileappversion": "web",
+    }
+    data = None
+    if json_body is not None:
+        data = json.dumps(json_body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+        headers["Origin"] = "https://ssl.education.lu"
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    status = 0
+    text = ""
+    try:
+        with urllib.request.urlopen(req, timeout=timeout, context=SSL_CONTEXT) as resp:
+            status = int(resp.getcode() or 0)
+            text = resp.read().decode("utf-8", "replace")
+    except Exception as exc:
+        status = int(getattr(exc, "code", 0) or 0)
+        try:
+            text = exc.read().decode("utf-8", "replace")
+        except Exception:
+            text = str(exc)
+    try:
+        body = json.loads(text) if text else None
+    except Exception:
+        body = None
+    return {"ok": 200 <= status < 300, "status": status, "body": body, "text": text[:700], "url": url}
+
+
+def _extract_group_objects_py(body) -> list:
+    if isinstance(body, list):
+        return body
+    if not isinstance(body, dict):
+        return []
+    candidates = [
+        body.get("objects"), body.get("groups"), body.get("data"),
+        (body.get("data") or {}).get("objects") if isinstance(body.get("data"), dict) else None,
+        body.get("result"),
+        (body.get("result") or {}).get("objects") if isinstance(body.get("result"), dict) else None,
+    ]
+    return next((c for c in candidates if isinstance(c, list)), [])
+
+
+def _map_person_py(person) -> dict | None:
+    if not isinstance(person, dict):
+        return None
+    raw_id = person.get("id", person.get("studentId", person.get("childId")))
+    try:
+        pid = int(raw_id)
+    except Exception:
+        return None
+    first = str(person.get("firstName", person.get("firstname", "")) or "")
+    last = str(person.get("lastName", person.get("lastname", "")) or "")
+    full = str(person.get("fullName", person.get("displayName", person.get("name", ""))) or "")
+    if not full:
+        full = (first + " " + last).strip()
+    if not (first or last or full):
+        return None
+    return {"id": pid, "firstName": first, "lastName": last, "fullName": full}
+
+
+def _unique_people_py(items) -> list:
+    mapped = {}
+    for item in items if isinstance(items, list) else []:
+        p = _map_person_py(item)
+        if p:
+            mapped[p["id"]] = p
+    return sorted(mapped.values(), key=lambda p: str(p.get("fullName") or "").casefold())
+
+
+def _map_group_py(group) -> dict | None:
+    if not isinstance(group, dict):
+        return None
+    try:
+        gid = int(group.get("id", group.get("groupId")))
+    except Exception:
+        return None
+    students = _unique_people_py(group.get("students") or group.get("children") or [])
+    teachers = _unique_people_py(group.get("teachers") or [])
+    tutors = _unique_people_py(group.get("tutors") or [])
+    excluded = {p["id"]: p for p in teachers + tutors}
+    return {
+        "id": gid,
+        "classAlias": str(group.get("classAlias", group.get("name", "")) or ""),
+        "name": str(group.get("name", group.get("classAlias", "")) or ""),
+        "classGrade": str(group.get("classGrade") or ""),
+        "entityCode": str(group.get("entityCode") or ""),
+        "isActivatedByTeacher": bool(group.get("isActivatedByTeacher")),
+        "isInactive": bool(group.get("isInactive")),
+        "isTestClass": bool(group.get("isTestClass")),
+        "numberOfClasses": group.get("numberOfClasses"),
+        "lastSynchDate": group.get("lastSynchDate"),
+        "students": students,
+        "teachers": teachers,
+        "tutors": tutors,
+        "excluded": sorted(excluded.values(), key=lambda p: str(p.get("fullName") or "").casefold()),
+    }
+
+
+def _normalize_subjects_py(body, source: str) -> list:
+    subjects: dict[int, dict] = {}
+    seen: set[int] = set()
+    rx_words = ("nachricht", "message", "deutsch", "fran", "math", "luxemb", "wochenplan", "ausflug", "sortie", "sport", "kunst", "science", "wissenschaft")
+
+    def walk(obj, path="$", depth=0):
+        if depth > 10 or not isinstance(obj, (dict, list)):
+            return
+        oid = id(obj)
+        if oid in seen:
+            return
+        seen.add(oid)
+        if isinstance(obj, dict):
+            if not any(k in obj for k in ("firstName", "lastName", "fullName", "classAlias", "students", "teachers", "tutors")):
+                raw_id = obj.get("id", obj.get("subjectId"))
+                if raw_id is None and isinstance(obj.get("subject"), dict):
+                    raw_id = obj["subject"].get("id")
+                try:
+                    sid = int(raw_id)
+                except Exception:
+                    sid = None
+                label_de = obj.get("labelDeu", obj.get("labelDE", obj.get("label_deu", obj.get("labelDe", obj.get("nameDeu", obj.get("nameDe", ""))))))
+                label_fr = obj.get("labelFra", obj.get("labelFR", obj.get("label_fra", obj.get("labelFr", obj.get("nameFra", obj.get("nameFr", ""))))))
+                label = obj.get("label", obj.get("name", obj.get("title", obj.get("description", ""))))
+                icon = obj.get("icon", obj.get("iconName", ""))
+                text = " ".join(str(x or "") for x in (label_de, label_fr, label, icon)).casefold()
+                looks = bool(label_de or label_fr or any(w in text for w in rx_words))
+                if sid is not None and looks and sid not in subjects:
+                    subjects[sid] = {
+                        "id": sid,
+                        "labelDeu": str(label_de or (label if label and not label_fr else "")),
+                        "labelFra": str(label_fr or ""),
+                        "label": str(label or ""),
+                        "icon": str(icon or ""),
+                        "defaultColor": obj.get("defaultColor", obj.get("colorId", obj.get("color"))),
+                        "source": source + " " + path,
+                    }
+            for key, value in obj.items():
+                if isinstance(value, (dict, list)):
+                    walk(value, path + "." + str(key), depth + 1)
+        else:
+            for i, value in enumerate(obj):
+                if isinstance(value, (dict, list)):
+                    walk(value, f"{path}[{i}]", depth + 1)
+
+    walk(body)
+    return sorted(subjects.values(), key=lambda s: str(s.get("labelDeu") or s.get("labelFra") or s.get("label") or s.get("id")).casefold())
+
+
+def _detect_message_subject_py(subjects: list) -> dict | None:
+    for subject in subjects or []:
+        text = " ".join(str(subject.get(k) or "") for k in ("labelDeu", "labelFra", "label", "icon")).casefold()
+        if "nachricht" in text or "message" in text:
+            return subject
+    return None
+
+
+def _read_subjects_direct(session: dict, group: dict) -> tuple[list, str | None, list]:
+    gid = int(group["id"])
+    gid_q = urllib.parse.quote(str(gid))
+    bases = [
+        "/ebichelchen/app/api/v6/get-subjects-for-groups",
+        "/ebichelchen/app/api/group/get-subjects-for-groups",
+        "/ebichelchen/app/api/get-subjects-for-groups",
+    ]
+    attempts = []
+    get_paths = [
+        bases[0] + "?groupId=" + gid_q,
+        bases[0] + "?groupIds=" + gid_q,
+        bases[1] + "?groupId=" + gid_q,
+        bases[1] + "?groupIds=" + gid_q,
+        bases[2] + "?groupId=" + gid_q,
+    ]
+    for path in get_paths:
+        res = _session_request(session, "GET", path, timeout=3.0)
+        subjects = _normalize_subjects_py(res.get("body"), "direct-get " + path) if res.get("ok") else []
+        attempts.append({"url": path, "method": "GET", "status": res.get("status"), "subjects": len(subjects), "messageSubjectId": (_detect_message_subject_py(subjects) or {}).get("id")})
+        if _detect_message_subject_py(subjects):
+            return subjects, "direct-get " + path, attempts
+    bodies = [{"groupId": gid}, {"groupIds": [gid]}, [gid], {"ids": [gid]}]
+    for body in bodies:
+        res = _session_request(session, "POST", bases[0], json_body=body, timeout=3.2)
+        subjects = _normalize_subjects_py(res.get("body"), "direct-post " + bases[0]) if res.get("ok") else []
+        attempts.append({"url": bases[0], "method": "POST", "status": res.get("status"), "subjects": len(subjects), "messageSubjectId": (_detect_message_subject_py(subjects) or {}).get("id")})
+        if _detect_message_subject_py(subjects):
+            return subjects, "direct-post " + bases[0], attempts
+    return [], None, attempts
+
+
+def _firefox_groups(session: dict) -> tuple[list, dict]:
+    path = "/ebichelchen/app/api/group/get-groups-from-teacher"
+    result = _session_request(session, "GET", path, timeout=4.0)
+    raw_groups = _extract_group_objects_py(result.get("body")) if result.get("ok") else []
+    groups = []
+    for raw in raw_groups:
+        mapped = _map_group_py(raw)
+        if mapped:
+            groups.append(mapped)
+    groups.sort(key=lambda g: str(g.get("classAlias") or g.get("name") or g.get("id")).casefold())
+    return groups, result
+
+
+def firefox_check_login_ready() -> dict:
+    try:
+        session = capture_firefox_session()
+        groups, result = _firefox_groups(session)
+        if groups:
+            global LATEST_SESSION, LATEST_SESSION_AT
+            with LOCK:
+                LATEST_SESSION = session
+                LATEST_SESSION_AT = session.get("capturedAt")
+            return {"ok": True, "ready": True, "browserClosed": False, "stage": "ready", "groupCount": len(groups), "status": result.get("status"), "via": "firefox-cookie-api", "lightweight": True}
+        return {"ok": True, "ready": False, "browserClosed": False, "stage": "login", "status": result.get("status"), "lightweight": True}
+    except Exception as exc:
+        return {"ok": True, "ready": False, "browserClosed": False, "stage": "login", "detail": str(exc), "lightweight": True}
+
+
+def read_from_firefox(selected_group_id: int | None = None) -> dict:
+    t0 = time.perf_counter()
+    session = capture_firefox_session()
+    groups_t0 = time.perf_counter()
+    groups, group_result = _firefox_groups(session)
+    groups_ms = round((time.perf_counter() - groups_t0) * 1000)
+    if not groups:
+        raise RuntimeError("Keine Klassen aus dem aktuellen Firefox erhalten. Bitte e-Bichelchen-Login abschließen.")
+
+    group = None
+    chosen_automatically = False
+    if selected_group_id is not None:
+        group = next((g for g in groups if int(g.get("id")) == int(selected_group_id)), None)
+        if group is None:
+            raise RuntimeError(f"Die in EntretienConnect gewählte Klasse wurde nicht gefunden (groupId {selected_group_id}).")
+    elif len(groups) == 1:
+        group = groups[0]
+        chosen_automatically = True
+
+    subjects = []
+    message_subject = None
+    subjects_source = None
+    subject_attempts = []
+    subjects_t0 = time.perf_counter()
+    if group is not None:
+        subjects, subjects_source, subject_attempts = _read_subjects_direct(session, group)
+        message_subject = _detect_message_subject_py(subjects)
+        if not message_subject:
+            raise RuntimeError("Die Kategorie « Nachricht / Message » konnte für die gewählte Klasse nicht gelesen werden.")
+    subjects_ms = round((time.perf_counter() - subjects_t0) * 1000)
+
+    payload = {
+        "version": "1.10.28",
+        "importedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "pageUrl": EB_URL,
+        "groups": groups,
+        "needsGroupSelection": group is None and len(groups) > 1,
+        "group": ({k: group.get(k) for k in ("id", "classAlias", "name", "classGrade", "entityCode")} if group else None),
+        "loggedInUser": None,
+        "students": group.get("students", []) if group else [],
+        "teachers": group.get("teachers", []) if group else [],
+        "tutors": group.get("tutors", []) if group else [],
+        "excluded": group.get("excluded", []) if group else [],
+        "subjects": subjects,
+        "messageSubject": ({
+            "id": message_subject.get("id"),
+            "labelDeu": message_subject.get("labelDeu", ""),
+            "labelFra": message_subject.get("labelFra", ""),
+            "label": message_subject.get("label", ""),
+            "source": message_subject.get("source", subjects_source or ""),
+        } if message_subject else None),
+        "endpoints": {
+            "groupsUrl": group_result.get("url"),
+            "subjectsSource": subjects_source,
+            "scannedStorageKeys": [],
+            "knownSubjectUrls": [],
+            "subjectAttempts": subject_attempts,
+        },
+        "timing": {
+            "groupsMs": groups_ms,
+            "subjectsMs": subjects_ms,
+            "totalMs": round((time.perf_counter() - t0) * 1000),
+        },
+        "summary": {
+            "groups": len(groups),
+            "students": len(group.get("students", [])) if group else 0,
+            "teachers": len(group.get("teachers", [])) if group else 0,
+            "tutors": len(group.get("tutors", [])) if group else 0,
+            "excluded": len(group.get("excluded", [])) if group else 0,
+            "subjects": len(subjects),
+            "messageSubjectId": message_subject.get("id") if message_subject else None,
+        },
+        "source": {
+            "browser": "firefox-current",
+            "sessionCaptured": True,
+            "sessionCookieNames": session.get("cookieNames", []),
+            "selectionAuthority": "EntretienConnect" if selected_group_id is not None else "automatic-only-for-single-group",
+            "groupChosenAutomatically": chosen_automatically,
+        },
+    }
+    global LATEST_SESSION, LATEST_SESSION_AT
+    with LOCK:
+        LATEST_SESSION = session
+        LATEST_SESSION_AT = session.get("capturedAt")
+    return payload
+
 def check_login_ready() -> dict:
+    if ACTIVE_BROWSER_MODE == "firefox-current":
+        return firefox_check_login_ready()
     """Sehr leichte Bereitschaftsprüfung für den Login-Polling-Loop.
 
     v297: weiterhin nur ein DevTools-Listenaufruf pro Poll. Die Freigabe erfolgt aber
@@ -1231,6 +1703,8 @@ def read_from_chrome(selected_group_id: int | None = None) -> dict:
 
 
 def focus_app_tab() -> dict:
+    if ACTIVE_BROWSER_MODE == "firefox-current":
+        return {"method": "page-window-reference", "foundExistingTab": True, "openedNewTab": False, "handledByFrontend": True}
     """Bringt den bereits geöffneten App-Tab / das App-Fenster nach vorne, ohne eine neue App-URL zu öffnen.
 
     v297: Zuerst rein über DevTools nach dem lokalen EntretienConnect-Tab suchen. Das
@@ -1337,6 +1811,8 @@ def _cdp_close_tab(target_id: str) -> bool:
 
 
 def close_ebichelchen_target() -> dict:
+    if ACTIVE_BROWSER_MODE == "firefox-current":
+        return {"closed": False, "method": "page-window-reference", "handledByFrontend": True, "sameBrowser": True}
     """Schließt nur den e-Bichelchen-Tab, niemals den vorgewärmten Browserprozess.
 
     v302: Der kontrollierte Browser bleibt durch den EntretienConnect-App-Tab geöffnet
@@ -1371,6 +1847,8 @@ def close_ebichelchen_target() -> dict:
     return {"closed": True, "method": "tabs-only", "closedTabs": closed, "browserKeptWarm": True, "targets": details}
 
 def force_close_launched_browser(force: bool = False) -> dict:
+    if ACTIVE_BROWSER_MODE == "firefox-current":
+        return {"closed": False, "method": "none", "normalBrowserProtected": True}
     """v155: Schließt den vom Helfer gestarteten Browser komplett – egal welche Seite
     gerade offen ist (auch IAM-/EduKey-Login). Betrifft ausschließlich den Browser am
     lokalen CDP-Port mit App-Profil; der normale Browser des Benutzers bleibt unberührt."""
@@ -1498,6 +1976,12 @@ def _clear_saved_login_data() -> list[str]:
 
 
 def soft_reset_login() -> dict:
+    if ACTIVE_BROWSER_MODE == "firefox-current":
+        try:
+            clear_current()
+        except Exception:
+            pass
+        return {"softReset": True, "browserRunning": True, "cookiesCleared": False, "navigated": False, "normalBrowserProtected": True}
     """v292: Verwirft eine halbfertige/abgebrochene IAM-Sitzung, OHNE den Browser zu
     schließen. Die Cookies werden per DevTools gelöscht (browserweit) und der
     e-Bichelchen-Tab frisch geladen, sodass ein sauberer Login startet. Der Browser
@@ -1538,6 +2022,12 @@ def soft_reset_login() -> dict:
 
 
 def reset_login_session(profile: str = "default", preserve_profile: bool = False) -> dict:
+    if ACTIVE_BROWSER_MODE == "firefox-current":
+        try:
+            clear_current()
+        except Exception:
+            pass
+        return {"closed": False, "profilesRemoved": [], "sessionDataRemoved": [], "cookiesCleared": False, "profilePreserved": True, "normalBrowserProtected": True}
     """v155: Kompletter Neustart der e-Bichelchen-Anmeldung. Schließt den App-Browser
     und löscht die App-Browserprofile (Cookies / halbfertige IAM-Sitzung). Ohne diesen
     Reset blockiert eine abgebrochene Anmeldung (falsches Passwort, Fenster zu früh
@@ -2256,7 +2746,7 @@ def read_browser_and_store(selected_group_id=None) -> dict:
     if not READ_BROWSER_LOCK.acquire(blocking=False):
         raise RuntimeError("Lecture déjà en cours – merci de patienter.")
     try:
-        payload = read_from_chrome(selected_group_id)
+        payload = read_from_firefox(selected_group_id) if ACTIVE_BROWSER_MODE == "firefox-current" else read_from_chrome(selected_group_id)
     finally:
         READ_BROWSER_LOCK.release()
     with LOCK:

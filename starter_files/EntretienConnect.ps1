@@ -1120,16 +1120,11 @@ Write-Host "  Dans le navigateur :  $url"
 Write-Host "  Laissez cette fenêtre ouverte. La fermer = quitter."
 Write-Host "============================================================"
 if (-not $NoAutoOpen) {
-    try {
-        $opened = Invoke-EbHelper "open-app" "" "" "auto" $url
-        if (-not $opened.ok) { throw ([string]$opened.error) }
-    } catch {
-        Log ("Kontrollierter Browser nicht verfügbar; Standardbrowser-Fallback: " + $_.Exception.Message)
-        try { Start-Process $url } catch {}
-    }
+    # v303: EntretienConnect wieder im Standardbrowser öffnen. Der kontrollierte
+    # Chromium-Browser wird nur dann verwendet, wenn Windows ihn für die
+    # e-Bichelchen-Automation wirklich benötigt.
+    try { Start-Process $url } catch {}
 }
-# v302: Kein separater Prewarm-Prozess. Der App-Tab hält denselben Browser offen,
-# in dem e-Bichelchen später als zweiter Tab erscheint.
 
 while (-not $script:ShutdownRequested) {
     $client = $null

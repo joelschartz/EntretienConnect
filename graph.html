@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v302</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v303</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1423,7 +1423,8 @@ Langues : FR, DE, EN, LU">?</span>
         <div class="eb-connect-row">
           <button id="ebConnect" class="ghost sm" type="button">Connecter e-Bichelchen</button>
           <select id="ebBrowser" class="eb-browser" title="Navigateur pour la fenêtre de connexion e-Bichelchen">
-            <option value="auto">Chrome ou Edge</option>
+            <option value="auto">Automatique</option>
+            <option value="firefox-current">Firefox actuel</option>
             <option value="chrome">Google Chrome</option>
             <option value="edge">Microsoft Edge</option>
           </select>
@@ -1571,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 302;
+const APP_VERSION = 303;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6447,6 +6448,8 @@ function refreshSelectionUI(){
    Optionaler zweiter Versandkanal. Solange der Schalter aus ist, wird nichts
    geladen und kein Login verlangt. */
 let ebData=null, ebAutoTimer=null, ebAutoStart=0, ebReadBusy=false, ebLoginPending=false, ebBrowserMissingCount=0; // v138: jamais reprendre automatiquement d’anciennes données e-Bichelchen du navigateur
+let ebSameBrowserPopup=null, ebSameBrowserMode=false;
+const EB_LOGIN_URL="https://ssl.education.lu/ebichelchen/app/login";
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
@@ -6500,7 +6503,7 @@ function ebWaitingStatusHtml(detail){
   const d=String(detail||"").trim();
   if(d) console.debug("e-Bichelchen en attente :", d);
   // v290: lien « Annuler » toujours présent pour sortir d'une connexion interrompue.
-  return 'Connexion en cours… Terminez l’identification dans la fenêtre e-Bichelchen. <a href="#" data-eb-cancel style="white-space:nowrap">Annuler</a>';
+  return 'Connexion en cours… Terminez l’identification dans l’onglet e-Bichelchen. <a href="#" data-eb-cancel style="white-space:nowrap">Annuler</a>';
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
@@ -6528,15 +6531,23 @@ function ebGroupChoiceHtml(){
 function ebBrowserPref(){
   const s=document.getElementById("ebBrowser");
   let v = s ? s.value : "auto";
+  const ua = navigator.userAgent || "";
+  const isFirefox=/Firefox\//.test(ua);
   if(v==="auto"){
-    // v292: e-Bichelchen möglichst im SELBEN Browser öffnen wie die App. Sonst lief die App
-    // z. B. in Edge, e-Bichelchen aber in Chrome (Auto bevorzugte Chrome). Läuft die App in
-    // Safari/Firefox (kein Chromium), bleibt "auto" und das Backend wählt Chrome/Edge.
-    const ua = navigator.userAgent || "";
+    // v303: Der normale, bereits geöffnete Firefox wird verwendet. Der
+    // Login erscheint als zweiter Tab desselben Fensters; kein Chrome-Kaltstart.
+    if(isFirefox) return "firefox-current";
     if(/Edg\//.test(ua)) return "edge";
     if(/Chrome\//.test(ua) && !/Edg\//.test(ua)) return "chrome";
   }
   return v;
+}
+function ebCloseSameBrowserPopup(){
+  const pop=ebSameBrowserPopup;
+  ebSameBrowserPopup=null;
+  ebSameBrowserMode=false;
+  try{ if(pop && !pop.closed) pop.close(); }catch(_){ }
+  try{ window.focus(); }catch(_){ }
 }
 function ebMatchedIdFor(stu){
   if(!stu) return "";
@@ -6710,8 +6721,13 @@ function renderEbPanel(){
       ? "Utile seulement si la session e-Bichelchen a expiré, ou pour changer de classe/compte ou relire la liste des élèves. Rouvre la fenêtre de connexion."
       : "Ouvre un deuxième onglet e-Bichelchen dans le même navigateur, puis lit la classe, les élèves et la catégorie « Message ».";
   }
-  // Browser-Auswahl nur vor dem Verbinden zeigen (danach irrelevant).
-  if(browserSel) browserSel.style.display = ebReady() ? "none" : "";
+  // v303: In Firefox ist kein Browserwähler nötig: e-Bichelchen öffnet
+  // zwingend als zweiter Tab des aktuell verwendeten Firefox.
+  if(browserSel){
+    const ua=navigator.userAgent||"";
+    const sameFirefox=/Firefox\//.test(ua);
+    browserSel.style.display = (ebReady() || sameFirefox) ? "none" : "";
+  }
   renderEbGroupChooser();
   renderEbMatch();
 }
@@ -6759,6 +6775,7 @@ function ebScheduleAuto(delay){
   ebAutoTimer=setTimeout(()=>{ ebAutoTimer=null; ebAutoAttempt(); },ms);
 }
 function ebResetAfterClosedBrowser(){
+  if(ebSameBrowserMode || ebSameBrowserPopup) ebCloseSameBrowserPopup();
   // v287: si l’utilisateur ferme la fenêtre de connexion avant la fin, revenir
   // immédiatement à un état réessayable au lieu de rester bloqué sur « Connexion en cours ».
   ebStopAuto();
@@ -6789,16 +6806,15 @@ document.addEventListener("click", function(ev){
   if(c){ ev.preventDefault(); ev.stopPropagation(); ebCancelPending(); }
 }, true);
 async function ebFocusAppForGroupChoice(){
-  // v299: Bei mehreren Klassen bleibt der e-Bichelchen-Tab nur technisch offen,
-  // damit die anschließende Auswahl direkt per API gelesen werden kann. Sichtbar soll
-  // aber sofort wieder EntretienConnect mit seiner eigenen Klassenwahl im Vordergrund sein.
+  // v303: Der von dieser Seite geöffnete Firefox-Tab kann direkt geschlossen werden.
+  // Die weitere Klassenwahl erfolgt nur in EntretienConnect und braucht den Tab nicht mehr.
+  if(ebSameBrowserMode){ ebCloseSameBrowserPopup(); return; }
   try{
     await fetch("/api/eb/focus-app",{cache:"no-store"});
   }catch(e){ /* best-effort */ }
 }
 async function ebCleanupAfterSuccessfulRead(){
-  // v299: Après la lecture complète, fermer si possible tout le navigateur auxiliaire
-  // isolé (sinon uniquement l’onglet e-Bichelchen), puis remettre EntretienConnect au premier plan.
+  if(ebSameBrowserMode) ebCloseSameBrowserPopup();
   try{
     await fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"});
   }catch(e){ /* best-effort */ }
@@ -6826,22 +6842,40 @@ async function ebConnectFlow(){
   state.ebichelchenSelectedGroupId="";
   state.ebichelchenMap=state.ebichelchenMap||{};
 
-  // v302: e-Bichelchen öffnet als zweiter Tab im selben kontrollierten Browser; keine Seite oder Klasse wird dort von EntretienConnect ausgewählt.
-  // Die App öffnet nur das isolierte Login-Fenster. e-Bichelchen darf auf seiner eigenen
-  // Startseite (z. B. Pinnwand) bleiben; gültige Cookies werden beibehalten.
+  // v303: Im normalen Firefox wird der Login synchron aus dem Klick heraus geöffnet.
+  // Dadurch nutzt er garantiert denselben bereits laufenden Browser und erscheint sofort.
+  const _browserPref=ebBrowserPref();
+  ebSameBrowserMode=(_browserPref==="firefox-current");
+  ebSameBrowserPopup=null;
+  if(ebSameBrowserMode){
+    try{
+      ebSameBrowserPopup=window.open(EB_LOGIN_URL,"_blank");
+      if(!ebSameBrowserPopup) throw new Error("Firefox a bloqué le nouvel onglet.");
+      try{ ebSameBrowserPopup.focus(); }catch(_){ }
+    }catch(e){
+      ebConnectBusy=false; ebLoginPending=false; ebSameBrowserMode=false;
+      renderSetup();
+      setEbStatus("Impossible d’ouvrir l’onglet e-Bichelchen : "+esc(e.message||e),"err");
+      return;
+    }
+  }
   saveState();
 
   try{
-    const j=await ebGet("/api/eb/open-browser?browser="+encodeURIComponent(ebBrowserPref()));
+    const j=await ebGet("/api/eb/open-browser?browser="+encodeURIComponent(_browserPref)+"&ua="+encodeURIComponent(navigator.userAgent||""));
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebConnectBusy=false;
     renderSetup();
-    setEbStatus(ebWaitingStatusHtml("L’onglet e-Bichelchen est ouvert dans le même navigateur. Terminez la connexion dans cet onglet."),"info");
+    const msg=ebSameBrowserMode
+      ? "L’onglet e-Bichelchen est ouvert dans ce Firefox. Terminez la connexion dans cet onglet."
+      : "La fenêtre e-Bichelchen est ouverte. Terminez la connexion.";
+    setEbStatus(ebWaitingStatusHtml(msg),"info");
     ebAutoStart=Date.now();
     // v288: zuerst nur leicht prüfen, ob IAM/e-Bichelchen wirklich bereit ist.
     // Die teure Klassen-/Schüleranalyse wird erst dann einmalig gestartet.
     ebScheduleAuto(320);
   }catch(e){
+    if(ebSameBrowserMode || ebSameBrowserPopup) ebCloseSameBrowserPopup();
     ebConnectBusy=false;
     ebLoginPending=false;
     renderSetup();
@@ -6849,6 +6883,9 @@ async function ebConnectFlow(){
   }
 }
 async function ebAutoAttempt(){
+  if(ebSameBrowserMode && ebSameBrowserPopup){
+    try{ if(ebSameBrowserPopup.closed){ ebResetAfterClosedBrowser(); return; } }catch(_){ }
+  }
   if(ebReadBusy){ ebScheduleAuto(220); return; }
   if(Date.now()-ebAutoStart>600000){
     ebStopAuto();
