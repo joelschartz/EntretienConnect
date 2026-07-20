@@ -662,6 +662,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         self.send_header("Pragma", "no-cache")
         self.send_header("Expires", "0")
+        # v309: only the harmless capabilities endpoint is cross-origin readable,
+        # so a stale local tab can discover a newer helper on another loopback port.
+        if self.path.split("?", 1)[0] == "/api/graph/capabilities":
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
         super().end_headers()
 
     def log_message(self, fmt, *args):
@@ -701,7 +706,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 309, "nativeLoginEngine": ("WKWebView-v309" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -1619,7 +1624,7 @@ def main():
                     eb.force_close_launched_browser(force=True)
             except Exception:
                 pass
-        # v306: Die Haupt-App öffnet wieder ganz normal im Standardbrowser des
+        # v309: Die Haupt-App öffnet wieder ganz normal im Standardbrowser des
         # Benutzers. e-Bichelchen wird erst beim Klick auf « Connecter » in einem
         # separaten, app-artigen Loginfenster geöffnet. Dadurch ist EntretienConnect
         # weder an Firefox noch an Chrome/Safari als Standardbrowser gebunden.

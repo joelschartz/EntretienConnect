@@ -1,4 +1,4 @@
-﻿# =====================================================================
+# =====================================================================
 #  EntretienConnect - lokaler Helfer fuer Windows (PowerShell)
 #  Ersetzt server.py: liefert graph.html aus und erledigt Login (Geraetecode)
 #  + Versand ueber Microsoft Graph. Kein Python, keine Installation, kein Admin.
