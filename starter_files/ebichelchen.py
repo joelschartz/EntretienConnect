@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.26 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.27 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -47,7 +47,7 @@ def _user_app_data_dir() -> pathlib.Path:
 
 DATA_ROOT = _user_app_data_dir()
 PROFILE_ROOT = DATA_ROOT / "profiles"
-EB_URL = "https://ssl.education.lu/ebichelchen/app/"
+EB_URL = "https://ssl.education.lu/ebichelchen/app/login"
 
 # Eigener Zertifikats-Context für direkte Hintergrund-Requests zu ssl.education.lu.
 # Auf manchen macOS-Python-Installationen fehlt sonst die lokale CA-Kette.
@@ -61,6 +61,7 @@ LATEST_DATA = None
 LATEST_AT = None
 LOCK = threading.Lock()
 BROWSER_PROCESSES: dict[str, subprocess.Popen] = {}
+BROWSER_LAUNCH_LOCK = threading.Lock()
 CREATED_TEST_ENTRIES: list[dict] = []
 LATEST_SESSION: dict | None = None
 LATEST_SESSION_AT: str | None = None
@@ -237,6 +238,51 @@ def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0) ->
             time.sleep(0.10)
     return {"focused": False, "method": "cdp", "error": last_error or "Target not ready"}
 
+
+def prewarm_browser(profile: str = "default", preferred_browser: str = "auto", wait_ready_s: float = 0.0) -> dict:
+    """Startet den isolierten Chromium-Prozess ohne sichtbares Fenster.
+
+    v301: Der langsame Browser-Kaltstart läuft bereits im Hintergrund, sobald
+    EntretienConnect geöffnet wird. Beim Klick auf « Connecter » muss dadurch nur
+    noch der direkte Login-Tab angelegt werden. Das normale Chrome-Profil des
+    Benutzers bleibt unangetastet; die automatische Klassen-/Schülerlesung behält
+    weiterhin ihren kontrollierten DevTools-Kontext.
+    """
+    with BROWSER_LAUNCH_LOCK:
+        if debug_browser_running():
+            return {"prewarmed": True, "alreadyRunning": True, "port": CDP_PORT}
+
+        browser = find_browser_executable(preferred_browser)
+        if not browser:
+            return {"prewarmed": False, "error": "Kein unterstützter Browser gefunden."}
+
+        profile = sanitize_profile_name(profile)
+        profile_dir = PROFILE_ROOT / browser["id"] / profile
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        args = [
+            browser["path"],
+            f"--remote-debugging-port={CDP_PORT}",
+            f"--user-data-dir={profile_dir}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--no-startup-window",
+        ]
+        try:
+            proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            BROWSER_PROCESSES[profile] = proc
+        except Exception as exc:
+            return {"prewarmed": False, "error": str(exc), "browser": browser.get("name")}
+
+    deadline = time.time() + max(0.0, float(wait_ready_s))
+    while time.time() < deadline:
+        if debug_browser_running():
+            return {"prewarmed": True, "alreadyRunning": False, "ready": True, "port": CDP_PORT, "browser": browser.get("name"), "profileDir": str(profile_dir)}
+        if proc.poll() is not None:
+            return {"prewarmed": False, "ready": False, "error": "Browser-Prozess wurde vorzeitig beendet.", "browser": browser.get("name")}
+        time.sleep(0.10)
+    return {"prewarmed": True, "alreadyRunning": False, "ready": debug_browser_running(), "port": CDP_PORT, "browser": browser.get("name"), "profileDir": str(profile_dir)}
+
+
 def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     browser = find_browser_executable(preferred_browser)
     if not browser:
@@ -252,6 +298,16 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     profile = sanitize_profile_name(profile)
     profile_dir = PROFILE_ROOT / browser_id / profile
     profile_dir.mkdir(parents=True, exist_ok=True)
+
+    # v301: Der Browser wird beim App-Start unsichtbar vorgewärmt. Falls der Klick
+    # sehr schnell erfolgt, kurz auf dessen DevTools-Port warten, statt einen zweiten
+    # Kaltstart mit demselben Profil anzustoßen.
+    warm_proc = BROWSER_PROCESSES.get(profile)
+    if warm_proc is not None and warm_proc.poll() is None and not debug_browser_running():
+        for _ in range(35):
+            if debug_browser_running():
+                break
+            time.sleep(0.10)
 
     # Falls schon ein Browser mit CDP-Port läuft, einen neuen e-Bichelchen-Tab öffnen.
     # v285: Nur Erfolg melden, wenn /json/new den Tab wirklich angelegt hat. Zuvor
@@ -274,7 +330,11 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
         # v299: Eine verwaiste IAM-/Zwischenseite aus einem abgebrochenen Login
         # nicht neben einem neuen e-Bichelchen-Fenster stehen lassen. Der Browser am
         # CDP-Port verwendet ausschließlich das isolierte EntretienConnect-Profil.
-        stale_pages = [t for t in _list_cdp_targets() if t.get("type") == "page"]
+        all_pages = [t for t in _list_cdp_targets() if t.get("type") == "page"]
+        for blank in [t for t in all_pages if str(t.get("url") or "") in ("", "about:blank") or str(t.get("url") or "").startswith(("chrome://newtab", "edge://newtab"))]:
+            if blank.get("id"):
+                _cdp_close_tab(blank.get("id"))
+        stale_pages = [t for t in _list_cdp_targets() if t.get("type") == "page" and not _is_app_target(t) and "/ebichelchen/app/" not in str(t.get("url") or "")]
         if stale_pages:
             ws = stale_pages[0].get("webSocketDebuggerUrl") or (version.get("webSocketDebuggerUrl") if isinstance(version, dict) else None)
             if ws:
@@ -1203,47 +1263,38 @@ def _cdp_close_tab(target_id: str) -> bool:
 
 
 def close_ebichelchen_target() -> dict:
-    """Schließt das von der App gestartete e-Bichelchen-Chrome vollständig.
-    In v1.7.3 wurde nur ein einzelner Tab geschlossen und danach versehentlich die App-URL
-    im e-Bichelchen-Fenster geöffnet. v1.10.16 schließt deshalb bevorzugt den ganzen
-    DevTools-Browser über Browser.close. Das betrifft nur den Chrome mit unserem lokalen Testprofil.
-    v1.10.17: läuft im selben Browser auch der App-Tab, wird nur der e-Bichelchen-Tab geschlossen.
+    """Schließt nur den e-Bichelchen-Tab, niemals den vorgewärmten Browserprozess.
+
+    v301: Der kontrollierte Browser bleibt ohne sichtbares Fenster im Hintergrund
+    bereit. Dadurch ist die nächste Verbindung ebenso schnell wie das Öffnen eines
+    neuen Tabs in einem bereits laufenden Chrome. Beim echten Beenden der App räumt
+    ``force_close_launched_browser`` den Prozess weiterhin vollständig auf.
     """
-    target = find_ebichelchen_target()
-    target_id = target.get("id")
-    url = target.get("url") or ""
-    title = target.get("title") or ""
-    ws_url = target.get("webSocketDebuggerUrl")
-    if not target_id or not ws_url:
+    targets = [t for t in _list_cdp_targets() if t.get("type") == "page" and "/ebichelchen/app/" in str(t.get("url") or "")]
+    if not targets:
         raise RuntimeError("Kein e-Bichelchen-Target zum Schließen gefunden.")
-
-    if "/ebichelchen/app/" not in url:
-        raise RuntimeError("Sicherheitsstopp: Target ist kein e-Bichelchen-Tab: " + url)
-
-    if any(_is_app_target(t) for t in _list_cdp_targets()):
-        if _cdp_close_tab(target_id):
-            return {"closed": True, "method": "json-close", "targetId": target_id, "url": url, "title": title, "appTabProtected": True}
-        cdp_call(ws_url, "Page.close", {}, msg_id=700)
-        return {"closed": True, "method": "Page.close", "targetId": target_id, "url": url, "title": title, "appTabProtected": True}
-
-    # Bevorzugt: kompletten von der App gestarteten Chrome schließen.
-    try:
-        cdp_call(ws_url, "Browser.close", {}, msg_id=701)
-        return {"closed": True, "method": "Browser.close", "targetId": target_id, "url": url, "title": title}
-    except Exception as first_exc:
-        # Fallback: nur den e-Bichelchen-Tab schließen.
-        close_url = f"http://127.0.0.1:{CDP_PORT}/json/close/{urllib.parse.quote(target_id, safe='')}"
-        try:
-            req = urllib.request.Request(close_url, method="GET")
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                text = resp.read().decode("utf-8", "replace")
-            return {"closed": True, "method": "json-close", "targetId": target_id, "url": url, "title": title, "warning": str(first_exc), "response": text[:200]}
-        except Exception as second_exc:
+    closed = 0
+    details = []
+    for target in targets:
+        target_id = target.get("id")
+        url = target.get("url") or ""
+        title = target.get("title") or ""
+        ws_url = target.get("webSocketDebuggerUrl")
+        ok = False
+        if target_id:
+            ok = _cdp_close_tab(target_id)
+        if not ok and ws_url:
             try:
                 cdp_call(ws_url, "Page.close", {}, msg_id=700)
-                return {"closed": True, "method": "Page.close", "targetId": target_id, "url": url, "title": title, "warning": f"{first_exc}; {second_exc}"}
-            except Exception as third_exc:
-                raise RuntimeError(f"e-Bichelchen konnte nicht geschlossen werden: Browser.close={first_exc}; json-close={second_exc}; Page.close={third_exc}")
+                ok = True
+            except Exception:
+                ok = False
+        if ok:
+            closed += 1
+        details.append({"targetId": target_id, "url": url, "title": title, "closed": ok})
+    if not closed:
+        raise RuntimeError("Der e-Bichelchen-Tab konnte nicht geschlossen werden.")
+    return {"closed": True, "method": "tabs-only", "closedTabs": closed, "browserKeptWarm": True, "targets": details}
 
 def force_close_launched_browser() -> dict:
     """v155: Schließt den vom Helfer gestarteten Browser komplett – egal welche Seite
@@ -1501,7 +1552,7 @@ def park_after_read(focus_app: bool = True) -> dict:
 
 
 def cleanup_after_read(close_eb: bool = True, focus_app: bool = True) -> dict:
-    result = {"closedEbichelchen": None, "focusedApp": None}
+    result = {"closedEbichelchen": None, "focusedApp": None, "prewarmScheduled": False}
     if close_eb:
         try:
             result["closedEbichelchen"] = close_ebichelchen_target()
@@ -1512,6 +1563,17 @@ def cleanup_after_read(close_eb: bool = True, focus_app: bool = True) -> dict:
             result["focusedApp"] = focus_app_tab()
         except Exception as exc:
             result["focusedApp"] = {"ok": False, "error": str(exc)}
+    # Chrome/Edge kann auf einzelnen Systemen nach dem letzten geschlossenen Fenster
+    # den Prozess beenden. Eine kurze, unsichtbare Nachwärmung stellt sicher, dass der
+    # nächste Connect trotzdem keinen Kaltstart braucht.
+    try:
+        def _rewarm():
+            time.sleep(0.35)
+            prewarm_browser("default", "auto", wait_ready_s=0.0)
+        threading.Thread(target=_rewarm, daemon=True).start()
+        result["prewarmScheduled"] = True
+    except Exception:
+        pass
     return result
 
 

@@ -462,7 +462,7 @@ function Get-QueryParam($requestPath, $name, $default = "") {
 }
 
 function Start-EbPlainBrowser {
-    $urlEb = "https://ssl.education.lu/ebichelchen/app/"
+    $urlEb = "https://ssl.education.lu/ebichelchen/app/login"
     try {
         Start-Process $urlEb
         return @{ ok=$true; info=@{ opened=$true; mode="plain"; url=$urlEb } }
@@ -493,6 +493,18 @@ function Invoke-EbHelper($action, $groupId = "", $payloadFile = "", $browser = "
     } catch {
         return @{ ok=$false; error=$_.Exception.Message }
     }
+}
+
+
+function Start-EbPrewarmAsync {
+    $helper = Join-Path $ScriptDir "EntretienConnect-eb.ps1"
+    if (-not (Test-Path $helper -PathType Leaf)) { return }
+    $ps = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+    if (-not (Test-Path $ps -PathType Leaf)) { $ps = "powershell.exe" }
+    try {
+        $args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$helper`" -Action prewarm -Browser auto"
+        Start-Process -FilePath $ps -ArgumentList $args -WindowStyle Hidden | Out-Null
+    } catch {}
 }
 
 
@@ -1101,6 +1113,8 @@ Write-Host "  Dans le navigateur :  $url"
 Write-Host "  Laissez cette fenêtre ouverte. La fermer = quitter."
 Write-Host "============================================================"
 if (-not $NoAutoOpen) { try { Start-Process $url } catch {} }
+# v301: Browser-Kaltstart unsichtbar im Hintergrund vorziehen.
+Start-EbPrewarmAsync
 
 while (-not $script:ShutdownRequested) {
     $client = $null
@@ -1139,5 +1153,6 @@ while (-not $script:ShutdownRequested) {
     } catch {}
 }
 try { $listener.Stop() } catch {}
+try { $null = Invoke-EbHelper "shutdown" } catch {}
 Remove-EntretienConnectPidFile
 Log "EntretienConnect local helper stopped."
