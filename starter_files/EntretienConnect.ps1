@@ -462,7 +462,7 @@ function Get-QueryParam($requestPath, $name, $default = "") {
 }
 
 function Start-EbPlainBrowser {
-    $urlEb = "https://ssl.education.lu/ebichelchen/app/tabs/calendar"
+    $urlEb = "https://ssl.education.lu/ebichelchen/app/"
     try {
         Start-Process $urlEb
         return @{ ok=$true; info=@{ opened=$true; mode="plain"; url=$urlEb } }
@@ -492,6 +492,51 @@ function Invoke-EbHelper($action, $groupId = "", $payloadFile = "", $browser = "
         catch { return @{ ok=$false; error=$txt } }
     } catch {
         return @{ ok=$false; error=$_.Exception.Message }
+    }
+}
+
+
+function Focus-EntretienConnectWindow {
+    # v299: Das App-Fenster nach der e-Bichelchen-Lesung wieder sichtbar nach vorne
+    # holen. Keine neue URL / kein zusätzlicher Tab wird geöffnet.
+    $candidates = @()
+    try {
+        $candidates = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.MainWindowHandle -ne 0 -and ([string]$_.MainWindowTitle) -like "*EntretienConnect*"
+        })
+    } catch {}
+
+    foreach ($proc in $candidates) {
+        try {
+            if (-not ("EntretienConnectAppWin32" -as [type])) {
+                Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class EntretienConnectAppWin32 {
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+}
+"@
+            }
+            $h = $proc.MainWindowHandle
+            [EntretienConnectAppWin32]::ShowWindowAsync($h, 9) | Out-Null
+            [EntretienConnectAppWin32]::BringWindowToTop($h) | Out-Null
+            try {
+                $shell = New-Object -ComObject WScript.Shell
+                $null = $shell.AppActivate($proc.Id)
+            } catch {}
+            $ok = [bool][EntretienConnectAppWin32]::SetForegroundWindow($h)
+            return @{ focused=$ok; method="windows-user32"; processId=$proc.Id; title=$proc.MainWindowTitle }
+        } catch {}
+    }
+
+    try {
+        $shell = New-Object -ComObject WScript.Shell
+        $ok = [bool]$shell.AppActivate("EntretienConnect")
+        return @{ focused=$ok; method="wscript-title" }
+    } catch {
+        return @{ focused=$false; method="none"; error=$_.Exception.Message }
     }
 }
 
@@ -596,14 +641,18 @@ function Handle-EbRequest($stream, $req) {
         }
 
         if ($req.Method -eq "GET" -and ($path -eq "/api/eb/cleanup" -or $path -eq "/api/eb/close")) {
-            $r = Invoke-EbHelper "park"
-            if ($r.ok) { Send-Json $stream @{ ok=$true; info=$r.info } }
-            else { Send-Json $stream @{ ok=$true; info=@{ closedInstead=$false; minimized=$false; keptOpenForPublishing=$true } } }
+            # v299: Nach der vollständigen Lesung den isolierten Hilfsbrowser schließen.
+            # Falls Windows Browser.close nicht zulässt, wird zumindest der e-Bichelchen-
+            # Tab geschlossen. Danach wird das bestehende App-Fenster fokussiert.
+            $r = Invoke-EbHelper "cleanup"
+            $focus = Focus-EntretienConnectWindow
+            if ($r.ok) { Send-Json $stream @{ ok=$true; info=$r.info; focusedApp=$focus } }
+            else { Send-Json $stream @{ ok=$true; info=@{ closed=$false; error=$r.error }; focusedApp=$focus } }
             return
         }
 
         if ($req.Method -eq "GET" -and $path -eq "/api/eb/focus-app") {
-            Send-Json $stream @{ ok=$true; info=@{ keptOpenForPublishing=$true; isolatedHelper=$true } }
+            Send-Json $stream @{ ok=$true; info=(Focus-EntretienConnectWindow) }
             return
         }
 

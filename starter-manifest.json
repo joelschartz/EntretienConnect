@@ -1,5 +1,5 @@
 {
-  "version": "v298",
+  "version": "v299",
   "files": [
     {
       "target": "server.py",
@@ -10,20 +10,20 @@
     {
       "target": "ebichelchen.py",
       "url": "starter_files/ebichelchen.py",
-      "sha256": "bf795b309a920d1f706fe75997f9601c03f6146da34dc04fcca4828b409546c6",
-      "size": 94211
+      "sha256": "fdff13c8ad64889a7797e56a3bb21c6993d30942602fcea24abcee96ee3f680d",
+      "size": 95942
     },
     {
       "target": "EntretienConnect.ps1",
       "url": "starter_files/EntretienConnect.ps1",
-      "sha256": "e944fe2186c43f928785b8b4f19a6d1299dfe45a85c264806cdbc94f49f1d4fb",
-      "size": 54087
+      "sha256": "74f74fbb819d4d9a4e953d9e82507907dd90543f29e9eeed5fa9068dd8cb3c78",
+      "size": 56166
     },
     {
       "target": "EntretienConnect-eb.ps1",
       "url": "starter_files/EntretienConnect-eb.ps1",
-      "sha256": "bbc23ff8ab00c70a7690940440ff49b13bcca819f19d4cff7312c381c486197a",
-      "size": 43343
+      "sha256": "f12cd266f21dc71a48cb9251aa59a999cc8bf97040bcad35c87729826b35695e",
+      "size": 50939
     },
     {
       "target": "EntretienConnect-Start.bat",
@@ -40,7 +40,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "82dbe79c02c08b3a56d7b02b1d20a00550298f825ef2ca9b0a6e546e4b0b4d45",
+      "sha256": "ff279f0fc66d8d952264eb300666998994a85ff22efef0d9e65f943fdb8c04b6",
       "size": 5
     },
     {

@@ -16,7 +16,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # ----------------------------------------------------------- e-Bichelchen (PowerShell, ohne Python)
 $EbCdpPort = 9223
-$EbUrl = "https://ssl.education.lu/ebichelchen/app/tabs/calendar"
+$EbUrl = "https://ssl.education.lu/ebichelchen/app/"
 $script:EbData = $null
 $script:EbReceivedAt = $null
 $script:EbCreatedEntries = @()
@@ -72,6 +72,155 @@ function Invoke-JsonUrl($url, $method = "GET", $timeoutSec = 4) {
     return Invoke-RestMethod -Uri $url -Method $method -TimeoutSec $timeoutSec -Headers @{ Accept="application/json" }
 }
 
+function Get-EbTargets {
+    try {
+        $targets = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json" "GET" 3
+        return @($targets)
+    } catch { return @() }
+}
+
+function Close-EbTargetById($targetId) {
+    if (-not $targetId) { return $false }
+    try {
+        $encoded = [Uri]::EscapeDataString([string]$targetId)
+        $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/close/$encoded" "GET" 3
+        return $true
+    } catch { return $false }
+}
+
+function Normalize-EbTabs {
+    # v299: Im isolierten Hilfsbrowser höchstens einen e-Bichelchen-Tab behalten.
+    # Leere Start-Tabs werden entfernt, andere Seiten des Nutzers aber nie angefasst.
+    $targets = @(Get-EbTargets)
+    $hits = @($targets | Where-Object { $_.type -eq "page" -and ([string]$_.url) -match '/ebichelchen/app/' })
+    $keep = $null
+    if ($hits.Count -gt 0) {
+        $keep = $hits | Select-Object -First 1
+        foreach ($dup in ($hits | Select-Object -Skip 1)) {
+            Close-EbTargetById $dup.id | Out-Null
+        }
+    }
+    foreach ($t in $targets) {
+        if ($keep -and ([string]$t.id -eq [string]$keep.id)) { continue }
+        $u = [string]$t.url
+        if ($t.type -eq "page" -and ($u -eq "about:blank" -or $u -match '^(chrome|edge)://newtab/?')) {
+            Close-EbTargetById $t.id | Out-Null
+        }
+    }
+    return $keep
+}
+
+function Get-EbOwnerProcessId {
+    try {
+        $c = Get-NetTCPConnection -LocalPort $EbCdpPort -State Listen -ErrorAction Stop | Select-Object -First 1
+        if ($c -and $c.OwningProcess) { return [int]$c.OwningProcess }
+    } catch {}
+    try {
+        $line = (& netstat -ano -p tcp 2>$null | Select-String -Pattern (":$EbCdpPort\s+.*LISTENING\s+(\d+)\s*$") | Select-Object -First 1)
+        if ($line -and $line.Matches.Count -gt 0) { return [int]$line.Matches[0].Groups[1].Value }
+    } catch {}
+    return 0
+}
+
+function Activate-EbBrowserWindow($processId = 0) {
+    # Page.bringToFront aktiviert nur den Tab innerhalb des Fensters. v299 bringt
+    # zusätzlich das isolierte Chrome-/Edge-Fenster auf Windows sichtbar nach vorne.
+    try {
+        if (-not ("EntretienConnectWin32" -as [type])) {
+            Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class EntretienConnectWin32 {
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+}
+"@
+        }
+    } catch {}
+
+    $candidateIds = @()
+    if ($processId) { $candidateIds += [int]$processId }
+    $owner = Get-EbOwnerProcessId
+    if ($owner -and ($candidateIds -notcontains $owner)) { $candidateIds += $owner }
+
+    # Der Prozess, der Port 9223 hält, besitzt bei Chromium nicht auf jedem Rechner
+    # selbst das sichtbare Fenster. Deshalb zusätzlich sichtbare e-Bichelchen-/IAM-
+    # Browserfenster berücksichtigen.
+    try {
+        $visible = @(Get-Process chrome,msedge -ErrorAction SilentlyContinue | Where-Object {
+            $_.MainWindowHandle -ne 0 -and (
+                ([string]$_.MainWindowTitle) -match 'e-Bichelchen|EduKey|education\.lu|IAM|Connexion'
+            )
+        })
+        foreach ($v in $visible) {
+            if ($candidateIds -notcontains ([int]$v.Id)) { $candidateIds += [int]$v.Id }
+        }
+    } catch {}
+
+    foreach ($id in $candidateIds) {
+        try {
+            $proc = Get-Process -Id $id -ErrorAction Stop
+            $h = $proc.MainWindowHandle
+            if ($h -and $h -ne 0) {
+                try { [EntretienConnectWin32]::ShowWindowAsync($h, 9) | Out-Null } catch {}
+                try { [EntretienConnectWin32]::BringWindowToTop($h) | Out-Null } catch {}
+                try {
+                    $shell = New-Object -ComObject WScript.Shell
+                    $null = $shell.AppActivate($id)
+                } catch {}
+                try { return [bool][EntretienConnectWin32]::SetForegroundWindow($h) } catch { return $true }
+            }
+        } catch {}
+    }
+    return $false
+}
+
+function Close-EbHelperBrowser {
+    # v299: Nach der vollständigen Lesung den isolierten Hilfsbrowser vollständig
+    # schließen, wenn er nur den e-Bichelchen-Tab enthält. Das normale Browserfenster
+    # mit EntretienConnect läuft nicht am CDP-Port 9223 und bleibt unberührt.
+    $targets = @(Get-EbTargets)
+    $pages = @($targets | Where-Object { $_.type -eq "page" })
+    $ebTargets = @($pages | Where-Object { ([string]$_.url) -match '/ebichelchen/app/' })
+    if ($ebTargets.Count -eq 0) {
+        return @{ closed=$false; method="none"; reason="Kein e-Bichelchen-Tab gefunden." }
+    }
+
+    $appTargets = @($pages | Where-Object {
+        $u = [string]$_.url
+        $u -match '^https?://(127\.0\.0\.1|localhost)(:|/)'
+    })
+
+    # Der Debug-Browser verwendet ein eigenes EntretienConnect-Profil. Solange darin
+    # kein lokaler App-Tab läuft, kann die gesamte Hilfsinstanz sicher beendet werden –
+    # auch wenn IAM beim Login einen zusätzlichen Zwischentab offen gelassen hat.
+    if ($appTargets.Count -eq 0) {
+        try {
+            $ws = [string]$ebTargets[0].webSocketDebuggerUrl
+            if (-not $ws) {
+                $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 2
+                $ws = [string]$version.webSocketDebuggerUrl
+            }
+            if ($ws) {
+                try { $null = Invoke-CdpCall $ws "Browser.close" @{} 930 2 } catch {}
+                Start-Sleep -Milliseconds 220
+                try {
+                    $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
+                } catch {
+                    return @{ closed=$true; method="Browser.close"; wholeHelperBrowser=$true }
+                }
+            }
+        } catch {}
+    }
+
+    $closedTabs = 0
+    foreach ($t in $ebTargets) {
+        if (Close-EbTargetById $t.id) { $closedTabs++ }
+    }
+    return @{ closed=($closedTabs -gt 0); method="json-close"; wholeHelperBrowser=$false; closedTabs=$closedTabs; appTabProtected=($appTargets.Count -gt 0) }
+}
+
 function Open-EbRemoteTab($url) {
     try {
         $encoded = [Uri]::EscapeDataString($url)
@@ -97,43 +246,73 @@ function Start-EbBrowser($profile = "default", $preferredBrowser = "auto") {
     $browser = Find-EbBrowserExecutable $preferredBrowser
     $safeProfile = ([regex]::Replace(([string]$profile), '[^A-Za-z0-9_.-]', '_')).Trim('._-')
     if (-not $safeProfile) { $safeProfile = "default" }
-    # Profil bewusst NICHT im App-Ordner/OneDrive speichern.
-    # Alte Versionen haben den Pfad mit Leerzeichen (z.B. "OneDrive - 365education")
-    # an Edge/Chrome weitergegeben; Chromium interpretierte einzelne Pfadteile dann
-    # als URLs und öffnete mehrere fehlerhafte Fenster.
     $baseProfileRoot = $env:LOCALAPPDATA
     if (-not $baseProfileRoot) { $baseProfileRoot = $ScriptDir }
     $profileDir = Join-Path $baseProfileRoot ("EntretienConnect\profiles\" + $browser.id + "\" + $safeProfile)
     New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+    $pidFile = Join-Path $profileDir "entretienconnect-browser.pid"
 
     try {
         $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
-        # v291: Läuft der Browser schon, einen vorhandenen e-Bichelchen-Tab WIEDERVERWENDEN,
-        # statt jedes Mal einen neuen zu öffnen (keine Tab-Flut) und den nach dem Lesen "warm"
-        # gehaltenen, minimierten Tab weiternutzen. Fenster dabei wieder normalisieren.
-        $existing = $null
-        try { $existing = Get-EbTarget } catch { $existing = $null }
+        $existing = Normalize-EbTabs
         if ($existing) {
             Set-EbWindowState $existing "normal" | Out-Null
             try { $null = Invoke-CdpCall $existing.webSocketDebuggerUrl "Page.bringToFront" @{} 912 6 } catch {}
-            return @{ alreadyRunning=$true; reusedTab=$true; openedTab=$false; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
+            $savedPid = 0
+            try { $savedPid = [int](Get-Content -LiteralPath $pidFile -Raw -ErrorAction Stop) } catch {}
+            $activated = Activate-EbBrowserWindow $savedPid
+            return @{ alreadyRunning=$true; reusedTab=$true; openedTab=$false; active=$activated; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
         }
+
+        # v299: Läuft am Hilfsport nur noch eine alte IAM-/Zwischenseite, die
+        # verwaiste Instanz vollständig beenden und danach genau ein neues Fenster
+        # starten. So sammeln sich nach abgebrochenen Logins keine Chrome-Fenster an.
+        $stalePages = @(Get-EbTargets | Where-Object { $_.type -eq "page" })
+        if ($stalePages.Count -gt 0) {
+            $ws = [string]$stalePages[0].webSocketDebuggerUrl
+            if (-not $ws) { $ws = [string]$version.webSocketDebuggerUrl }
+            if ($ws) { try { $null = Invoke-CdpCall $ws "Browser.close" @{} 929 2 } catch {} }
+            for ($w=0; $w -lt 12; $w++) {
+                Start-Sleep -Milliseconds 100
+                try { $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1 }
+                catch { break }
+            }
+            throw "Verwaister e-Bichelchen-Hilfsbrowser wurde neu gestartet."
+        }
+
         Open-EbRemoteTab $EbUrl | Out-Null
-        return @{ alreadyRunning=$true; openedTab=$true; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
+        Start-Sleep -Milliseconds 180
+        $target = $null
+        try { $target = Get-EbTarget } catch {}
+        if ($target) {
+            try { $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Page.bringToFront" @{} 913 6 } catch {}
+        }
+        $savedPid = 0
+        try { $savedPid = [int](Get-Content -LiteralPath $pidFile -Raw -ErrorAction Stop) } catch {}
+        $activated = Activate-EbBrowserWindow $savedPid
+        return @{ alreadyRunning=$true; openedTab=$true; active=$activated; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
     } catch {}
 
-    # Start-Process in Windows PowerShell quotet Array-Argumente nicht zuverlässig.
-    # Deshalb bauen wir die Commandline selbst und quoten den Profilpfad explizit.
-    $argLine = "--remote-debugging-port=$EbCdpPort --user-data-dir=`"$profileDir`" --no-first-run --no-default-browser-check `"$EbUrl`""
-    Start-Process -FilePath $browser.path -ArgumentList $argLine | Out-Null
+    # v299: separates, aktives Hilfsfenster. Es wird nur die e-Bichelchen-App geöffnet;
+    # deren eigene Startseite (z. B. Pinnwand) darf unverändert bleiben.
+    $argLine = "--remote-debugging-port=$EbCdpPort --user-data-dir=`"$profileDir`" --no-first-run --no-default-browser-check --new-window `"$EbUrl`""
+    $proc = Start-Process -FilePath $browser.path -ArgumentList $argLine -PassThru
+    try { Set-Content -LiteralPath $pidFile -Value ([string]$proc.Id) -Encoding ASCII } catch {}
+
     for ($i=0; $i -lt 30; $i++) {
         Start-Sleep -Milliseconds 250
         try {
             $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
-            return @{ alreadyRunning=$false; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
+            $target = $null
+            try { $target = Get-EbTarget } catch {}
+            if ($target) {
+                try { $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Page.bringToFront" @{} 914 6 } catch {}
+            }
+            $activated = Activate-EbBrowserWindow $proc.Id
+            return @{ alreadyRunning=$false; active=$activated; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; processId=$proc.Id; devtoolsBrowser=$version.Browser }
         } catch {}
     }
-    return @{ alreadyRunning=$false; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; warning="Browser wurde gestartet, DevTools war aber noch nicht erreichbar." }
+    return @{ alreadyRunning=$false; active=$false; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; processId=$proc.Id; warning="Browser wurde gestartet, DevTools war aber noch nicht erreichbar." }
 }
 
 function Get-EbTarget {
@@ -141,7 +320,7 @@ function Get-EbTarget {
     $hits = @($targets | Where-Object { ([string]$_.url) -match '/ebichelchen/app/' })
     if ($hits.Count -eq 0) {
         $hint = @($targets | Select-Object -First 6 | ForEach-Object { (([string]$_.title) + " -> " + ([string]$_.url)).Trim() }) -join " | "
-        throw "Warte auf e-Bichelchen-Kalender. Bitte Login abschließen. Aktuelle Tabs: $hint"
+        throw "Warte auf e-Bichelchen. Bitte Login abschließen. Aktuelle Tabs: $hint"
     }
     $target = $hits | Select-Object -First 1
     if (-not $target.webSocketDebuggerUrl) { throw "Der e-Bichelchen-Tab hat keine DevTools-WebSocket-URL geliefert." }
@@ -227,7 +406,7 @@ function New-EbReadExpression($selectedGroupId = $null) {
 
   async function waitMs(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-  // v298: EntretienConnect steuert die Klassenwahl ausschließlich über API-Parameter.
+  // v299: EntretienConnect steuert die Klassenwahl ausschließlich über API-Parameter.
   // Es gibt absichtlich keine DOM-Klicks, Store-Manipulationen oder location.replace()-
   // Navigationen mehr im sichtbaren e-Bichelchen-Tab.
 
@@ -268,7 +447,7 @@ function New-EbReadExpression($selectedGroupId = $null) {
     let result = await tryAll('initial');
     if (extractGroupObjects(result.json).length) return result;
 
-    // 2) v298: keinerlei Reiter oder Seiten in e-Bichelchen mehr anklicken.
+    // 2) v299: keinerlei Reiter oder Seiten in e-Bichelchen mehr anklicken.
     // Ein sichtbarer Route-Wechsel zerstört sonst den laufenden CDP-Kontext.
     await waitMs(650);
     result = await tryAll('after-short-wait');
@@ -545,7 +724,7 @@ function New-EbReadExpression($selectedGroupId = $null) {
   const userStore = parseStore("userStore");
   const selectedFromStore = Number(groupStore?.selectedGroup?.id);
 
-  // v298: Bei mehreren Klassen entscheidet ausschließlich EntretienConnect.
+  // v299: Bei mehreren Klassen entscheidet ausschließlich EntretienConnect.
   // Die zuletzt in e-Bichelchen aktive Klasse wird ignoriert. Ein Klick in der App
   // arbeitet direkt mit der groupId und löst keinerlei sichtbare Navigation aus.
   let group = null;
@@ -564,7 +743,7 @@ function New-EbReadExpression($selectedGroupId = $null) {
   let subjectAttempts = [];
   let messageSubject = detectMessageSubject(subjects);
 
-  // v298: Nach einem Klick in EntretienConnect wird die Kategorie zuerst mit der
+  // v299: Nach einem Klick in EntretienConnect wird die Kategorie zuerst mit der
   // ausdrücklich gewählten groupId abgefragt. Die aktuell sichtbare Klasse bzw. ein
   // alter Store in e-Bichelchen darf die Auswahl nicht mehr beeinflussen.
   if (requestedGroupId !== null && group) {
@@ -597,7 +776,7 @@ function New-EbReadExpression($selectedGroupId = $null) {
   } : null;
 
   const payload = {
-    version: "1.10.24",
+    version: "1.10.25",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -810,20 +989,22 @@ try {
         exit 0
     }
 
+    if ($Action -eq "cleanup") {
+        $info = Close-EbHelperBrowser
+        @{ ok=$true; info=$info } | ConvertTo-Json -Depth 10 -Compress
+        exit 0
+    }
+
     if ($Action -eq "park") {
-        # v297: Kompatibilitätsaktion für gecachte v296-Seiten. Nie das ganze
-        # Browserfenster minimieren; nur den e-Bichelchen-Tab schließen.
+        # Kompatibilitätsaktion für alte Oberflächen: niemals minimieren.
+        # Nur den e-Bichelchen-Tab schließen; das vollständige v299-Aufräumen
+        # verwendet die eigene Aktion "cleanup".
         $closed = $false; $detail = ""
         try {
             $target = Get-EbTarget
-            $targetId = [string]$target.id
-            if ($targetId) {
-                $encoded = [uri]::EscapeDataString($targetId)
-                $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/close/$encoded" "GET" 3
-                $closed = $true
-            }
+            $closed = Close-EbTargetById $target.id
         } catch { $detail = [string]$_.Exception.Message }
-        @{ ok=$true; info=@{ parked=$false; minimized=$false; closedInstead=$closed; keptOpenForPublishing=$true; detail=$detail } } | ConvertTo-Json -Depth 10 -Compress
+        @{ ok=$true; info=@{ parked=$false; minimized=$false; closedInstead=$closed; detail=$detail } } | ConvertTo-Json -Depth 10 -Compress
         exit 0
     }
 

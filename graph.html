@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v298</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v299</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1571,7 +1571,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 297;
+const APP_VERSION = 299;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6726,7 +6726,7 @@ function renderEbMatch(){
   const box=document.getElementById("ebMatchBox"); if(!box) return;
   if(!ebData || ebData.needsGroupSelection || !ebData.group){ box.innerHTML=""; return; }
   if(!ebData.messageSubject || !ebData.messageSubject.id){
-    box.innerHTML='<div class="banner warn compact">La catégorie « Nachricht / Message » n’a pas été trouvée dans e-Bichelchen. La publication sera bloquée. Ouvrez le calendrier e-Bichelchen puis « Relire les données ».</div>';
+    box.innerHTML='<div class="banner warn compact">La catégorie « Nachricht / Message » n’a pas été trouvée dans e-Bichelchen. La publication sera bloquée. Reconnectez e-Bichelchen puis relisez les données.</div>';
     return;
   }
   const named=state.students.filter(s=>(s.name||"").trim());
@@ -6789,7 +6789,7 @@ document.addEventListener("click", function(ev){
   if(c){ ev.preventDefault(); ev.stopPropagation(); ebCancelPending(); }
 }, true);
 async function ebFocusAppForGroupChoice(){
-  // v298: Bei mehreren Klassen bleibt der e-Bichelchen-Tab nur technisch offen,
+  // v299: Bei mehreren Klassen bleibt der e-Bichelchen-Tab nur technisch offen,
   // damit die anschließende Auswahl direkt per API gelesen werden kann. Sichtbar soll
   // aber sofort wieder EntretienConnect mit seiner eigenen Klassenwahl im Vordergrund sein.
   try{
@@ -6797,8 +6797,8 @@ async function ebFocusAppForGroupChoice(){
   }catch(e){ /* best-effort */ }
 }
 async function ebCleanupAfterSuccessfulRead(){
-  // v297+: ne jamais minimiser la fenêtre du navigateur. Après la lecture complète,
-  // on ferme uniquement l'onglet e-Bichelchen et on remet EntretienConnect au premier plan.
+  // v299: Après la lecture complète, fermer si possible tout le navigateur auxiliaire
+  // isolé (sinon uniquement l’onglet e-Bichelchen), puis remettre EntretienConnect au premier plan.
   try{
     await fetch("/api/eb/cleanup?closeEb=1&focusApp=1",{cache:"no-store"});
   }catch(e){ /* best-effort */ }
@@ -6826,13 +6826,9 @@ async function ebConnectFlow(){
   state.ebichelchenSelectedGroupId="";
   state.ebichelchenMap=state.ebichelchenMap||{};
 
-  // v294: KEIN automatisches Zurücksetzen/Abmelden mehr beim Verbinden.
-  // Das frühere soft-reset (v292) löschte beim Connect die Cookies (= Abmeldung!) und
-  // lud den Tab neu — dadurch startete e-Bichelchen zwar mit dem Kalender, meldete sich
-  // dann aber wieder ab / lud neu / landete auf der Pinwand. Sehr verwirrend. Jetzt wird
-  // der Browser einfach geöffnet und gelesen; gültige Cookies bleiben erhalten (schneller
-  // Login, kein Ausloggen). Bei einer wirklich hängenden Anmeldung schließt der Nutzer das
-  // Fenster und klickt erneut auf « Connecter ».
+  // v299: Beim Verbinden wird keine e-Bichelchen-Seite mehr ausgewählt oder neu geladen.
+  // Die App öffnet nur das isolierte Login-Fenster. e-Bichelchen darf auf seiner eigenen
+  // Startseite (z. B. Pinnwand) bleiben; gültige Cookies werden beibehalten.
   saveState();
 
   try{
@@ -6928,7 +6924,7 @@ async function ebAutoAttempt(){
     console.log("[eb] Verbindung fertig in "+_total+"s (davon Lesen "+_read+"s) — Rest = Login/IAM + Laden von e-Bichelchen."+_parts);
     ebApplyRead(j.data);
     if(j.data.needsGroupSelection){
-      // v298: e-Bichelchens zuletzt aktive Klasse wird nicht übernommen. Die App zeigt
+      // v299: e-Bichelchens zuletzt aktive Klasse wird nicht übernommen. Die App zeigt
       // ihre eigene Auswahl und holt sich sofort wieder den Vordergrund.
       ebFocusAppForGroupChoice();
     }else{
@@ -6938,8 +6934,7 @@ async function ebAutoAttempt(){
   }
 
   setEbStatus(ebWaitingStatusHtml(j&&j.error?String(j.error):""),"info");
-  // Nach der automatischen Klassenauswahl nicht mehr bis zum nächsten regulären
-  // Zyklus warten: der Kalender wird normalerweise in wenigen hundert ms bereit.
+  // Bei einem kurzzeitigen internen Seitenwechsel schnell erneut prüfen.
   ebScheduleAuto(j&&j.retrySoon ? 360 : (probeSupported ? 850 : 2500));
 }
 

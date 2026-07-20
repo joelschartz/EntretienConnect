@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.21 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.10.25 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -47,7 +47,7 @@ def _user_app_data_dir() -> pathlib.Path:
 
 DATA_ROOT = _user_app_data_dir()
 PROFILE_ROOT = DATA_ROOT / "profiles"
-EB_URL = "https://ssl.education.lu/ebichelchen/app/tabs/calendar"
+EB_URL = "https://ssl.education.lu/ebichelchen/app/"
 
 # Eigener Zertifikats-Context für direkte Hintergrund-Requests zu ssl.education.lu.
 # Auf manchen macOS-Python-Installationen fehlt sonst die lokale CA-Kette.
@@ -191,6 +191,23 @@ def open_remote_tab(url: str) -> bool:
     return False
 
 
+
+def _activate_browser_app(browser_name: str) -> bool:
+    """Bringt das isolierte Login-Fenster sichtbar nach vorne, ohne eine Seite zu wechseln."""
+    system = platform.system().lower()
+    try:
+        if system == "darwin":
+            # `open -a` aktiviert die Anwendung ohne den Browser per AppleScript zu steuern.
+            subprocess.run(["open", "-a", browser_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+            return True
+        if system == "windows":
+            # Beim Python-Starter reicht normalerweise der neue Browserprozess; der
+            # Windows-PowerShell-Starter besitzt zusätzlich eine stärkere user32-Fokussierung.
+            return True
+    except Exception:
+        pass
+    return False
+
 def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     browser = find_browser_executable(preferred_browser)
     if not browser:
@@ -227,7 +244,26 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
                 cdp_call(existing.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=912)
             except Exception:
                 pass
-            return {"alreadyRunning": True, "reusedTab": True, "openedTab": False, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            active = _activate_browser_app(browser_name)
+            return {"alreadyRunning": True, "reusedTab": True, "openedTab": False, "active": active, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+
+        # v299: Eine verwaiste IAM-/Zwischenseite aus einem abgebrochenen Login
+        # nicht neben einem neuen e-Bichelchen-Fenster stehen lassen. Der Browser am
+        # CDP-Port verwendet ausschließlich das isolierte EntretienConnect-Profil.
+        stale_pages = [t for t in _list_cdp_targets() if t.get("type") == "page"]
+        if stale_pages:
+            ws = stale_pages[0].get("webSocketDebuggerUrl") or (version.get("webSocketDebuggerUrl") if isinstance(version, dict) else None)
+            if ws:
+                try:
+                    cdp_call(ws, "Browser.close", {}, msg_id=929, timeout=2)
+                except Exception:
+                    pass
+            for _ in range(12):
+                if not debug_browser_running():
+                    break
+                time.sleep(0.1)
+            raise OSError("Stale helper browser restarted")
+
         opened = False
         for _ in range(8):
             if open_remote_tab(EB_URL):
@@ -235,7 +271,8 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
                 break
             time.sleep(0.25)
         if opened:
-            return {"alreadyRunning": True, "openedTab": True, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            active = _activate_browser_app(browser_name)
+            return {"alreadyRunning": True, "openedTab": True, "active": active, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
         # Fallback: URL über den Browser-Prozess an die bereits laufende Instanz geben.
         # Chrome/Edge leitet dies normalerweise an dieselbe Profilinstanz weiter.
         try:
@@ -244,7 +281,8 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
             pass
         for _ in range(16):
             if open_remote_tab(EB_URL):
-                return {"alreadyRunning": True, "openedTab": True, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+                active = _activate_browser_app(browser_name)
+                return {"alreadyRunning": True, "openedTab": True, "active": active, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
             time.sleep(0.25)
         raise RuntimeError("Le navigateur est ouvert, mais l’onglet e-Bichelchen n’a pas pu être créé. Réessayez une fois.")
     except RuntimeError:
@@ -258,6 +296,7 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
         f"--user-data-dir={profile_dir}",
         "--no-first-run",
         "--no-default-browser-check",
+        "--new-window",
         EB_URL,
     ]
 
@@ -270,7 +309,8 @@ def launch_browser(profile: str, preferred_browser: str = "auto") -> dict:
     for _ in range(48):
         try:
             version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=0.5)
-            return {"alreadyRunning": False, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            active = _activate_browser_app(browser_name)
+            return {"alreadyRunning": False, "active": active, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
         except Exception:
             if proc.poll() is not None:
                 raise RuntimeError(f"{browser_name} s’est fermé avant l’ouverture de la fenêtre e-Bichelchen.")
@@ -425,7 +465,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
 
   async function waitMs(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-  // v298: EntretienConnect steuert die Klassenwahl ausschließlich über API-Parameter.
+  // v299: EntretienConnect steuert die Klassenwahl ausschließlich über API-Parameter.
   // Es gibt absichtlich keine DOM-Klicks, Store-Manipulationen oder location.replace()-
   // Navigationen mehr im sichtbaren e-Bichelchen-Tab.
 
@@ -466,7 +506,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
     let result = await tryAll('initial');
     if (extractGroupObjects(result.json).length) return result;
 
-    // 2) v298: Die App klickt in e-Bichelchen keinerlei Reiter mehr an. Ein sichtbarer
+    // 2) v299: Die App klickt in e-Bichelchen keinerlei Reiter mehr an. Ein sichtbarer
     // Seitenwechsel (Kalender → Pinnwand/Klassen → Kalender) kann den laufenden CDP-
     // JavaScript-Kontext zerstören. Wir warten stattdessen kurz und fragen denselben
     // authentifizierten API-Endpunkt erneut ab.
@@ -747,7 +787,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   const userStore = parseStore("userStore");
   const selectedFromStore = Number(groupStore?.selectedGroup?.id);
 
-  // v298: EntretienConnect ist bei mehreren Klassen die einzige maßgebliche Auswahl.
+  // v299: EntretienConnect ist bei mehreren Klassen die einzige maßgebliche Auswahl.
   // Die in der sichtbaren e-Bichelchen-Oberfläche zuletzt gewählte Klasse wird bewusst
   // ignoriert. Dadurch erscheint immer zuerst die Klassenwahl in EntretienConnect und
   // ein Klick dort arbeitet direkt mit der angeforderten groupId — ohne DOM-Klick,
@@ -769,7 +809,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   let subjectAttempts = [];
   let messageSubject = detectMessageSubject(subjects);
 
-  // v298: Nach einem Klick in EntretienConnect wird die Kategorie zuerst mit der
+  // v299: Nach einem Klick in EntretienConnect wird die Kategorie zuerst mit der
   // ausdrücklich gewählten groupId abgefragt. Die aktuell sichtbare Klasse bzw. ein
   // alter Store in e-Bichelchen darf die Auswahl nicht mehr beeinflussen.
   if (requestedGroupId !== null && group) {
@@ -805,7 +845,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   } : null;
 
   const payload = {
-    version: "1.10.24",
+    version: "1.10.25",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -841,10 +881,10 @@ def find_ebichelchen_target() -> dict:
     if not candidates:
         current_urls = [t.get("url") or "" for t in pages[:6]]
         hint = " | ".join(u[:90] for u in current_urls if u)
-        raise RuntimeError("En attente du calendrier e-Bichelchen. Terminez la connexion dans la fenêtre ouverte ; aucun nouvel onglet ne sera ouvert automatiquement. Onglets actuels : " + hint)
+        raise RuntimeError("En attente d’e-Bichelchen. Terminez la connexion dans la fenêtre ouverte ; aucun nouvel onglet ne sera ouvert automatiquement. Onglets actuels : " + hint)
 
-    # bevorzugt Kalender-Tab; Login-/Zwischenseiten bleiben nur Fallback
-    candidates.sort(key=lambda t: ("/tabs/calendar" not in (t.get("url") or ""), t.get("url") or ""))
+    # v299: Jede echte e-Bichelchen-Seite ist ausreichend; Pinnwand und andere
+    # Bereiche werden nicht auf den Kalender umgeschaltet.
     target = candidates[0]
     if not target.get("webSocketDebuggerUrl"):
         raise RuntimeError("Der e-Bichelchen-Tab hat keine DevTools-WebSocket-URL geliefert.")
@@ -859,7 +899,7 @@ def check_login_ready() -> dict:
     v297: weiterhin nur ein DevTools-Listenaufruf pro Poll. Die Freigabe erfolgt aber
     nicht mehr allein anhand alter sessionStorage-Werte: e-Bichelchen darf seine Route
     erst stabilisieren und der echte Klassen-Endpunkt muss antworten. Das verhindert
-    das sichtbare Kalender → Pinnwand → Kalender-Flackern durch eine zu frühe Lesung.
+    eine zu frühe Lesung während e-Bichelchens internem Startvorgang.
     """
     try:
         targets = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json", timeout=0.8)
@@ -874,7 +914,6 @@ def check_login_ready() -> dict:
     if not candidates:
         return {"ok": True, "ready": False, "browserClosed": False, "stage": "login", "lightweight": True}
 
-    candidates.sort(key=lambda t: ("/tabs/calendar" not in str(t.get("url") or ""), str(t.get("url") or "")))
     target = candidates[0]
     ws_url = target.get("webSocketDebuggerUrl")
     if not ws_url:
@@ -937,7 +976,7 @@ def _is_transient_context_error(text: str) -> bool:
 
     e-Bichelchen kann direkt nach dem Login selbst noch einmal von Kalender zu Pinnwand
     (oder umgekehrt) wechseln. Der alte Code gab dann sofort den technischen Fehler
-    ``Execution context was destroyed`` an den Nutzer weiter. v298 liest nach dem
+    ``Execution context was destroyed`` an den Nutzer weiter. v299 liest nach dem
     Seitenwechsel automatisch erneut — ohne selbst eine Navigation auszulösen.
     """
     t = str(text or "").lower()
@@ -960,7 +999,7 @@ def read_from_chrome(selected_group_id: int | None = None) -> dict:
     payload: dict | None = None
     retries_used = 0
 
-    # v298: Ein von e-Bichelchen selbst ausgelöster Route-Wechsel darf die Auswahl in
+    # v299: Ein von e-Bichelchen selbst ausgelöster Route-Wechsel darf die Auswahl in
     # EntretienConnect nicht mehr abbrechen. Bei genau diesen transienten CDP-Fehlern
     # wird das aktuelle Target neu gesucht und die reine API-Lesung wiederholt.
     for attempt in range(3):
@@ -1091,7 +1130,7 @@ def focus_app_tab() -> dict:
                 if title:
                     titles.append(title)
                 # Chrome/Edge/Firefox-Fenstertitel enthalten normalerweise den Titel des aktiven Tabs.
-                if "eBichelchen Helper" in title and "e-Bichelchen" not in title:
+                if "EntretienConnect" in title and "e-Bichelchen" not in title:
                     found["hwnd"] = hwnd
                     found["title"] = title
                     return False
@@ -1105,7 +1144,7 @@ def focus_app_tab() -> dict:
                 user32.BringWindowToTop(hwnd)
                 ok = bool(user32.SetForegroundWindow(hwnd))
                 return {"method": "windows-user32", "foundExistingTab": True, "setForegroundOk": ok, "title": found["title"], "openedNewTab": False}
-            return {"method": "windows-user32", "foundExistingTab": False, "message": "Kein vorhandenes App-Fenster mit aktivem eBichelchen-Helper-Tab gefunden.", "sampleTitles": titles[:8], "openedNewTab": False}
+            return {"method": "windows-user32", "foundExistingTab": False, "message": "Kein vorhandenes EntretienConnect-Fenster gefunden.", "sampleTitles": titles[:8], "openedNewTab": False}
         except Exception as exc:
             raise RuntimeError("Windows-Fokus fehlgeschlagen: " + str(exc))
 
@@ -1526,7 +1565,7 @@ def direct_ebichelchen_request(method: str, path: str, fields: dict | None = Non
     headers = {
         "Accept": "application/json, text/plain, */*",
         "Origin": "https://ssl.education.lu",
-        "Referer": "https://ssl.education.lu/ebichelchen/app/tabs/calendar",
+        "Referer": "https://ssl.education.lu/ebichelchen/app/",
         "Cookie": session["cookieHeader"],
         "User-Agent": session.get("userAgent") or "Mozilla/5.0",
         "mobileappversion": "web",
