@@ -1,7 +1,5 @@
-# EntretienConnect v309
+# EntretienConnect v310
 
-- Haupt-App im Standardbrowser.
-- macOS e-Bichelchen-Login über natives WKWebView, ohne Chrome-/Firefox-Bindung.
-- Klassenauswahl ausschließlich in EntretienConnect.
-- v309 verhindert Mischzustände aus neuer Oberfläche und altem lokalem Helper.
-- Das WKWebView-Modul wird aus einer eingebetteten, checksum-geprüften Kopie erzeugt.
+- Corrige la détection de version du helper local lorsque l’URL de capacités contient un paramètre anti-cache.
+- Empêche l’affichage erroné « helper local actif v? » alors que le helper v310 est bien lancé.
+- Conserve la fenêtre de connexion e-Bichelchen native WKWebView sur macOS et la sélection de classe exclusivement dans EntretienConnect.

@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v309</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v310</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 309;
+const APP_VERSION = 310;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6531,7 +6531,7 @@ function ebGroupChoiceHtml(){
 function ebBrowserPref(){
   const s=document.getElementById("ebBrowser");
   const v=s ? s.value : "auto";
-  // v309: Der Standardbrowser der Haupt-App ist absichtlich unabhängig vom
+  // v310: Der Standardbrowser der Haupt-App ist absichtlich unabhängig vom
   // Loginfenster. « auto » lässt den lokalen Helfer Chrome bzw. Edge nur als
   // eingebettetes app-artiges Fenster verwenden; Firefox/Safari werden nicht
   // ferngesteuert und es entsteht kein zusätzlicher normaler Browser-Tab.
@@ -6801,7 +6801,7 @@ document.addEventListener("click", function(ev){
   if(c){ ev.preventDefault(); ev.stopPropagation(); ebCancelPending(); }
 }, true);
 async function ebFocusAppForGroupChoice(){
-  // v309: Sobald die Klassenliste gelesen ist, wird das eigene Loginfenster
+  // v310: Sobald die Klassenliste gelesen ist, wird das eigene Loginfenster
   // vollständig geschlossen. Die konkrete Klasse wird danach ausschließlich in
   // EntretienConnect gewählt; die zweite Lesung nutzt die gespeicherte Sitzung.
   try{
@@ -6830,7 +6830,7 @@ async function ecFetchCapabilitiesAt(origin, timeoutMs){
   finally{ if(timer) clearTimeout(timer); }
 }
 
-async function ecFindV309Backend(){
+async function ecFindV310Backend(){
   const here=location.origin;
   const current=await ecFetchCapabilitiesAt(here,650);
   if(current && Number(current.backendGeneration||current.appVersion||0)===APP_VERSION){
@@ -6846,10 +6846,10 @@ async function ecFindV309Backend(){
   return rows.find(row=>row.cap && Number(row.cap.backendGeneration||row.cap.appVersion||0)===APP_VERSION)||null;
 }
 
-async function ecEnsureV309Backend(){
-  const found=await ecFindV309Backend();
+async function ecEnsureV310Backend(){
+  const found=await ecFindV310Backend();
   if(found && found.origin!==location.origin){
-    const next=found.origin+"/graph.html?backend=v309&t="+Date.now();
+    const next=found.origin+"/graph.html?backend=v310&t="+Date.now();
     location.replace(next);
     return false;
   }
@@ -6857,7 +6857,7 @@ async function ecEnsureV309Backend(){
   let cur=null;
   try{ cur=await ecFetchCapabilitiesAt(location.origin,650); }catch(_){ }
   const got=cur?String(cur.backendGeneration||cur.appVersion||"?"):"?";
-  throw new Error("Le navigateur affiche v309, mais le helper local actif est encore v"+got+". Fermez complètement EntretienConnect puis démarrez EntretienConnect_MAC.app du Starter v309.");
+  throw new Error("Le navigateur affiche v310, mais le helper local actif est encore v"+got+". Fermez complètement EntretienConnect puis démarrez EntretienConnect_MAC.app du Starter v310.");
 }
 
 async function ebConnectFlow(){
@@ -6869,7 +6869,7 @@ async function ebConnectFlow(){
     return;
   }
   try{
-    if(!(await ecEnsureV309Backend())) return;
+    if(!(await ecEnsureV310Backend())) return;
   }catch(e){
     setEbStatus("Impossible de connecter e-Bichelchen : "+esc(e.message||e),"err");
     return;
@@ -6888,7 +6888,7 @@ async function ebConnectFlow(){
   state.ebichelchenSelectedGroupId="";
   state.ebichelchenMap=state.ebichelchenMap||{};
 
-  // v309: Die Haupt-App bleibt im Standardbrowser. Der lokale Helfer öffnet
+  // v310: Die Haupt-App bleibt im Standardbrowser. Der lokale Helfer öffnet
   // e-Bichelchen separat in einem nativen System-Loginfenster.
   const _browserPref=ebBrowserPref();
   ebSameBrowserMode=false;
