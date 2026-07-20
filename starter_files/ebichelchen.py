@@ -3757,7 +3757,7 @@ def reset_login_session(profile: str = "default", preserve_profile: bool = False
 
 
 # ===================================================================
-# v307 – native macOS login window (WKWebView / Safari WebKit)
+# v308 – native macOS login window (WKWebView / Safari WebKit)
 # -------------------------------------------------------------------
 # The main EntretienConnect UI remains in the user's default browser.
 # On macOS, e-Bichelchen is opened in a small native WKWebView window,
@@ -3779,9 +3779,76 @@ _reset_login_session_v306 = reset_login_session
 
 MAC_WK_STATE_FILE = DATA_ROOT / "native-wkwebview-state.json"
 MAC_WK_EXPRESSION_FILE = DATA_ROOT / "native-wkwebview-read.js"
-MAC_WK_SCRIPT_FILE = ROOT / "EntretienConnect-WKWebView.js"
+MAC_WK_SCRIPT_NAME = "EntretienConnect-WKWebView.js"
+# v308: The module remains a normal packaged file, but is also embedded here.
+# This makes the native login independent of App Translocation, updater caches,
+# and the directory from which server.py was started.
+MAC_WK_SCRIPT_B64 = "T2JqQy5pbXBvcnQoJ0NvY29hJyk7Ck9iakMuaW1wb3J0KCdXZWJLaXQnKTsKT2JqQy5pbXBvcnQoJ0ZvdW5kYXRpb24nKTsKCi8qCiAqIEVudHJldGllbkNvbm5lY3QgdjMwNyDigJMgbmF0aXZlIG1hY09TIGUtQmljaGVsY2hlbiBsb2dpbiB3aW5kb3cuCiAqIFJ1bnMgdGhyb3VnaCAvdXNyL2Jpbi9vc2FzY3JpcHQgLWwgSmF2YVNjcmlwdCBhbmQgdXNlcyBXS1dlYlZpZXcgKFNhZmFyaS9XZWJLaXQpLAogKiBzbyBubyBDaHJvbWUsIEVkZ2Ugb3IgcmVtb3RlbHkgY29udHJvbGxlZCBGaXJlZm94IGlzIHJlcXVpcmVkLgogKi8KCmxldCBFQ19BUFAgPSBudWxsOwpsZXQgRUNfV0lORE9XID0gbnVsbDsKbGV0IEVDX1dFQlZJRVcgPSBudWxsOwpsZXQgRUNfVElNRVIgPSBudWxsOwpsZXQgRUNfQlVTWSA9IGZhbHNlOwpsZXQgRUNfRklOSVNIRUQgPSBmYWxzZTsKbGV0IEVDX1NUQVRFX1BBVEggPSAnJzsKbGV0IEVDX1JFQURfRVhQUkVTU0lPTiA9ICcnOwpsZXQgRUNfU1RBUlRfVVJMID0gJyc7CmxldCBFQ19TVEFSVEVEX0FUID0gRGF0ZS5ub3coKTsKCmZ1bmN0aW9uIGpzVmFsdWUodmFsdWUpIHsKICB0cnkgewogICAgaWYgKHZhbHVlID09PSB1bmRlZmluZWQgfHwgdmFsdWUgPT09IG51bGwpIHJldHVybiBudWxsOwogICAgaWYgKHZhbHVlLmpzICE9PSB1bmRlZmluZWQpIHJldHVybiB2YWx1ZS5qczsKICB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLmRlZXBVbndyYXAodmFsdWUpOyB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLnVud3JhcCh2YWx1ZSk7IH0gY2F0Y2ggKF8pIHt9CiAgcmV0dXJuIFN0cmluZyh2YWx1ZSk7Cn0KCmZ1bmN0aW9uIHdyaXRlU3RhdGUob2JqKSB7CiAgdHJ5IHsKICAgIG9iaiA9IG9iaiB8fCB7fTsKICAgIGlmICghb2JqLnVwZGF0ZWRBdCkgb2JqLnVwZGF0ZWRBdCA9IG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKTsKICAgIGNvbnN0IHRleHQgPSAkKEpTT04uc3RyaW5naWZ5KG9iaikpOwogICAgY29uc3QgZXJyID0gUmVmKCk7CiAgICBjb25zdCBvayA9IHRleHQud3JpdGVUb0ZpbGVBdG9taWNhbGx5RW5jb2RpbmdFcnJvcigkKEVDX1NUQVRFX1BBVEgpLCB0cnVlLCAkLk5TVVRGOFN0cmluZ0VuY29kaW5nLCBlcnIpOwogICAgcmV0dXJuIEJvb2xlYW4ob2spOwogIH0gY2F0Y2ggKF8pIHsKICAgIHJldHVybiBmYWxzZTsKICB9Cn0KCmZ1bmN0aW9uIGZpbmlzaFdpdGhFcnJvcihtZXNzYWdlLCBkZXRhaWwpIHsKICBpZiAoRUNfRklOSVNIRUQpIHJldHVybjsKICBFQ19GSU5JU0hFRCA9IHRydWU7CiAgd3JpdGVTdGF0ZSh7CiAgICBzdGF0dXM6ICdlcnJvcicsCiAgICBlcnJvcjogU3RyaW5nKG1lc3NhZ2UgfHwgJ1dLV2ViVmlldyBlcnJvcicpLAogICAgZGV0YWlsOiBTdHJpbmcoZGV0YWlsIHx8ICcnKSwKICAgIHN0YXJ0ZWRBdDogbmV3IERhdGUoRUNfU1RBUlRFRF9BVCkudG9JU09TdHJpbmcoKQogIH0pOwogIHRyeSB7IGlmIChFQ19USU1FUikgRUNfVElNRVIuaW52YWxpZGF0ZTsgfSBjYXRjaCAoXykge30KICB0cnkgeyBpZiAoRUNfV0lORE9XKSBFQ19XSU5ET1cub3JkZXJPdXQobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgJC5OU1RocmVhZC5zbGVlcEZvclRpbWVJbnRlcnZhbCgwLjEyKTsKICB0cnkgeyBFQ19BUFAudGVybWluYXRlKG51bGwpOyB9IGNhdGNoIChfKSB7fQp9CgpmdW5jdGlvbiBlZHVjYXRpb25Db29raWVzKGNvb2tpZXMpIHsKICBjb25zdCBvdXQgPSBbXTsKICB0cnkgewogICAgY29uc3QgY291bnQgPSBOdW1iZXIoY29va2llcy5jb3VudCB8fCAwKTsKICAgIGZvciAobGV0IGkgPSAwOyBpIDwgY291bnQ7IGkrKykgewogICAgICBjb25zdCBjID0gY29va2llcy5vYmplY3RBdEluZGV4KGkpOwogICAgICBjb25zdCBkb21haW4gPSBTdHJpbmcoanNWYWx1ZShjLmRvbWFpbikgfHwgJycpOwogICAgICBjb25zdCBuYW1lID0gU3RyaW5nKGpzVmFsdWUoYy5uYW1lKSB8fCAnJyk7CiAgICAgIGlmICghbmFtZSB8fCBkb21haW4udG9Mb3dlckNhc2UoKS5pbmRleE9mKCdlZHVjYXRpb24ubHUnKSA8IDApIGNvbnRpbnVlOwogICAgICBvdXQucHVzaCh7CiAgICAgICAgbmFtZTogbmFtZSwKICAgICAgICB2YWx1ZTogU3RyaW5nKGpzVmFsdWUoYy52YWx1ZSkgfHwgJycpLAogICAgICAgIGRvbWFpbjogZG9tYWluLAogICAgICAgIHBhdGg6IFN0cmluZyhqc1ZhbHVlKGMucGF0aCkgfHwgJy8nKSwKICAgICAgICBzZWN1cmU6IEJvb2xlYW4oanNWYWx1ZShjLnNlY3VyZSkpLAogICAgICAgIGh0dHBPbmx5OiBCb29sZWFuKGpzVmFsdWUoYy5IVFRQT25seSkpCiAgICAgIH0pOwogICAgfQogIH0gY2F0Y2ggKF8pIHt9CiAgcmV0dXJuIG91dDsKfQoKZnVuY3Rpb24gZmluYWxpemVQYXlsb2FkKHBheWxvYWQsIHBhZ2VVcmwpIHsKICBpZiAoRUNfRklOSVNIRUQpIHJldHVybjsKICBFQ19GSU5JU0hFRCA9IHRydWU7CgogIGNvbnN0IHN0b3JlID0gRUNfV0VCVklFVy5jb25maWd1cmF0aW9uLndlYnNpdGVEYXRhU3RvcmUuaHR0cENvb2tpZVN0b3JlOwogIHN0b3JlLmdldEFsbENvb2tpZXNXaXRoQ29tcGxldGlvbkhhbmRsZXIoZnVuY3Rpb24oY29va2llcykgewogICAgbGV0IGNvb2tpZVJvd3MgPSBlZHVjYXRpb25Db29raWVzKGNvb2tpZXMpOwogICAgRUNfV0VCVklFVy5ldmFsdWF0ZUphdmFTY3JpcHRDb21wbGV0aW9uSGFuZGxlcigkKCduYXZpZ2F0b3IudXNlckFnZW50IHx8ICJNb3ppbGxhLzUuMCInKSwgZnVuY3Rpb24odWFWYWx1ZSwgdWFFcnJvcikgewogICAgICBjb25zdCB1YSA9IFN0cmluZyhqc1ZhbHVlKHVhVmFsdWUpIHx8ICdNb3ppbGxhLzUuMCAoTWFjaW50b3NoKSBBcHBsZVdlYktpdCcpOwogICAgICBjb25zdCBtZXJnZWQgPSB7fTsKICAgICAgY29va2llUm93cy5mb3JFYWNoKGZ1bmN0aW9uKGMpIHsgbWVyZ2VkW2MubmFtZV0gPSBjLnZhbHVlOyB9KTsKICAgICAgY29uc3QgY29va2llSGVhZGVyID0gT2JqZWN0LmtleXMobWVyZ2VkKS5tYXAoZnVuY3Rpb24oaykgeyByZXR1cm4gayArICc9JyArIG1lcmdlZFtrXTsgfSkuam9pbignOyAnKTsKICAgICAgaWYgKCFjb29raWVIZWFkZXIpIHsKICAgICAgICBFQ19GSU5JU0hFRCA9IGZhbHNlOwogICAgICAgIHdyaXRlU3RhdGUoewogICAgICAgICAgc3RhdHVzOiAnd2FpdGluZycsCiAgICAgICAgICBzdGFnZTogJ3Nlc3Npb24nLAogICAgICAgICAgbWVzc2FnZTogJ2UtQmljaGVsY2hlbiBpcyBvcGVuLCBidXQgdGhlIGF1dGhlbnRpY2F0ZWQgc2Vzc2lvbiBpcyBub3QgYXZhaWxhYmxlIHlldC4nLAogICAgICAgICAgcGFnZVVybDogU3RyaW5nKHBhZ2VVcmwgfHwgJycpCiAgICAgICAgfSk7CiAgICAgICAgcmV0dXJuOwogICAgICB9CiAgICAgIHRyeSB7IGlmIChFQ19USU1FUikgRUNfVElNRVIuaW52YWxpZGF0ZTsgfSBjYXRjaCAoXykge30KICAgICAgd3JpdGVTdGF0ZSh7CiAgICAgICAgc3RhdHVzOiAncmVhZHknLAogICAgICAgIHBhZ2VVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKSwKICAgICAgICBkYXRhOiBwYXlsb2FkLAogICAgICAgIHNlc3Npb246IHsKICAgICAgICAgIGNvb2tpZUhlYWRlcjogY29va2llSGVhZGVyLAogICAgICAgICAgY29va2llTmFtZXM6IE9iamVjdC5rZXlzKG1lcmdlZCkuc29ydCgpLAogICAgICAgICAgY29va2llczogY29va2llUm93cywKICAgICAgICAgIHVzZXJBZ2VudDogdWEsCiAgICAgICAgICBjYXB0dXJlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCksCiAgICAgICAgICB0YXJnZXRVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKSwKICAgICAgICAgIGJyb3dzZXI6ICdtYWNPUyBXS1dlYlZpZXcnCiAgICAgICAgfSwKICAgICAgICBlbmdpbmU6ICdXS1dlYlZpZXcnLAogICAgICAgIHN0YXJ0ZWRBdDogbmV3IERhdGUoRUNfU1RBUlRFRF9BVCkudG9JU09TdHJpbmcoKQogICAgICB9KTsKICAgICAgdHJ5IHsgRUNfV0lORE9XLm9yZGVyT3V0KG51bGwpOyB9IGNhdGNoIChfKSB7fQogICAgICAkLk5TVGhyZWFkLnNsZWVwRm9yVGltZUludGVydmFsKDAuMTgpOwogICAgICB0cnkgeyBFQ19BUFAudGVybWluYXRlKG51bGwpOyB9IGNhdGNoIChfKSB7fQogICAgfSk7CiAgfSk7Cn0KCmZ1bmN0aW9uIGJ1aWxkQ29udHJvbGxlclNjcmlwdCgpIHsKICAvLyBUaGUgcmVhZCBleHByZXNzaW9uIGlzIGFuIGFzeW5jIElJRkUuIFdlIGxhdW5jaCBpdCBvbmNlIGFuZCBzdG9yZSBpdHMgcmVzdWx0CiAgLy8gaW4gYSBwYWdlLWdsb2JhbCBvYmplY3QuIGV2YWx1YXRlSmF2YVNjcmlwdCBpdHNlbGYgb25seSByZXR1cm5zIGEgc3luY2hyb25vdXMKICAvLyBzdGF0dXMgc25hcHNob3QsIHdoaWNoIHdvcmtzIG9uIG9sZGVyIFdLV2ViVmlldyB2ZXJzaW9ucyBhcyB3ZWxsLgogIHJldHVybiBgKCgpID0+IHsKICAgIGNvbnN0IGhyZWYgPSBTdHJpbmcobG9jYXRpb24uaHJlZiB8fCAnJyk7CiAgICBjb25zdCBvbkViID0gaHJlZi5pbmRleE9mKCcvZWJpY2hlbGNoZW4vYXBwLycpID49IDA7CiAgICBpZiAoIW9uRWIpIHJldHVybiBKU09OLnN0cmluZ2lmeSh7cGhhc2U6J2xvZ2luJyx1cmw6aHJlZn0pOwogICAgaWYgKCF3aW5kb3cuX19lbnRyZXRpZW5Db25uZWN0TmF0aXZlMzA3KSB7CiAgICAgIHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMDcgPSB7cGhhc2U6J3N0YXJ0aW5nJyx1cmw6aHJlZixlcnJvcjonJyxkYXRhOm51bGwsc3RhcnRlZEF0OkRhdGUubm93KCl9OwogICAgICBjb25zdCBzID0gd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMwNzsKICAgICAgcy5waGFzZSA9ICdyZWFkaW5nJzsKICAgICAgUHJvbWlzZS5yZXNvbHZlKCR7RUNfUkVBRF9FWFBSRVNTSU9OfSkKICAgICAgICAudGhlbih2ID0+IHsgcy5kYXRhID0gdjsgcy5waGFzZSA9ICdyZWFkeSc7IHMudXJsID0gU3RyaW5nKGxvY2F0aW9uLmhyZWYgfHwgaHJlZik7IH0pCiAgICAgICAgLmNhdGNoKGUgPT4gewogICAgICAgICAgcy5lcnJvciA9IFN0cmluZyhlICYmIChlLm1lc3NhZ2UgfHwgZSkgfHwgJ3Vua25vd24gZXJyb3InKTsKICAgICAgICAgIHMucGhhc2UgPSAnd2FpdGluZyc7CiAgICAgICAgICBzLnVybCA9IFN0cmluZyhsb2NhdGlvbi5ocmVmIHx8IGhyZWYpOwogICAgICAgICAgc2V0VGltZW91dCgoKSA9PiB7IHRyeSB7IGRlbGV0ZSB3aW5kb3cuX19lbnRyZXRpZW5Db25uZWN0TmF0aXZlMzA3OyB9IGNhdGNoIChfKSB7fSB9LCAxMjAwKTsKICAgICAgICB9KTsKICAgIH0KICAgIGNvbnN0IHMgPSB3aW5kb3cuX19lbnRyZXRpZW5Db25uZWN0TmF0aXZlMzA3OwogICAgcmV0dXJuIEpTT04uc3RyaW5naWZ5KHtwaGFzZTpzLnBoYXNlLHVybDpTdHJpbmcocy51cmx8fGhyZWYpLGVycm9yOlN0cmluZyhzLmVycm9yfHwnJyksZGF0YTpzLmRhdGF8fG51bGwsYWdlOkRhdGUubm93KCktTnVtYmVyKHMuc3RhcnRlZEF0fHxEYXRlLm5vdygpKX0pOwogIH0pKClgOwp9CgpmdW5jdGlvbiBwb2xsV2ViVmlldygpIHsKICBpZiAoRUNfRklOSVNIRUQgfHwgRUNfQlVTWSB8fCAhRUNfV0VCVklFVykgcmV0dXJuOwogIHRyeSB7CiAgICBpZiAoRUNfV0lORE9XICYmICFCb29sZWFuKEVDX1dJTkRPVy5pc1Zpc2libGUpKSB7CiAgICAgIEVDX0ZJTklTSEVEID0gdHJ1ZTsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidjbG9zZWQnLCBtZXNzYWdlOidMb2dpbiB3aW5kb3cgY2xvc2VkIGJ5IHVzZXIuJ30pOwogICAgICB0cnkgeyBFQ19BUFAudGVybWluYXRlKG51bGwpOyB9IGNhdGNoIChfKSB7fQogICAgICByZXR1cm47CiAgICB9CiAgfSBjYXRjaCAoXykge30KCiAgRUNfQlVTWSA9IHRydWU7CiAgY29uc3Qgc2NyaXB0ID0gYnVpbGRDb250cm9sbGVyU2NyaXB0KCk7CiAgRUNfV0VCVklFVy5ldmFsdWF0ZUphdmFTY3JpcHRDb21wbGV0aW9uSGFuZGxlcigkKHNjcmlwdCksIGZ1bmN0aW9uKHJlc3VsdCwgZXJyb3IpIHsKICAgIEVDX0JVU1kgPSBmYWxzZTsKICAgIGlmIChFQ19GSU5JU0hFRCkgcmV0dXJuOwogICAgaWYgKGVycm9yKSB7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czond2FpdGluZycsIHN0YWdlOiduYXZpZ2F0aW9uJywgZGV0YWlsOlN0cmluZyhqc1ZhbHVlKGVycm9yLmxvY2FsaXplZERlc2NyaXB0aW9uKSB8fCBlcnJvciksIHBhZ2VVcmw6Jyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgbGV0IG91dGVyID0gbnVsbDsKICAgIHRyeSB7IG91dGVyID0gSlNPTi5wYXJzZShTdHJpbmcoanNWYWx1ZShyZXN1bHQpIHx8ICd7fScpKTsgfSBjYXRjaCAoXykgeyBvdXRlciA9IG51bGw7IH0KICAgIGlmICghb3V0ZXIpIHJldHVybjsKICAgIGNvbnN0IHBoYXNlID0gU3RyaW5nKG91dGVyLnBoYXNlIHx8ICd3YWl0aW5nJyk7CiAgICBjb25zdCBwYWdlVXJsID0gU3RyaW5nKG91dGVyLnVybCB8fCAnJyk7CiAgICBpZiAocGhhc2UgPT09ICdsb2dpbicpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J2xvZ2luJywgcGFnZVVybDpwYWdlVXJsLCBlbmdpbmU6J1dLV2ViVmlldyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKHBoYXNlID09PSAncmVhZGluZycgfHwgcGhhc2UgPT09ICdzdGFydGluZycpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J3JlYWRpbmcnLCBwYWdlVXJsOnBhZ2VVcmwsIGVuZ2luZTonV0tXZWJWaWV3J30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBpZiAocGhhc2UgPT09ICd3YWl0aW5nJykgewogICAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J29wZW4nLCBzdGFnZTonbG9hZGluZycsIHBhZ2VVcmw6cGFnZVVybCwgZGV0YWlsOlN0cmluZyhvdXRlci5lcnJvciB8fCAnJyksIGVuZ2luZTonV0tXZWJWaWV3J30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBpZiAocGhhc2UgPT09ICdyZWFkeScgJiYgb3V0ZXIuZGF0YSkgewogICAgICBsZXQgcGF5bG9hZCA9IG51bGw7CiAgICAgIHRyeSB7CiAgICAgICAgcGF5bG9hZCA9IHR5cGVvZiBvdXRlci5kYXRhID09PSAnc3RyaW5nJyA/IEpTT04ucGFyc2Uob3V0ZXIuZGF0YSkgOiBvdXRlci5kYXRhOwogICAgICB9IGNhdGNoIChlKSB7CiAgICAgICAgZmluaXNoV2l0aEVycm9yKCdUaGUgZS1CaWNoZWxjaGVuIGRhdGEgY291bGQgbm90IGJlIGRlY29kZWQuJywgU3RyaW5nKGUpKTsKICAgICAgICByZXR1cm47CiAgICAgIH0KICAgICAgZmluYWxpemVQYXlsb2FkKHBheWxvYWQsIHBhZ2VVcmwpOwogICAgfQogIH0pOwp9CgpmdW5jdGlvbiBydW4oYXJndikgewogIHRyeSB7CiAgICBpZiAoIWFyZ3YgfHwgYXJndi5sZW5ndGggPCAzKSB0aHJvdyBuZXcgRXJyb3IoJ01pc3NpbmcgbmF0aXZlIGxvZ2luIGFyZ3VtZW50cy4nKTsKICAgIEVDX1NUQVRFX1BBVEggPSBTdHJpbmcoYXJndlswXSk7CiAgICBjb25zdCBleHByZXNzaW9uUGF0aCA9IFN0cmluZyhhcmd2WzFdKTsKICAgIEVDX1NUQVJUX1VSTCA9IFN0cmluZyhhcmd2WzJdKTsKICAgIGNvbnN0IHJlYWRFcnIgPSBSZWYoKTsKICAgIGNvbnN0IHJlYWRPYmogPSAkLk5TU3RyaW5nLnN0cmluZ1dpdGhDb250ZW50c09mRmlsZUVuY29kaW5nRXJyb3IoJChleHByZXNzaW9uUGF0aCksICQuTlNVVEY4U3RyaW5nRW5jb2RpbmcsIHJlYWRFcnIpOwogICAgRUNfUkVBRF9FWFBSRVNTSU9OID0gU3RyaW5nKGpzVmFsdWUocmVhZE9iaikgfHwgJycpOwogICAgaWYgKCFFQ19SRUFEX0VYUFJFU1NJT04pIHRocm93IG5ldyBFcnJvcignVGhlIGUtQmljaGVsY2hlbiByZWFkIHNjcmlwdCBpcyBlbXB0eS4nKTsKCiAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J3N0YXJ0aW5nJywgZW5naW5lOidXS1dlYlZpZXcnLCBzdGFydGVkQXQ6bmV3IERhdGUoRUNfU1RBUlRFRF9BVCkudG9JU09TdHJpbmcoKX0pOwoKICAgIEVDX0FQUCA9ICQuTlNBcHBsaWNhdGlvbi5zaGFyZWRBcHBsaWNhdGlvbjsKICAgIEVDX0FQUC5zZXRBY3RpdmF0aW9uUG9saWN5KCQuTlNBcHBsaWNhdGlvbkFjdGl2YXRpb25Qb2xpY3lSZWd1bGFyKTsKCiAgICBjb25zdCByZWN0ID0gJC5OU01ha2VSZWN0KDAsIDAsIDEwODAsIDc2MCk7CiAgICBjb25zdCBzdHlsZSA9ICQuTlNXaW5kb3dTdHlsZU1hc2tUaXRsZWQgfCAkLk5TV2luZG93U3R5bGVNYXNrQ2xvc2FibGUgfCAkLk5TV2luZG93U3R5bGVNYXNrTWluaWF0dXJpemFibGUgfCAkLk5TV2luZG93U3R5bGVNYXNrUmVzaXphYmxlOwogICAgRUNfV0lORE9XID0gJC5OU1dpbmRvdy5hbGxvYy5pbml0V2l0aENvbnRlbnRSZWN0U3R5bGVNYXNrQmFja2luZ0RlZmVyKHJlY3QsIHN0eWxlLCAkLk5TQmFja2luZ1N0b3JlQnVmZmVyZWQsIGZhbHNlKTsKICAgIEVDX1dJTkRPVy5zZXRUaXRsZSgkKCdlLUJpY2hlbGNoZW4g4oCTIEVudHJldGllbkNvbm5lY3QnKSk7CiAgICBFQ19XSU5ET1cuc2V0UmVsZWFzZWRXaGVuQ2xvc2VkKGZhbHNlKTsKICAgIEVDX1dJTkRPVy5jZW50ZXI7CgogICAgY29uc3QgY29uZmlnID0gJC5XS1dlYlZpZXdDb25maWd1cmF0aW9uLmFsbG9jLmluaXQ7CiAgICBjb25maWcud2Vic2l0ZURhdGFTdG9yZSA9ICQuV0tXZWJzaXRlRGF0YVN0b3JlLmRlZmF1bHREYXRhU3RvcmU7CiAgICBFQ19XRUJWSUVXID0gJC5XS1dlYlZpZXcuYWxsb2MuaW5pdFdpdGhGcmFtZUNvbmZpZ3VyYXRpb24ocmVjdCwgY29uZmlnKTsKICAgIEVDX1dFQlZJRVcuc2V0QWxsb3dzQmFja0ZvcndhcmROYXZpZ2F0aW9uR2VzdHVyZXModHJ1ZSk7CiAgICBFQ19XSU5ET1cuc2V0Q29udGVudFZpZXcoRUNfV0VCVklFVyk7CiAgICBFQ19XSU5ET1cubWFrZUtleUFuZE9yZGVyRnJvbnQobnVsbCk7CiAgICBFQ19BUFAuYWN0aXZhdGVJZ25vcmluZ090aGVyQXBwcyh0cnVlKTsKCiAgICBjb25zdCB1cmwgPSAkLk5TVVJMLlVSTFdpdGhTdHJpbmcoJChFQ19TVEFSVF9VUkwpKTsKICAgIGlmICghdXJsKSB0aHJvdyBuZXcgRXJyb3IoJ0ludmFsaWQgZS1CaWNoZWxjaGVuIFVSTC4nKTsKICAgIGNvbnN0IHJlcXVlc3QgPSAkLk5TVVJMUmVxdWVzdC5yZXF1ZXN0V2l0aFVSTCh1cmwpOwogICAgRUNfV0VCVklFVy5sb2FkUmVxdWVzdChyZXF1ZXN0KTsKCiAgICBFQ19USU1FUiA9ICQuTlNUaW1lci5zY2hlZHVsZWRUaW1lcldpdGhUaW1lSW50ZXJ2YWxSZXBlYXRzQmxvY2soMC44LCB0cnVlLCBmdW5jdGlvbihfKSB7IHBvbGxXZWJWaWV3KCk7IH0pOwogICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J2xvZ2luJywgZW5naW5lOidXS1dlYlZpZXcnLCBwYWdlVXJsOkVDX1NUQVJUX1VSTH0pOwogICAgRUNfQVBQLnJ1bjsKICB9IGNhdGNoIChlKSB7CiAgICBmaW5pc2hXaXRoRXJyb3IoJ1RoZSBtYWNPUyBsb2dpbiB3aW5kb3cgY291bGQgbm90IGJlIHN0YXJ0ZWQuJywgU3RyaW5nKGUgJiYgKGUubWVzc2FnZSB8fCBlKSB8fCBlKSk7CiAgfQp9Cg=="
 MAC_WK_PROCESS: subprocess.Popen | None = None
 MAC_WK_LOCK = threading.RLock()
+
+
+def _mac_wk_script_candidates() -> list[pathlib.Path]:
+    candidates: list[pathlib.Path] = []
+    env_path = str(os.environ.get("ENTRETIENCONNECT_WKWEBVIEW_MODULE") or "").strip()
+    if env_path:
+        candidates.append(pathlib.Path(env_path).expanduser())
+    candidates.extend([
+        ROOT / MAC_WK_SCRIPT_NAME,
+        pathlib.Path.cwd() / MAC_WK_SCRIPT_NAME,
+        pathlib.Path(sys.argv[0]).resolve().parent / MAC_WK_SCRIPT_NAME,
+    ])
+    # Also inspect parent folders, including an .app/Contents/Resources tree.
+    for base in (ROOT, pathlib.Path(sys.argv[0]).resolve().parent, pathlib.Path.cwd()):
+        for parent in [base, *list(base.parents)[:6]]:
+            candidates.extend([
+                parent / "_EntretienConnect" / MAC_WK_SCRIPT_NAME,
+                parent / "Contents" / "Resources" / "_EntretienConnect" / MAC_WK_SCRIPT_NAME,
+            ])
+    seen: set[str] = set()
+    unique: list[pathlib.Path] = []
+    for candidate in candidates:
+        try:
+            key = str(candidate.resolve())
+        except Exception:
+            key = str(candidate)
+        if key not in seen:
+            seen.add(key)
+            unique.append(candidate)
+    return unique
+
+
+def _mac_wk_resolve_script() -> pathlib.Path:
+    for candidate in _mac_wk_script_candidates():
+        try:
+            if candidate.is_file() and candidate.stat().st_size > 1000:
+                return candidate
+        except Exception:
+            continue
+
+    # Last-resort self-repair: write the embedded, checksum-stable module into
+    # the user's Application Support folder. No browser installation is needed.
+    target_dir = DATA_ROOT / "native-runtime"
+    target = target_dir / MAC_WK_SCRIPT_NAME
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        data = base64.b64decode(MAC_WK_SCRIPT_B64.encode("ascii"))
+        if len(data) < 1000:
+            raise RuntimeError("embedded module is incomplete")
+        tmp = target.with_suffix(".tmp")
+        tmp.write_bytes(data)
+        os.replace(str(tmp), str(target))
+        try:
+            target.chmod(0o600)
+        except Exception:
+            pass
+        if target.is_file() and target.stat().st_size == len(data):
+            return target
+    except Exception as exc:
+        raise RuntimeError(
+            "Das interne WKWebView-Loginmodul konnte nicht bereitgestellt werden: " + str(exc)
+        ) from exc
+    raise RuntimeError("Das interne WKWebView-Loginmodul konnte nicht bereitgestellt werden.")
 
 
 def _mac_wk_read_state() -> dict:
@@ -3840,10 +3907,7 @@ def _mac_wk_launch(profile: str = "default", user_agent: str = "") -> dict:
     global MAC_WK_PROCESS, ACTIVE_BROWSER_MODE, ACTIVE_BROWSER_USER_AGENT
     if platform.system().lower() != "darwin":
         raise RuntimeError("WKWebView ist nur auf macOS verfügbar.")
-    if not MAC_WK_SCRIPT_FILE.exists():
-        raise RuntimeError(
-            "Das interne WKWebView-Loginmodul fehlt. Bitte den Starter vollständig neu entpacken."
-        )
+    script_file = _mac_wk_resolve_script()
     if not pathlib.Path("/usr/bin/osascript").exists():
         raise RuntimeError("Die macOS-Systemkomponente osascript wurde nicht gefunden.")
 
@@ -3867,7 +3931,7 @@ def _mac_wk_launch(profile: str = "default", user_agent: str = "") -> dict:
     args = [
         "/usr/bin/osascript",
         "-l", "JavaScript",
-        str(MAC_WK_SCRIPT_FILE),
+        str(script_file),
         str(MAC_WK_STATE_FILE),
         str(MAC_WK_EXPRESSION_FILE),
         EB_URL,
