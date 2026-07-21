@@ -1,17 +1,17 @@
 {
-  "version": "v324",
+  "version": "v325",
   "files": [
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "b8bef784cee0649b082983662fb0c0a87f0cd20c1f9c099edf9744d33deb36cd",
+      "sha256": "208fbb4385e2afdd1d21c0e61a0e14087879044e634378fe6af476022aec0994",
       "size": 75503
     },
     {
       "target": "ebichelchen.py",
       "url": "starter_files/ebichelchen.py",
-      "sha256": "7e83d56487e1d7f41e02124606c6d9530b7b6b54783e2a02f9bf12b61314dfc2",
-      "size": 175258
+      "sha256": "96ef94945f47c29b87886f0a0c578455067aff625d9f778850c0463e8284ef66",
+      "size": 184403
     },
     {
       "target": "EntretienConnect.ps1",
@@ -40,13 +40,13 @@
     {
       "target": "EntretienConnect-WKWebView.js",
       "url": "starter_files/EntretienConnect-WKWebView.js",
-      "sha256": "839965b1da490de2c1d9c207ee7af1f5642557611a790589d902dc6b43ba1c6f",
-      "size": 12178
+      "sha256": "a848780b3afef48a1d5a1f5ec32a28e3e9a8b0d6224aea8b49d3a09666fd40ee",
+      "size": 16522
     },
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "b7b4928afa6221593710bdb32bfc78bf4004b973d79a710c47682930705b90e6",
+      "sha256": "750bebd7012ecee2b3ef61f260b1a690ba2edbd701f0075a56bc9ffe35b6a96d",
       "size": 5
     },
     {

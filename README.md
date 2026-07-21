@@ -1,21 +1,13 @@
-# EntretienConnect v324
+# EntretienConnect v325
 
-La connexion Microsoft réagit maintenant aussi vite que celle d’e-Bichelchen.
+Deux améliorations de la fenêtre de connexion e-Bichelchen sur macOS.
 
-Le procédé était déjà le bon : code d’autorisation avec PKCE, aucun code à recopier (la méthode par code d’appareil ne sert plus que de secours). Ce qui donnait l’impression de lenteur, c’était l’attente **après** l’identification :
+**Ne plus se reconnecter à chaque démarrage.** La session e-Bichelchen tient à un cookie de session, qui ne vit que dans la mémoire du processus de la fenêtre — dès que celle-ci se fermait, il était perdu, d’où une nouvelle identification à chaque lancement de l’application. Les cookies education.lu du dernier login sont désormais enregistrés (fichier lisible par vous seul, droits 0600) et réinjectés dans la fenêtre **avant** le chargement de la page. Si la session IAM est encore valable côté serveur, vous arrivez directement connecté.
 
-| | e-Bichelchen | Microsoft avant | Microsoft maintenant |
-|---|---|---|---|
-| Cadence d’interrogation | 850–1400 ms | 3000 ms | 900 ms |
-| Fermeture de l’onglet de retour | — | 1500 ms | 400 ms |
-| Attente cumulée | — | **jusqu’à 4,5 s** | **moins d’1,5 s** |
+Vérifié de bout en bout sur banc d’essai : au 1er lancement les deux cookies sont capturés et enregistrés ; au 2ᵉ, le cookie de session — celui qui ne survivait pas — est bien renvoyé au serveur dès la première requête. Garde-fous testés : la session expire après 12 h et est alors supprimée ; une reconnexion volontaire (« recommencer ») efface la session mémorisée ; une session vide n’est jamais enregistrée. C’est le même principe que le jeton Microsoft, déjà conservé sur le disque.
 
-Une interrogation coûte 0,85 ms, mesuré : elle s’adresse à l’assistant local, la cadence plus courte ne charge rien.
+**Plus d’icône « osascript » dans le Dock.** La fenêtre s’annonce désormais comme accessoire : l’icône supplémentaire dans le Dock disparaît. La fenêtre reste pleinement utilisable — fenêtre active, saisie au clavier et **⌘V** fonctionnent (vérifié : le WKWebView est premier répondeur et gère paste:). Un menu « Édition » a été ajouté exprès pour que les raccourcis Couper/Copier/Coller marchent, utile quand le mot de passe vient d’un gestionnaire.
 
-**Pourquoi la connexion Microsoft ne se fait pas dans la fenêtre native, comme e-Bichelchen :** Microsoft déconseille et bloque fréquemment l’authentification dans une fenêtre intégrée, et les stratégies d’accès conditionnel d’un établissement peuvent la refuser. Le navigateur du système est ici la voie prévue et sûre. Comme la connexion actuelle fonctionne, la déplacer serait un pari — et un pari de ce genre a déjà coûté une version aujourd’hui (v315). Le trajet reste donc le même ; seule l’attente inutile a disparu.
+Une limite honnête : le mot **« osascript »** peut encore apparaître dans la barre de menus en haut, mais uniquement tant que la fenêtre de connexion est au premier plan. Ce nom vient du programme réellement exécuté (`/usr/bin/osascript`) et ne peut pas être renommé sans envelopper le tout dans une véritable application — un changement bien plus lourd, écarté pour l’instant. L’icône du Dock, elle, disparaît vraiment.
 
-Rappel v323 : avertissement en cas de variable mal orthographiée dans un modèle, contrôle des adresses renforcé (chevrons, points doublés).
-
-Reste ouvert dans la partie e-mail : la taille des pièces jointes n’est pas vérifiée avant l’envoi, et le jeton d’accès n’est lu qu’une fois avant la boucle d’envoi.
-
-L’assistant e-Bichelchen et la fenêtre de connexion native restent inchangés depuis v320.
+Rappel v324 : la connexion Microsoft réagit aussi vite que celle d’e-Bichelchen (attente après identification réduite de 4,5 s à moins d’1,5 s). La connexion Microsoft reste dans le navigateur système à dessein — Microsoft bloque souvent l’authentification en fenêtre intégrée.

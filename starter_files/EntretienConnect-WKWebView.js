@@ -3,7 +3,7 @@ ObjC.import('WebKit');
 ObjC.import('Foundation');
 
 /*
- * EntretienConnect v320 – native macOS e-Bichelchen login window.
+ * EntretienConnect v325 – native macOS e-Bichelchen login window.
  * Runs through /usr/bin/osascript -l JavaScript and uses WKWebView (Safari/WebKit),
  * so no Chrome, Edge or remotely controlled Firefox is required.
  */
@@ -17,9 +17,74 @@ let EC_FINISHED = false;
 let EC_STATE_PATH = '';
 let EC_READ_EXPRESSION = '';
 let EC_START_URL = '';
+let EC_RESTORE_COOKIES_PATH = '';
 let EC_STARTED_AT = Date.now();
 // v320: Safari-Kennung für den User-Agent des Loginfensters.
 const EC_APP_NAME_FOR_UA = 'Version/17.4 Safari/605.1.15';
+
+// v325: Eigene Menüleiste. Ohne sie gibt es keine Tastenkürzel – und ⌘V braucht
+// man im Loginfenster, wenn das Passwort aus einem Passwortmanager kommt. Das
+// WKWebView ist erster Responder und behandelt paste:/copy:/cut: selbst; die
+// Menüpunkte reichen die Kürzel nur an die Responder-Kette weiter.
+function installEditMenu() {
+  try {
+    const main = $.NSMenu.alloc.init;
+    const appItem = $.NSMenuItem.alloc.init; main.addItem(appItem);
+    const appMenu = $.NSMenu.alloc.initWithTitle($('EntretienConnect'));
+    appMenu.addItemWithTitleActionKeyEquivalent($('Fenster schließen'), 'performClose:', $('w'));
+    appMenu.addItemWithTitleActionKeyEquivalent($('Beenden'), 'terminate:', $('q'));
+    appItem.setSubmenu(appMenu);
+    const editItem = $.NSMenuItem.alloc.init; main.addItem(editItem);
+    const edit = $.NSMenu.alloc.initWithTitle($('Bearbeiten'));
+    edit.addItemWithTitleActionKeyEquivalent($('Annuler'), 'undo:', $('z'));
+    edit.addItemWithTitleActionKeyEquivalent($('Ausschneiden'), 'cut:', $('x'));
+    edit.addItemWithTitleActionKeyEquivalent($('Kopieren'), 'copy:', $('c'));
+    edit.addItemWithTitleActionKeyEquivalent($('Einfügen'), 'paste:', $('v'));
+    edit.addItemWithTitleActionKeyEquivalent($('Alles auswählen'), 'selectAll:', $('a'));
+    editItem.setSubmenu(edit);
+    $.NSApplication.sharedApplication.setMainMenu(main);
+  } catch (_) {}
+}
+
+// v325: Eine noch gültige e-Bichelchen-Sitzung aus einem früheren App-Start wird
+// zurückgeschrieben, BEVOR die Seite geladen wird. War die IAM-Sitzung nicht
+// abgelaufen, landet der Benutzer direkt angemeldet. Das Sitzungs-Cookie lebt
+// sonst nur im Speicher dieses Prozesses und ist bei jedem Neustart weg – das war
+// der Grund, warum bisher jedes Mal eine neue Anmeldung nötig war.
+function injectCookiesThenLoad(webview, url, cookiesPath) {
+  let arr = [];
+  if (cookiesPath) {
+    try {
+      const raw = $.NSString.stringWithContentsOfFileEncodingError($(cookiesPath), $.NSUTF8StringEncoding, Ref());
+      const txt = String(jsValue(raw) || '');
+      if (txt) arr = JSON.parse(txt);
+    } catch (_) { arr = []; }
+  }
+  const request = $.NSURLRequest.requestWithURL(url);
+  if (!Array.isArray(arr) || !arr.length) { webview.loadRequest(request); return; }
+  let store = null;
+  try { store = webview.configuration.websiteDataStore.httpCookieStore; } catch (_) { store = null; }
+  if (!store || typeof store.setCookieCompletionHandler !== 'function') { webview.loadRequest(request); return; }
+  let remaining = arr.length;
+  let loaded = false;
+  const loadOnce = () => { if (!loaded) { loaded = true; try { webview.loadRequest(request); } catch (_) {} } };
+  const done = () => { remaining -= 1; if (remaining <= 0) loadOnce(); };
+  // Sicherheitsnetz: falls ein Completion-Handler ausbleibt, wird trotzdem geladen.
+  $.NSTimer.scheduledTimerWithTimeIntervalRepeatsBlock(2.0, false, function(_) { loadOnce(); });
+  arr.forEach(function(c) {
+    try {
+      const props = $.NSMutableDictionary.alloc.init;
+      props.setObjectForKey($(String(c.name || '')), $.NSHTTPCookieName);
+      props.setObjectForKey($(String(c.value || '')), $.NSHTTPCookieValue);
+      props.setObjectForKey($(String(c.domain || 'ssl.education.lu')), $.NSHTTPCookieDomain);
+      props.setObjectForKey($(String(c.path || '/')), $.NSHTTPCookiePath);
+      if (c.secure) props.setObjectForKey($('TRUE'), $.NSHTTPCookieSecure);
+      const cookie = $.NSHTTPCookie.cookieWithProperties(props);
+      if (cookie && !cookie.isNil()) { store.setCookieCompletionHandler(cookie, function() { done(); }); }
+      else { done(); }
+    } catch (_) { done(); }
+  });
+}
 
 function jsValue(value) {
   try {
@@ -147,9 +212,9 @@ function finalizePayload(payload, pageUrl) {
           userAgent: ua,
           capturedAt: new Date().toISOString(),
           targetUrl: String(pageUrl || ''),
-          browser: 'macOS WKWebView v320'
+          browser: 'macOS WKWebView v325'
         },
-        engine: 'WKWebView-v320',
+        engine: 'WKWebView-v325',
         startedAt: new Date(EC_STARTED_AT).toISOString()
       });
       try { EC_WINDOW.orderOut(null); } catch (_) {}
@@ -167,9 +232,9 @@ function buildControllerScript() {
     const href = String(location.href || '');
     const onEb = href.indexOf('/ebichelchen/app/') >= 0;
     if (!onEb) return JSON.stringify({phase:'login',url:href});
-    if (!window.__entretienConnectNative320) {
-      window.__entretienConnectNative320 = {phase:'starting',url:href,error:'',data:null,startedAt:Date.now()};
-      const s = window.__entretienConnectNative320;
+    if (!window.__entretienConnectNative325) {
+      window.__entretienConnectNative325 = {phase:'starting',url:href,error:'',data:null,startedAt:Date.now()};
+      const s = window.__entretienConnectNative325;
       s.phase = 'reading';
       Promise.resolve(${EC_READ_EXPRESSION})
         .then(v => { s.data = v; s.phase = 'ready'; s.url = String(location.href || href); })
@@ -177,10 +242,10 @@ function buildControllerScript() {
           s.error = String(e && (e.message || e) || 'unknown error');
           s.phase = 'waiting';
           s.url = String(location.href || href);
-          setTimeout(() => { try { delete window.__entretienConnectNative320; } catch (_) {} }, 1200);
+          setTimeout(() => { try { delete window.__entretienConnectNative325; } catch (_) {} }, 1200);
         });
     }
-    const s = window.__entretienConnectNative320;
+    const s = window.__entretienConnectNative325;
     return JSON.stringify({phase:s.phase,url:String(s.url||href),error:String(s.error||''),data:s.data||null,age:Date.now()-Number(s.startedAt||Date.now())});
   })()`;
 }
@@ -246,6 +311,8 @@ function run(argv) {
     EC_STATE_PATH = String(argv[0]);
     const expressionPath = String(argv[1]);
     EC_START_URL = String(argv[2]);
+    // v325: Optionaler 4. Parameter – Pfad zu den zurückzuschreibenden Cookies.
+    EC_RESTORE_COOKIES_PATH = (argv.length > 3) ? String(argv[3]) : '';
     const readErr = Ref();
     const readObj = $.NSString.stringWithContentsOfFileEncodingError($(expressionPath), $.NSUTF8StringEncoding, readErr);
     EC_READ_EXPRESSION = String(jsValue(readObj) || '');
@@ -254,7 +321,14 @@ function run(argv) {
     writeState({status:'starting', engine:'WKWebView', startedAt:new Date(EC_STARTED_AT).toISOString()});
 
     EC_APP = $.NSApplication.sharedApplication;
-    EC_APP.setActivationPolicy($.NSApplicationActivationPolicyRegular);
+    // v325: Als Zubehör statt als vollwertiges Programm anmelden. Damit
+    // verschwindet das zusätzliche Dock-Symbol; das Fenster bleibt voll bedienbar
+    // (gemessen: Key-Window, Eingabefokus, ⌘V funktionieren). Der Prozessname wird
+    // als Beste-Bemühung gesetzt – den fettgedruckten Menüleistennamen bestimmt
+    // aber das laufende Programm (osascript), das lässt sich hier nicht umbenennen.
+    try { $.NSProcessInfo.processInfo.setProcessName($('EntretienConnect')); } catch (_) {}
+    EC_APP.setActivationPolicy($.NSApplicationActivationPolicyAccessory);
+    installEditMenu();
 
     const rect = $.NSMakeRect(0, 0, 1080, 760);
     const style = $.NSWindowStyleMaskTitled | $.NSWindowStyleMaskClosable | $.NSWindowStyleMaskMiniaturizable | $.NSWindowStyleMaskResizable;
@@ -290,8 +364,7 @@ function run(argv) {
 
     const url = $.NSURL.URLWithString($(EC_START_URL));
     if (!url) throw new Error('Invalid e-Bichelchen URL.');
-    const request = $.NSURLRequest.requestWithURL(url);
-    EC_WEBVIEW.loadRequest(request);
+    injectCookiesThenLoad(EC_WEBVIEW, url, EC_RESTORE_COOKIES_PATH);
 
     EC_TIMER = $.NSTimer.scheduledTimerWithTimeIntervalRepeatsBlock(0.8, true, function(_) { pollWebView(); });
     writeState({status:'open', stage:'login', engine:'WKWebView', pageUrl:EC_START_URL});
