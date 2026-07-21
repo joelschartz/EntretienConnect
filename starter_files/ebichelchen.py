@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.11.2 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.12.0 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -94,7 +94,7 @@ try:
 except Exception:
     SSL_CONTEXT = None
 
-HELPER_VERSION = "1.11.2"
+HELPER_VERSION = "1.12.0"
 
 LATEST_DATA = None
 LATEST_AT = None
@@ -169,19 +169,6 @@ def _save_subjects_endpoint_hint(method: str, base_path: str) -> None:
         )
     except Exception:
         pass
-
-
-def _json_response(handler: BaseHTTPRequestHandler, data, status: int = 200):
-    body = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
-    handler.send_response(status)
-    handler.send_header("Content-Type", "application/json; charset=utf-8")
-    handler.send_header("Content-Length", str(len(body)))
-    handler.send_header("Cache-Control", "no-store")
-    handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
-    handler.end_headers()
-    handler.wfile.write(body)
 
 
 def sanitize_profile_name(raw: str) -> str:
@@ -279,41 +266,6 @@ def debug_browser_running() -> bool:
         return False
 
 
-def open_remote_tab(url: str) -> bool:
-    """Öffnet einen neuen Tab im bereits kontrollierten Chrome-/Edge-Fenster.
-
-    v302: Zuerst wird ``Target.createTarget`` mit ``newWindow=False`` verwendet.
-    Dadurch erscheint e-Bichelchen als zweiter Tab neben EntretienConnect und nicht
-    als weiteres Browserfenster. Die ältere HTTP-DevTools-Route bleibt Fallback.
-    """
-    try:
-        version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=2)
-        ws = version.get("webSocketDebuggerUrl") if isinstance(version, dict) else None
-        if ws:
-            msg = cdp_call(ws, "Target.createTarget", {
-                "url": url,
-                "newWindow": False,
-                "background": False,
-            }, msg_id=906, timeout=4)
-            target_id = (((msg or {}).get("result") or {}).get("targetId"))
-            if target_id:
-                return True
-    except Exception:
-        pass
-
-    target = f"http://127.0.0.1:{CDP_PORT}/json/new?" + urllib.parse.quote(url, safe="")
-    for method in ("PUT", "GET"):
-        try:
-            req = urllib.request.Request(target, method=method)
-            with urllib.request.urlopen(req, timeout=2) as resp:
-                resp.read()
-            return True
-        except Exception:
-            continue
-    return False
-
-
-
 def _activate_browser_app(browser_name: str) -> bool:
     """Best-effort OS activation without changing the e-Bichelchen route.
 
@@ -358,109 +310,6 @@ def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0) ->
             last_error = str(exc)
             time.sleep(0.10)
     return {"focused": False, "method": "cdp", "error": last_error or "Target not ready"}
-
-
-def launch_app_browser(app_url: str, profile: str = "default", preferred_browser: str = "auto", timeout_s: float = 18.0) -> dict:
-    """Startet EntretienConnect selbst im kontrollierten Chromium-Browser.
-
-    v302: App und e-Bichelchen teilen damit denselben Browserprozess, dasselbe
-    Fenster und dasselbe isolierte Profil. Beim Verbinden wird nur ein zweiter Tab
-    angelegt; ein separater Chrome-Kaltstart entfällt vollständig. Ein beliebiger
-    bereits laufender Standardbrowser (insbesondere Firefox) kann nicht nachträglich
-    sicher über DevTools übernommen werden, daher wird die App von Beginn an in der
-    kontrollierten Chrome-/Edge-Instanz geöffnet.
-    """
-    browser = find_browser_executable(preferred_browser)
-    if not browser:
-        raise RuntimeError("Kein unterstützter Browser gefunden. Installiert sein muss Google Chrome oder Microsoft Edge.")
-
-    profile = sanitize_profile_name(profile)
-    profile_dir = PROFILE_ROOT / browser["id"] / profile
-    profile_dir.mkdir(parents=True, exist_ok=True)
-
-    with BROWSER_LAUNCH_LOCK:
-        if debug_browser_running():
-            try:
-                targets = [t for t in _list_cdp_targets() if _is_app_target(t)]
-                if targets:
-                    target = targets[0]
-                    _cdp_set_window_state(target, "normal")
-                    cdp_call(target.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=907, timeout=3)
-                    return {"opened": True, "alreadyRunning": True, "reusedAppTab": True, "browser": browser.get("name"), "profileDir": str(profile_dir), "url": target.get("url")}
-            except Exception:
-                pass
-            if not open_remote_tab(app_url):
-                raise RuntimeError("Der EntretienConnect-Tab konnte im kontrollierten Browser nicht geöffnet werden.")
-        else:
-            args = [
-                browser["path"],
-                f"--remote-debugging-port={CDP_PORT}",
-                f"--user-data-dir={profile_dir}",
-                "--no-first-run",
-                "--no-default-browser-check",
-                app_url,
-            ]
-            proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            BROWSER_PROCESSES[profile] = proc
-
-    deadline = time.time() + max(4.0, float(timeout_s))
-    last_error = ""
-    while time.time() < deadline:
-        try:
-            targets = [t for t in _list_cdp_targets() if _is_app_target(t)]
-            if targets:
-                target = targets[0]
-                _cdp_set_window_state(target, "normal")
-                cdp_call(target.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=908, timeout=3)
-                return {"opened": True, "alreadyRunning": False, "reusedAppTab": False, "browser": browser.get("name"), "profileDir": str(profile_dir), "url": target.get("url"), "targetId": target.get("id")}
-        except Exception as exc:
-            last_error = str(exc)
-        time.sleep(0.12)
-    raise RuntimeError("Der kontrollierte Browser wurde gestartet, aber EntretienConnect erschien nicht rechtzeitig." + ((" " + last_error) if last_error else ""))
-
-
-def prewarm_browser(profile: str = "default", preferred_browser: str = "auto", wait_ready_s: float = 0.0) -> dict:
-    """Startet den isolierten Chromium-Prozess ohne sichtbares Fenster.
-
-    Legacy-Prewarm-Fallback: Der Browser-Kaltstart kann im Hintergrund laufen, falls
-    EntretienConnect geöffnet wird. Beim Klick auf « Connecter » muss dadurch nur
-    noch der direkte Login-Tab angelegt werden. Das normale Chrome-Profil des
-    Benutzers bleibt unangetastet; die automatische Klassen-/Schülerlesung behält
-    weiterhin ihren kontrollierten DevTools-Kontext.
-    """
-    with BROWSER_LAUNCH_LOCK:
-        if debug_browser_running():
-            return {"prewarmed": True, "alreadyRunning": True, "port": CDP_PORT}
-
-        browser = find_browser_executable(preferred_browser)
-        if not browser:
-            return {"prewarmed": False, "error": "Kein unterstützter Browser gefunden."}
-
-        profile = sanitize_profile_name(profile)
-        profile_dir = PROFILE_ROOT / browser["id"] / profile
-        profile_dir.mkdir(parents=True, exist_ok=True)
-        args = [
-            browser["path"],
-            f"--remote-debugging-port={CDP_PORT}",
-            f"--user-data-dir={profile_dir}",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--no-startup-window",
-        ]
-        try:
-            proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            BROWSER_PROCESSES[profile] = proc
-        except Exception as exc:
-            return {"prewarmed": False, "error": str(exc), "browser": browser.get("name")}
-
-    deadline = time.time() + max(0.0, float(wait_ready_s))
-    while time.time() < deadline:
-        if debug_browser_running():
-            return {"prewarmed": True, "alreadyRunning": False, "ready": True, "port": CDP_PORT, "browser": browser.get("name"), "profileDir": str(profile_dir)}
-        if proc.poll() is not None:
-            return {"prewarmed": False, "ready": False, "error": "Browser-Prozess wurde vorzeitig beendet.", "browser": browser.get("name")}
-        time.sleep(0.10)
-    return {"prewarmed": True, "alreadyRunning": False, "ready": debug_browser_running(), "port": CDP_PORT, "browser": browser.get("name"), "profileDir": str(profile_dir)}
 
 
 def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: str = "") -> dict:
@@ -691,7 +540,6 @@ def cdp_eval(ws_url: str, expression: str, await_promise: bool = False, msg_id: 
         "returnByValue": True,
         "timeout": timeout_ms,
     }, msg_id=msg_id)
-
 
 
 def build_read_expression(selected_group_id: int | None = None) -> str:
@@ -1152,8 +1000,6 @@ def find_ebichelchen_target() -> dict:
     return target
 
 
-
-
 def _firefox_profile_dirs() -> list[pathlib.Path]:
     """Findet Firefox-Profile, ohne den Browser zu steuern oder zu beenden."""
     system = platform.system().lower()
@@ -1210,7 +1056,6 @@ def _firefox_profile_dirs() -> list[pathlib.Path]:
         return max(mtimes, default=0)
     found.sort(key=score, reverse=True)
     return found
-
 
 
 def _lz4_block_decompress_with_size(data: bytes) -> bytes:
@@ -2460,7 +2305,6 @@ def cleanup_after_read(close_eb: bool = True, focus_app: bool = True) -> dict:
     return result
 
 
-
 def capture_browser_session(target: dict) -> dict:
     """Speichert die e-Bichelchen-Cookies aus dem eingeloggten Browser.
     Danach können save-entry/delete-entry direkt vom lokalen Helfer ausgeführt werden,
@@ -2597,36 +2441,6 @@ def direct_save_entry(payload: dict) -> dict:
 def direct_delete_entry(entry_id: int) -> dict:
     path = f"/ebichelchen/app/api/delete-entry?id={int(entry_id)}&deleteFollowingRecurrence=false"
     return direct_ebichelchen_request("DELETE", path, None)
-
-def _read_json_body(handler: BaseHTTPRequestHandler) -> dict:
-    length = int(handler.headers.get("Content-Length") or 0)
-    if length <= 0:
-        return {}
-    raw = handler.rfile.read(length)
-    try:
-        return json.loads(raw.decode("utf-8"))
-    except Exception as exc:
-        raise RuntimeError("JSON-Anfrage konnte nicht gelesen werden: " + str(exc))
-
-
-def ensure_ebichelchen_target(profile: str = "default", preferred_browser: str = "auto", timeout_s: float = 24.0) -> dict:
-    """Stellt sicher, dass ein e-Bichelchen-Tab mit DevTools existiert.
-    Wird für den echten Test-Eintrag genutzt, nachdem das e-Bichelchen-Fenster nach dem Lesen evtl. geschlossen wurde.
-    """
-    try:
-        return find_ebichelchen_target()
-    except Exception:
-        pass
-    launch_browser(profile or "default", preferred_browser=preferred_browser or "auto")
-    deadline = time.time() + timeout_s
-    last_error = None
-    while time.time() < deadline:
-        try:
-            return find_ebichelchen_target()
-        except Exception as exc:
-            last_error = exc
-            time.sleep(0.4)
-    raise RuntimeError("e-Bichelchen-Tab konnte nicht für den Test-Eintrag geöffnet werden: " + str(last_error))
 
 
 def _as_int_or_none(value):
@@ -2828,6 +2642,16 @@ def validate_single_entry_payload(payload: dict) -> dict:
         "weekInterval": 1,
     }
     return safe
+
+
+# ---------------------------------------------------------------------------
+# v314: Die folgenden fünf Funktionen (build_save_entry_expression bis
+# delete_created_test_entry) schreiben Einträge über JavaScript IM Browser-Tab,
+# statt über die direkte HTTP-Route mit den übernommenen Cookies. Der reguläre
+# Ablauf nutzt sie nicht mehr. Sie bleiben bewusst erhalten: Sie dokumentieren
+# den alternativen Schreibweg und dienen als Einzeleintrags-Testwerkzeug, falls
+# der direkte Weg einmal ausfällt. Nicht löschen, ohne dafür Ersatz zu haben.
+# ---------------------------------------------------------------------------
 
 
 def build_save_entry_expression(payload: dict) -> str:
@@ -3146,591 +2970,12 @@ def clear_current() -> None:
         LATEST_DATA = None
         LATEST_AT = None
 
-# ===================================================================
-# Legacy v305 – deaktivierter Firefox-WebDriver-BiDi-Code
-# App und e-Bichelchen laufen als zwei Tabs derselben Firefox-Instanz.
-# Die sichtbare e-Bichelchen-Seite wird nicht umgeschaltet; die Klasse
-# wird ausschließlich über die von EntretienConnect gewählte groupId gelesen.
-# ===================================================================
-
-# Legacy-Referenzen; v306 verwendet standardmäßig ausschließlich den CDP-Loginfensterpfad.
-_launch_browser_legacy_v304 = launch_browser
-_check_login_ready_legacy_v304 = check_login_ready
-_focus_app_legacy_v304 = focus_app_tab
-_close_eb_legacy_v304 = close_ebichelchen_target
-_force_close_legacy_v304 = force_close_launched_browser
-_soft_reset_legacy_v304 = soft_reset_login
-_reset_login_legacy_v304 = reset_login_session
-
-BIDI_PORT = 9224
-FIREFOX_BIDI = None
-FIREFOX_BIDI_START_ERROR = ""
-
-
-def _is_local_app_url(url: str) -> bool:
-    u = str(url or "").lower()
-    return (
-        u.startswith("http://127.0.0.1:")
-        or u.startswith("http://localhost:")
-        or u.startswith("http://[::1]:")
-    )
-
-
-def find_firefox_executable() -> dict | None:
-    system = platform.system().lower()
-    candidates: list[str] = []
-    if system == "darwin":
-        candidates = [
-            "/Applications/Firefox.app/Contents/MacOS/firefox",
-            os.path.expanduser("~/Applications/Firefox.app/Contents/MacOS/firefox"),
-            "/Applications/Firefox Developer Edition.app/Contents/MacOS/firefox",
-        ]
-    elif system == "windows":
-        pf = os.environ.get("PROGRAMFILES", "")
-        pfx86 = os.environ.get("PROGRAMFILES(X86)", "")
-        local = os.environ.get("LOCALAPPDATA", "")
-        candidates = [
-            os.path.join(pf, "Mozilla Firefox", "firefox.exe"),
-            os.path.join(pfx86, "Mozilla Firefox", "firefox.exe"),
-            os.path.join(local, "Mozilla Firefox", "firefox.exe"),
-            shutil.which("firefox.exe") or "",
-        ]
-    else:
-        candidates = [shutil.which("firefox") or "", shutil.which("firefox-esr") or ""]
-    for path in candidates:
-        if path and pathlib.Path(path).exists():
-            return {"path": path, "id": "firefox", "name": "Mozilla Firefox"}
-    return None
-
-
-def _free_loopback_port(preferred: int = BIDI_PORT) -> int:
-    for port in list(range(preferred, preferred + 20)) + [0]:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.bind(("127.0.0.1", port))
-            return int(sock.getsockname()[1])
-        except OSError:
-            pass
-        finally:
-            sock.close()
-    raise RuntimeError("Kein freier lokaler Port für Firefox WebDriver BiDi gefunden.")
-
-
-def _write_firefox_profile_prefs(profile_dir: pathlib.Path) -> None:
-    profile_dir.mkdir(parents=True, exist_ok=True)
-    prefs = (
-        '// Legacy Firefox-BiDi-Profil (v306 nicht automatisch verwendet)\n'
-        'user_pref("browser.shell.checkDefaultBrowser", false);\n'
-        'user_pref("browser.aboutwelcome.enabled", false);\n'
-        'user_pref("browser.startup.page", 0);\n'
-        'user_pref("browser.tabs.warnOnClose", false);\n'
-        'user_pref("browser.tabs.warnOnCloseOtherTabs", false);\n'
-        'user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);\n'
-        'user_pref("toolkit.telemetry.reportingpolicy.firstRun", false);\n'
-        'user_pref("browser.newtabpage.activity-stream.showSponsored", false);\n'
-        'user_pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);\n'
-    )
-    try:
-        (profile_dir / "user.js").write_text(prefs, encoding="utf-8")
-    except Exception:
-        pass
-
-
-def _bidi_remote_value(remote):
-    if not isinstance(remote, dict):
-        return remote
-    typ = remote.get("type")
-    if typ in ("string", "number", "boolean", "bigint"):
-        return remote.get("value")
-    if typ in ("null", "undefined"):
-        return None
-    if typ in ("array", "set"):
-        return [_bidi_remote_value(v) for v in (remote.get("value") or [])]
-    if typ in ("object", "map"):
-        out = {}
-        for pair in remote.get("value") or []:
-            if isinstance(pair, list) and len(pair) == 2:
-                key = _bidi_remote_value(pair[0]) if isinstance(pair[0], dict) else pair[0]
-                out[str(key)] = _bidi_remote_value(pair[1])
-        return out
-    return remote.get("value")
-
-
-def _bidi_bytes_value(value) -> str:
-    if isinstance(value, str):
-        return value
-    if not isinstance(value, dict):
-        return str(value or "")
-    typ = value.get("type")
-    raw = value.get("value") or ""
-    if typ == "base64":
-        try:
-            return base64.b64decode(raw).decode("utf-8", "replace")
-        except Exception:
-            return ""
-    return str(raw)
-
-
-class FirefoxBiDiController:
-    def __init__(self):
-        self.process: subprocess.Popen | None = None
-        self.ws: SimpleWebSocket | None = None
-        self.lock = threading.RLock()
-        self.next_id = 1
-        self.session_id = None
-        self.capabilities: dict = {}
-        self.port: int | None = None
-        self.profile_dir: pathlib.Path | None = None
-        self.firefox_path: str | None = None
-        self.app_context: str | None = None
-        self.eb_context: str | None = None
-
-    def alive(self) -> bool:
-        return bool(self.ws and self.process and self.process.poll() is None)
-
-    def _command_locked(self, method: str, params: dict | None = None, timeout: float = 15.0) -> dict:
-        if not self.ws:
-            raise RuntimeError("Firefox-BiDi ist nicht verbunden.")
-        msg_id = self.next_id
-        self.next_id += 1
-        self.ws.sock.settimeout(max(1.0, float(timeout)))
-        self.ws.send_text(json.dumps({"id": msg_id, "method": method, "params": params or {}}, ensure_ascii=False))
-        deadline = time.time() + max(1.0, float(timeout))
-        while time.time() < deadline:
-            raw = self.ws.recv_text()
-            msg = json.loads(raw)
-            if msg.get("id") != msg_id:
-                # Events gehören nicht zu dieser Anfrage und werden hier bewusst ignoriert.
-                continue
-            if msg.get("type") == "error" or msg.get("error"):
-                err = msg.get("error") or "error"
-                detail = msg.get("message") or ""
-                raise RuntimeError(f"Firefox BiDi {method}: {err} – {detail}".strip())
-            return msg.get("result") or {}
-        raise RuntimeError(f"Firefox BiDi {method}: keine Antwort erhalten.")
-
-    def command(self, method: str, params: dict | None = None, timeout: float = 15.0) -> dict:
-        with self.lock:
-            return self._command_locked(method, params, timeout)
-
-    def start(self, app_url: str, profile: str = "default", timeout_s: float = 30.0) -> dict:
-        global ACTIVE_BROWSER_MODE, ACTIVE_BROWSER_USER_AGENT
-        with self.lock:
-            if self.alive():
-                self._refresh_contexts()
-                if self.app_context:
-                    self._command_locked("browsingContext.activate", {"context": self.app_context}, 5)
-                    ACTIVE_BROWSER_MODE = "firefox-bidi"
-                    return {
-                        "opened": True,
-                        "alreadyRunning": True,
-                        "browser": "Mozilla Firefox",
-                        "sameBrowser": True,
-                        "appContext": self.app_context,
-                    }
-                self.shutdown(close_browser=True)
-
-            browser = find_firefox_executable()
-            if not browser:
-                raise RuntimeError("Mozilla Firefox wurde nicht gefunden. Bitte Firefox installieren und EntretienConnect erneut starten.")
-            self.firefox_path = browser["path"]
-            self.port = _free_loopback_port(BIDI_PORT)
-            self.profile_dir = PROFILE_ROOT / "firefox-bidi" / sanitize_profile_name(profile)
-            _write_firefox_profile_prefs(self.profile_dir)
-
-            args = [
-                self.firefox_path,
-                "--no-remote",
-                "--profile", str(self.profile_dir),
-                "--remote-debugging-port", str(self.port),
-                "--new-window", app_url,
-            ]
-            env = os.environ.copy()
-            env.setdefault("MOZ_CRASHREPORTER_DISABLE", "1")
-            self.process = subprocess.Popen(
-                args,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                env=env,
-            )
-            BROWSER_PROCESSES["firefox-bidi"] = self.process
-
-            deadline = time.time() + max(10.0, float(timeout_s))
-            last_error = ""
-            while time.time() < deadline:
-                if self.process.poll() is not None:
-                    raise RuntimeError("Firefox wurde beendet, bevor EntretienConnect geöffnet werden konnte.")
-                try:
-                    self.ws = SimpleWebSocket(f"ws://127.0.0.1:{self.port}/session", timeout=3.0)
-                    result = self._command_locked(
-                        "session.new",
-                        {
-                            "capabilities": {
-                                "alwaysMatch": {"browserName": "firefox"}
-                            }
-                        },
-                        12,
-                    )
-                    self.session_id = result.get("sessionId")
-                    self.capabilities = result.get("capabilities") or {}
-                    ACTIVE_BROWSER_USER_AGENT = str(self.capabilities.get("userAgent") or "Mozilla/5.0 Firefox")
-                    break
-                except Exception as exc:
-                    last_error = str(exc)
-                    if self.ws:
-                        try:
-                            self.ws.close()
-                        except Exception:
-                            pass
-                    self.ws = None
-                    time.sleep(0.22)
-            if not self.ws:
-                raise RuntimeError("Firefox WebDriver BiDi wurde nicht rechtzeitig verfügbar. " + last_error)
-
-            while time.time() < deadline:
-                self._refresh_contexts()
-                if self.app_context:
-                    try:
-                        self._command_locked("browsingContext.activate", {"context": self.app_context}, 5)
-                    except Exception:
-                        pass
-                    ACTIVE_BROWSER_MODE = "firefox-bidi"
-                    return {
-                        "opened": True,
-                        "alreadyRunning": False,
-                        "browser": "Mozilla Firefox",
-                        "sameBrowser": True,
-                        "profileDir": str(self.profile_dir),
-                        "port": self.port,
-                        "appContext": self.app_context,
-                    }
-                time.sleep(0.16)
-            raise RuntimeError("Firefox läuft, aber der EntretienConnect-Tab wurde nicht gefunden.")
-
-    def _refresh_contexts(self) -> list[dict]:
-        tree = self._command_locked("browsingContext.getTree", {"maxDepth": 0}, 6)
-        contexts = tree.get("contexts") or []
-        ids = {str(c.get("context")) for c in contexts}
-        app = next((c for c in contexts if _is_local_app_url(str(c.get("url") or ""))), None)
-        if app:
-            self.app_context = str(app.get("context"))
-        elif self.app_context not in ids:
-            self.app_context = None
-        if self.eb_context not in ids:
-            self.eb_context = None
-        if not self.eb_context:
-            eb = next(
-                (
-                    c
-                    for c in contexts
-                    if "education.lu" in str(c.get("url") or "").lower()
-                    and not _is_local_app_url(str(c.get("url") or ""))
-                ),
-                None,
-            )
-            if not eb and self.app_context:
-                eb = next(
-                    (
-                        c
-                        for c in contexts
-                        if str(c.get("originalOpener") or "") == self.app_context
-                        and not _is_local_app_url(str(c.get("url") or ""))
-                    ),
-                    None,
-                )
-            if eb:
-                self.eb_context = str(eb.get("context"))
-        return contexts
-
-    def context_info(self, context_id: str | None) -> dict | None:
-        if not context_id:
-            return None
-        with self.lock:
-            for context in self._refresh_contexts():
-                if str(context.get("context")) == str(context_id):
-                    return context
-        return None
-
-    def open_ebichelchen(self) -> dict:
-        with self.lock:
-            contexts = self._refresh_contexts()
-            if self.eb_context and any(str(c.get("context")) == self.eb_context for c in contexts):
-                self._command_locked("browsingContext.activate", {"context": self.eb_context}, 5)
-                current_url = next((c.get("url") for c in contexts if str(c.get("context")) == self.eb_context), "")
-                return {
-                    "alreadyRunning": True,
-                    "reusedTab": True,
-                    "sameBrowser": True,
-                    "active": True,
-                    "browser": "Mozilla Firefox",
-                    "url": current_url,
-                }
-            params: dict = {"type": "tab", "background": False}
-            if self.app_context:
-                params["referenceContext"] = self.app_context
-            created = self._command_locked("browsingContext.create", params, 8)
-            self.eb_context = str(created.get("context") or "")
-            if not self.eb_context:
-                raise RuntimeError("Firefox konnte keinen zweiten Tab anlegen.")
-            self._command_locked(
-                "browsingContext.navigate",
-                {"context": self.eb_context, "url": EB_URL, "wait": "none"},
-                8,
-            )
-            self._command_locked("browsingContext.activate", {"context": self.eb_context}, 5)
-            return {
-                "alreadyRunning": False,
-                "openedTab": True,
-                "active": True,
-                "sameBrowser": True,
-                "browser": "Mozilla Firefox",
-                "url": EB_URL,
-                "context": self.eb_context,
-            }
-
-    def evaluate_json(self, context_id: str, expression: str, timeout: float = 20.0):
-        result = self.command(
-            "script.evaluate",
-            {
-                "expression": expression,
-                "target": {"context": context_id},
-                "awaitPromise": True,
-                "resultOwnership": "none",
-                "serializationOptions": {"maxObjectDepth": 2, "maxDomDepth": 0},
-            },
-            timeout,
-        )
-        if result.get("type") == "exception":
-            details = result.get("exceptionDetails") or {}
-            raise RuntimeError(details.get("text") or "JavaScript-Auswertung in Firefox fehlgeschlagen.")
-        remote = result.get("result") or {}
-        value = _bidi_remote_value(remote)
-        if isinstance(value, str):
-            try:
-                return json.loads(value)
-            except Exception:
-                return value
-        return value
-
-    def capture_session(self, context_id: str) -> dict:
-        result = self.command(
-            "storage.getCookies",
-            {"partition": {"type": "context", "context": context_id}},
-            10,
-        )
-        merged: dict[str, str] = {}
-        for cookie in result.get("cookies") or []:
-            domain = str(cookie.get("domain") or "").lower()
-            name = str(cookie.get("name") or "")
-            if not name or "education.lu" not in domain:
-                continue
-            merged[name] = _bidi_bytes_value(cookie.get("value"))
-        if not merged:
-            raise RuntimeError("Keine e-Bichelchen-Sitzungscookies in Firefox gefunden.")
-        return {
-            "cookieHeader": "; ".join(f"{key}={value}" for key, value in merged.items()),
-            "cookieNames": sorted(merged),
-            "userAgent": str(self.capabilities.get("userAgent") or ACTIVE_BROWSER_USER_AGENT or "Mozilla/5.0 Firefox"),
-            "capturedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "targetUrl": (self.context_info(context_id) or {}).get("url") or EB_URL,
-            "browser": "firefox-bidi",
-            "profileDir": str(self.profile_dir or ""),
-        }
-
-    def close_eb(self) -> dict:
-        with self.lock:
-            self._refresh_contexts()
-            context = self.eb_context
-            if not context:
-                return {"closed": True, "alreadyClosed": True, "method": "firefox-bidi"}
-            try:
-                self._command_locked("browsingContext.close", {"context": context, "promptUnload": False}, 8)
-            finally:
-                self.eb_context = None
-            return {"closed": True, "method": "firefox-bidi", "context": context}
-
-    def focus_app(self) -> dict:
-        with self.lock:
-            self._refresh_contexts()
-            if not self.app_context:
-                raise RuntimeError("EntretienConnect-Tab wurde in Firefox nicht gefunden.")
-            self._command_locked("browsingContext.activate", {"context": self.app_context}, 6)
-            return {
-                "method": "firefox-bidi",
-                "foundExistingTab": True,
-                "context": self.app_context,
-                "openedNewTab": False,
-            }
-
-    def delete_education_cookies(self) -> int:
-        deleted = 0
-        for domain in ("ssl.education.lu", ".education.lu", "education.lu"):
-            try:
-                self.command("storage.deleteCookies", {"filter": {"domain": domain}}, 7)
-                deleted += 1
-            except Exception:
-                pass
-        return deleted
-
-    def shutdown(self, close_browser: bool = True) -> dict:
-        result = {"closed": False, "method": "firefox-bidi"}
-        with self.lock:
-            if self.ws and close_browser:
-                try:
-                    self._command_locked("browser.close", {}, 6)
-                    result["closed"] = True
-                except Exception:
-                    pass
-            if self.ws:
-                try:
-                    self.ws.close()
-                except Exception:
-                    pass
-            self.ws = None
-            if self.process and self.process.poll() is None:
-                try:
-                    self.process.terminate()
-                    self.process.wait(timeout=5)
-                    result["closed"] = True
-                except Exception:
-                    try:
-                        self.process.kill()
-                    except Exception:
-                        pass
-            self.process = None
-            self.session_id = None
-            self.app_context = None
-            self.eb_context = None
-            BROWSER_PROCESSES.pop("firefox-bidi", None)
-        return result
-
-
-def launch_firefox_app(app_url: str, profile: str = "default", timeout_s: float = 30.0) -> dict:
-    global FIREFOX_BIDI, FIREFOX_BIDI_START_ERROR
-    if FIREFOX_BIDI is None:
-        FIREFOX_BIDI = FirefoxBiDiController()
-    try:
-        info = FIREFOX_BIDI.start(app_url, profile=profile, timeout_s=timeout_s)
-        FIREFOX_BIDI_START_ERROR = ""
-        return info
-    except Exception as exc:
-        FIREFOX_BIDI_START_ERROR = str(exc)
-        raise
-
 
 def supports_firefox_bidi() -> bool:
-    # v306: Die App wird nicht mehr in einem ferngesteuerten Firefox gestartet.
-    # Der BiDi-Code bleibt nur als stiller Rückfall im Modul, wird aber von der
-    # Oberfläche nicht angeboten oder automatisch aktiviert.
+    # v314: Der ferngesteuerte Firefox (WebDriver BiDi) ist vollständig entfernt.
+    # Diese Funktion bleibt nur, weil server.py sie für den capabilities-Endpunkt
+    # abfragt und ältere, noch gecachte Oberflächen sie erwarten können.
     return False
-
-
-def debug_browser_running() -> bool:
-    if ACTIVE_BROWSER_MODE == "firefox-bidi" or (FIREFOX_BIDI and FIREFOX_BIDI.alive()):
-        return bool(FIREFOX_BIDI and FIREFOX_BIDI.alive())
-    if ACTIVE_BROWSER_MODE == "firefox-current":
-        return True
-    try:
-        data = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1.0)
-        return isinstance(data, dict)
-    except Exception:
-        return False
-
-
-def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: str = "") -> dict:
-    global ACTIVE_BROWSER_MODE, ACTIVE_BROWSER_USER_AGENT
-    pref = str(preferred_browser or "").lower()
-    if pref == "firefox-bidi" or (FIREFOX_BIDI and FIREFOX_BIDI.alive()):
-        if not FIREFOX_BIDI or not FIREFOX_BIDI.alive():
-            raise RuntimeError(
-                FIREFOX_BIDI_START_ERROR
-                or "Der kontrollierte Firefox ist nicht verfügbar. EntretienConnect bitte vollständig beenden und neu starten."
-            )
-        ACTIVE_BROWSER_MODE = "firefox-bidi"
-        ACTIVE_BROWSER_USER_AGENT = str(
-            FIREFOX_BIDI.capabilities.get("userAgent") or user_agent or "Mozilla/5.0 Firefox"
-        )
-        return FIREFOX_BIDI.open_ebichelchen()
-    return _launch_browser_legacy_v304(profile, preferred_browser, user_agent)
-
-
-def _firefox_bidi_probe_expression() -> str:
-    return r'''(async () => {
-      const out={ready:false,pageUrl:String(location.href||""),groupCount:0,via:"firefox-bidi"};
-      if(!out.pageUrl.includes('/ebichelchen/app/')) return JSON.stringify(out);
-      const controller=new AbortController();
-      const timer=setTimeout(()=>controller.abort(),1800);
-      try{
-        const res=await fetch('/ebichelchen/app/api/group/get-groups-from-teacher',{
-          method:'GET',credentials:'include',signal:controller.signal,
-          headers:{'accept':'application/json, text/plain, */*','mobileappversion':'web'}
-        });
-        out.status=res.status;
-        if(!res.ok) return JSON.stringify(out);
-        const json=await res.json();
-        const lists=[json,json&&json.objects,json&&json.groups,json&&json.data,
-          json&&json.data&&json.data.objects,json&&json.result,
-          json&&json.result&&json.result.objects];
-        const arr=lists.find(Array.isArray)||[];
-        out.groupCount=arr.length;
-        out.ready=arr.length>0;
-        return JSON.stringify(out);
-      }catch(e){
-        out.error=String(e&&e.message||e);
-        return JSON.stringify(out);
-      }finally{ clearTimeout(timer); }
-    })()'''
-
-
-def check_login_ready() -> dict:
-    if ACTIVE_BROWSER_MODE != "firefox-bidi":
-        return _check_login_ready_legacy_v304()
-    if not FIREFOX_BIDI or not FIREFOX_BIDI.alive():
-        return {"ok": True, "ready": False, "browserClosed": True, "stage": "closed", "lightweight": True}
-    try:
-        info = FIREFOX_BIDI.context_info(FIREFOX_BIDI.eb_context)
-        if not info:
-            return {"ok": True, "ready": False, "browserClosed": True, "stage": "tab-closed", "lightweight": True}
-        url = str(info.get("url") or "")
-        if "/ebichelchen/app/" not in url:
-            return {
-                "ok": True,
-                "ready": False,
-                "browserClosed": False,
-                "stage": "login",
-                "pageUrl": url,
-                "lightweight": True,
-            }
-        probe = FIREFOX_BIDI.evaluate_json(
-            FIREFOX_BIDI.eb_context,
-            _firefox_bidi_probe_expression(),
-            timeout=8,
-        )
-        if not isinstance(probe, dict):
-            probe = {}
-        return {
-            "ok": True,
-            "ready": bool(probe.get("ready")),
-            "browserClosed": False,
-            "stage": "ready" if probe.get("ready") else "loading",
-            "groupCount": int(probe.get("groupCount") or 0),
-            "status": probe.get("status"),
-            "pageUrl": probe.get("pageUrl") or url,
-            "via": "firefox-bidi",
-            "lightweight": True,
-            "detail": probe.get("error") or "",
-        }
-    except Exception as exc:
-        # Ein interner Route-Wechsel von e-Bichelchen zerstört kurz den Realm. Das ist
-        # während des Logins normal und wird beim nächsten Poll erneut geprüft.
-        return {
-            "ok": True,
-            "ready": False,
-            "browserClosed": False,
-            "stage": "loading",
-            "detail": str(exc),
-            "lightweight": True,
-        }
 
 
 def _read_direct_with_session(session: dict, selected_group_id: int) -> dict:
@@ -3795,7 +3040,7 @@ def _read_direct_with_session(session: dict, selected_group_id: int) -> dict:
             "messageSubjectId": message_subject.get("id"),
         },
         "source": {
-            "browser": "firefox-bidi-direct",
+            "browser": "session-direct",
             "sessionCaptured": True,
             "sessionCookieNames": session.get("cookieNames", []),
             "selectionAuthority": "EntretienConnect",
@@ -3804,152 +3049,26 @@ def _read_direct_with_session(session: dict, selected_group_id: int) -> dict:
     }
 
 
-def read_from_firefox_bidi(selected_group_id: int | None = None) -> dict:
-    global LATEST_SESSION, LATEST_SESSION_AT
-    if not FIREFOX_BIDI or not FIREFOX_BIDI.alive():
-        raise RuntimeError("Der kontrollierte Firefox ist nicht mehr geöffnet.")
-    info = FIREFOX_BIDI.context_info(FIREFOX_BIDI.eb_context)
-    if not info:
-        if selected_group_id is not None:
-            return _read_direct_with_session(get_saved_session(), int(selected_group_id))
-        raise RuntimeError("Der e-Bichelchen-Tab wurde geschlossen. Bitte erneut verbinden.")
-    url = str(info.get("url") or "")
-    if "/ebichelchen/app/" not in url:
-        raise RuntimeError("e-Bichelchen ist noch nicht vollständig angemeldet.")
-    payload = FIREFOX_BIDI.evaluate_json(
-        FIREFOX_BIDI.eb_context,
-        build_read_expression(selected_group_id),
-        timeout=36,
-    )
-    if not isinstance(payload, dict):
-        raise RuntimeError("Firefox hat keine gültigen e-Bichelchen-Daten zurückgegeben.")
-    session = FIREFOX_BIDI.capture_session(FIREFOX_BIDI.eb_context)
-    with LOCK:
-        LATEST_SESSION = session
-        LATEST_SESSION_AT = session.get("capturedAt")
-    payload.setdefault("source", {})
-    payload["source"].update(
-        {
-            "browser": "firefox-bidi",
-            "sessionCaptured": True,
-            "sessionCookieNames": session.get("cookieNames", []),
-            "selectionAuthority": (
-                "EntretienConnect" if selected_group_id is not None else "automatic-only-for-single-group"
-            ),
-        }
-    )
-    payload["version"] = HELPER_VERSION
-    payload["pageUrl"] = url
-    return payload
-
-
-def read_browser_and_store(selected_group_id=None) -> dict:
-    global LATEST_DATA, LATEST_AT
-    if not READ_BROWSER_LOCK.acquire(blocking=False):
-        raise RuntimeError("Lecture déjà en cours – merci de patienter.")
-    try:
-        if ACTIVE_BROWSER_MODE == "firefox-bidi":
-            payload = read_from_firefox_bidi(selected_group_id)
-        elif ACTIVE_BROWSER_MODE == "firefox-current":
-            payload = read_from_firefox(selected_group_id)
-        else:
-            payload = read_from_chrome(selected_group_id)
-    finally:
-        READ_BROWSER_LOCK.release()
-    with LOCK:
-        LATEST_DATA = payload
-        LATEST_AT = time.strftime("%Y-%m-%d %H:%M:%S")
-    return payload
-
-
-def focus_app_tab() -> dict:
-    if ACTIVE_BROWSER_MODE == "firefox-bidi":
-        if not FIREFOX_BIDI:
-            raise RuntimeError("Firefox-BiDi ist nicht verfügbar.")
-        return FIREFOX_BIDI.focus_app()
-    return _focus_app_legacy_v304()
-
-
-def close_ebichelchen_target() -> dict:
-    if ACTIVE_BROWSER_MODE == "firefox-bidi":
-        if not FIREFOX_BIDI:
-            return {"closed": True, "alreadyClosed": True, "method": "firefox-bidi"}
-        return FIREFOX_BIDI.close_eb()
-    return _close_eb_legacy_v304()
-
-
-def force_close_launched_browser(force: bool = False) -> dict:
-    global FIREFOX_BIDI
-    if ACTIVE_BROWSER_MODE == "firefox-bidi" or (FIREFOX_BIDI and FIREFOX_BIDI.alive()):
-        return FIREFOX_BIDI.shutdown(close_browser=True) if FIREFOX_BIDI else {
-            "closed": False,
-            "method": "firefox-bidi",
-        }
-    return _force_close_legacy_v304(force=force)
-
-
-def soft_reset_login() -> dict:
-    global LATEST_SESSION, LATEST_SESSION_AT
-    if ACTIVE_BROWSER_MODE == "firefox-bidi":
-        closed = None
-        cleared = 0
-        if FIREFOX_BIDI:
-            try:
-                closed = FIREFOX_BIDI.close_eb()
-            except Exception:
-                pass
-            try:
-                cleared = FIREFOX_BIDI.delete_education_cookies()
-            except Exception:
-                pass
-        clear_current()
-        with LOCK:
-            LATEST_SESSION = None
-            LATEST_SESSION_AT = None
-        return {
-            "softReset": True,
-            "browserRunning": debug_browser_running(),
-            "cookiesCleared": bool(cleared),
-            "closedEbichelchen": closed,
-            "profilePreserved": True,
-        }
-    return _soft_reset_legacy_v304()
-
-
-def reset_login_session(profile: str = "default", preserve_profile: bool = False) -> dict:
-    if ACTIVE_BROWSER_MODE == "firefox-bidi":
-        info = soft_reset_login()
-        return {
-            "closed": False,
-            "profilesRemoved": [],
-            "sessionDataRemoved": [],
-            "cookiesCleared": info.get("cookiesCleared", False),
-            "profilePreserved": True,
-            "browserRunning": info.get("browserRunning", False),
-        }
-    return _reset_login_legacy_v304(profile, preserve_profile)
-
-
 # ===================================================================
-# v313 – native macOS login window (WKWebView / Safari WebKit)
+# v314 – native macOS login window (WKWebView / Safari WebKit)
 # -------------------------------------------------------------------
 # The main EntretienConnect UI remains in the user's default browser.
 # On macOS, e-Bichelchen is opened in a small native WKWebView window,
 # so Google Chrome, Microsoft Edge and remotely controlled Firefox are
 # no longer required. The native window exports only education.lu
 # cookies and the already parsed class payload to this local helper.
-# Windows keeps the proven v306 Chromium/WebView path for now.
+# Windows keeps the proven Chromium/CDP path for now.
 # ===================================================================
 
-_launch_browser_v306 = launch_browser
-_check_login_ready_v306 = check_login_ready
-_read_browser_and_store_v306 = read_browser_and_store
-_debug_browser_running_v306 = debug_browser_running
-_focus_app_tab_v306 = focus_app_tab
-_close_ebichelchen_target_v306 = close_ebichelchen_target
-_force_close_launched_browser_v306 = force_close_launched_browser
-_soft_reset_login_v306 = soft_reset_login
-_reset_login_session_v306 = reset_login_session
+_launch_browser_cdp = launch_browser
+_check_login_ready_cdp = check_login_ready
+_read_browser_and_store_cdp = read_browser_and_store
+_debug_browser_running_cdp = debug_browser_running
+_focus_app_tab_cdp = focus_app_tab
+_close_ebichelchen_target_cdp = close_ebichelchen_target
+_force_close_launched_browser_cdp = force_close_launched_browser
+_soft_reset_login_cdp = soft_reset_login
+_reset_login_session_cdp = reset_login_session
 
 MAC_WK_STATE_FILE = DATA_ROOT / "native-wkwebview-state.json"
 MAC_WK_EXPRESSION_FILE = DATA_ROOT / "native-wkwebview-read.js"
@@ -3957,39 +3076,25 @@ MAC_WK_SCRIPT_NAME = "EntretienConnect-WKWebView.js"
 # v308: The module remains a normal packaged file, but is also embedded here.
 # This makes the native login independent of App Translocation, updater caches,
 # and the directory from which server.py was started.
-MAC_WK_SCRIPT_B64 = "T2JqQy5pbXBvcnQoJ0NvY29hJyk7Ck9iakMuaW1wb3J0KCdXZWJLaXQnKTsKT2JqQy5pbXBvcnQoJ0ZvdW5kYXRpb24nKTsKCi8qCiAqIEVudHJldGllbkNvbm5lY3QgdjMxMyDigJMgbmF0aXZlIG1hY09TIGUtQmljaGVsY2hlbiBsb2dpbiB3aW5kb3cuCiAqIFJ1bnMgdGhyb3VnaCAvdXNyL2Jpbi9vc2FzY3JpcHQgLWwgSmF2YVNjcmlwdCBhbmQgdXNlcyBXS1dlYlZpZXcgKFNhZmFyaS9XZWJLaXQpLAogKiBzbyBubyBDaHJvbWUsIEVkZ2Ugb3IgcmVtb3RlbHkgY29udHJvbGxlZCBGaXJlZm94IGlzIHJlcXVpcmVkLgogKi8KCmxldCBFQ19BUFAgPSBudWxsOwpsZXQgRUNfV0lORE9XID0gbnVsbDsKbGV0IEVDX1dFQlZJRVcgPSBudWxsOwpsZXQgRUNfVElNRVIgPSBudWxsOwpsZXQgRUNfQlVTWSA9IGZhbHNlOwpsZXQgRUNfRklOSVNIRUQgPSBmYWxzZTsKbGV0IEVDX1NUQVRFX1BBVEggPSAnJzsKbGV0IEVDX1JFQURfRVhQUkVTU0lPTiA9ICcnOwpsZXQgRUNfU1RBUlRfVVJMID0gJyc7CmxldCBFQ19TVEFSVEVEX0FUID0gRGF0ZS5ub3coKTsKCmZ1bmN0aW9uIGpzVmFsdWUodmFsdWUpIHsKICB0cnkgewogICAgaWYgKHZhbHVlID09PSB1bmRlZmluZWQgfHwgdmFsdWUgPT09IG51bGwpIHJldHVybiBudWxsOwogICAgaWYgKHZhbHVlLmpzICE9PSB1bmRlZmluZWQpIHJldHVybiB2YWx1ZS5qczsKICB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLmRlZXBVbndyYXAodmFsdWUpOyB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLnVud3JhcCh2YWx1ZSk7IH0gY2F0Y2ggKF8pIHt9CiAgcmV0dXJuIFN0cmluZyh2YWx1ZSk7Cn0KCi8vIHYzMTM6IFJldHVybnMgYSB1c2FibGUgbWVzc2FnZSBmb3IgYSBSRUFMIGVycm9yLCBhbmQgJycgZm9yIGFuIE9iakMgbmlsIHRoYXQKLy8gSlhBIGhhbmRzIG92ZXIgYXMgYSB0cnV0aHkgd3JhcHBlciAoaXRzIFN0cmluZygpIGZvcm0gaXMgIltpZCBuaWxdIikuCmZ1bmN0aW9uIGVycm9yVGV4dChlcnIpIHsKICBpZiAoIWVycikgcmV0dXJuICcnOwogIGxldCBkZXNjID0gbnVsbDsKICB0cnkgeyBkZXNjID0ganNWYWx1ZShlcnIubG9jYWxpemVkRGVzY3JpcHRpb24pOyB9IGNhdGNoIChfKSB7IGRlc2MgPSBudWxsOyB9CiAgaWYgKGRlc2MgIT09IG51bGwgJiYgZGVzYyAhPT0gdW5kZWZpbmVkKSB7CiAgICBjb25zdCB0ZXh0ID0gU3RyaW5nKGRlc2MpLnRyaW0oKTsKICAgIHJldHVybiAoIXRleHQgfHwgdGV4dCA9PT0gJ251bGwnIHx8IHRleHQgPT09ICd1bmRlZmluZWQnKSA/ICcnIDogdGV4dDsKICB9CiAgbGV0IHJhdyA9ICcnOwogIHRyeSB7IHJhdyA9IFN0cmluZyhlcnIpLnRyaW0oKTsgfSBjYXRjaCAoXykgeyByYXcgPSAnJzsgfQogIGlmICghcmF3IHx8IHJhdyA9PT0gJ1tpZCBuaWxdJyB8fCByYXcgPT09ICdudWxsJyB8fCByYXcgPT09ICd1bmRlZmluZWQnKSByZXR1cm4gJyc7CiAgcmV0dXJuIHJhdzsKfQoKZnVuY3Rpb24gd3JpdGVTdGF0ZShvYmopIHsKICB0cnkgewogICAgb2JqID0gb2JqIHx8IHt9OwogICAgaWYgKCFvYmoudXBkYXRlZEF0KSBvYmoudXBkYXRlZEF0ID0gbmV3IERhdGUoKS50b0lTT1N0cmluZygpOwogICAgY29uc3QgdGV4dCA9ICQoSlNPTi5zdHJpbmdpZnkob2JqKSk7CiAgICBjb25zdCBlcnIgPSBSZWYoKTsKICAgIGNvbnN0IG9rID0gdGV4dC53cml0ZVRvRmlsZUF0b21pY2FsbHlFbmNvZGluZ0Vycm9yKCQoRUNfU1RBVEVfUEFUSCksIHRydWUsICQuTlNVVEY4U3RyaW5nRW5jb2RpbmcsIGVycik7CiAgICByZXR1cm4gQm9vbGVhbihvayk7CiAgfSBjYXRjaCAoXykgewogICAgcmV0dXJuIGZhbHNlOwogIH0KfQoKZnVuY3Rpb24gZmluaXNoV2l0aEVycm9yKG1lc3NhZ2UsIGRldGFpbCkgewogIGlmIChFQ19GSU5JU0hFRCkgcmV0dXJuOwogIEVDX0ZJTklTSEVEID0gdHJ1ZTsKICB3cml0ZVN0YXRlKHsKICAgIHN0YXR1czogJ2Vycm9yJywKICAgIGVycm9yOiBTdHJpbmcobWVzc2FnZSB8fCAnV0tXZWJWaWV3IGVycm9yJyksCiAgICBkZXRhaWw6IFN0cmluZyhkZXRhaWwgfHwgJycpLAogICAgc3RhcnRlZEF0OiBuZXcgRGF0ZShFQ19TVEFSVEVEX0FUKS50b0lTT1N0cmluZygpCiAgfSk7CiAgdHJ5IHsgaWYgKEVDX1RJTUVSKSBFQ19USU1FUi5pbnZhbGlkYXRlOyB9IGNhdGNoIChfKSB7fQogIHRyeSB7IGlmIChFQ19XSU5ET1cpIEVDX1dJTkRPVy5vcmRlck91dChudWxsKTsgfSBjYXRjaCAoXykge30KICAkLk5TVGhyZWFkLnNsZWVwRm9yVGltZUludGVydmFsKDAuMTIpOwogIHRyeSB7IEVDX0FQUC50ZXJtaW5hdGUobnVsbCk7IH0gY2F0Y2ggKF8pIHt9Cn0KCmZ1bmN0aW9uIGVkdWNhdGlvbkNvb2tpZXMoY29va2llcykgewogIGNvbnN0IG91dCA9IFtdOwogIHRyeSB7CiAgICBjb25zdCBjb3VudCA9IE51bWJlcihjb29raWVzLmNvdW50IHx8IDApOwogICAgZm9yIChsZXQgaSA9IDA7IGkgPCBjb3VudDsgaSsrKSB7CiAgICAgIGNvbnN0IGMgPSBjb29raWVzLm9iamVjdEF0SW5kZXgoaSk7CiAgICAgIGNvbnN0IGRvbWFpbiA9IFN0cmluZyhqc1ZhbHVlKGMuZG9tYWluKSB8fCAnJyk7CiAgICAgIGNvbnN0IG5hbWUgPSBTdHJpbmcoanNWYWx1ZShjLm5hbWUpIHx8ICcnKTsKICAgICAgaWYgKCFuYW1lIHx8IGRvbWFpbi50b0xvd2VyQ2FzZSgpLmluZGV4T2YoJ2VkdWNhdGlvbi5sdScpIDwgMCkgY29udGludWU7CiAgICAgIG91dC5wdXNoKHsKICAgICAgICBuYW1lOiBuYW1lLAogICAgICAgIHZhbHVlOiBTdHJpbmcoanNWYWx1ZShjLnZhbHVlKSB8fCAnJyksCiAgICAgICAgZG9tYWluOiBkb21haW4sCiAgICAgICAgcGF0aDogU3RyaW5nKGpzVmFsdWUoYy5wYXRoKSB8fCAnLycpLAogICAgICAgIHNlY3VyZTogQm9vbGVhbihqc1ZhbHVlKGMuc2VjdXJlKSksCiAgICAgICAgaHR0cE9ubHk6IEJvb2xlYW4oanNWYWx1ZShjLkhUVFBPbmx5KSkKICAgICAgfSk7CiAgICB9CiAgfSBjYXRjaCAoXykge30KICByZXR1cm4gb3V0Owp9CgpmdW5jdGlvbiBmaW5hbGl6ZVBheWxvYWQocGF5bG9hZCwgcGFnZVVybCkgewogIGlmIChFQ19GSU5JU0hFRCkgcmV0dXJuOwogIEVDX0ZJTklTSEVEID0gdHJ1ZTsKCiAgLy8gdjMxMzogVGhlIFdLSFRUUENvb2tpZVN0b3JlIHNlbGVjdG9yIGlzIGBnZXRBbGxDb29raWVzOmAsIHNvIHRoZSBKWEEgbmFtZSBpcwogIC8vIGBnZXRBbGxDb29raWVzYC4gVGhlIHByZXZpb3VzIGBnZXRBbGxDb29raWVzV2l0aENvbXBsZXRpb25IYW5kbGVyYCBkaWQgbm90CiAgLy8gZXhpc3QgYW5kIHJhaXNlZCBhbiB1bmNhdWdodCBOU0V4Y2VwdGlvbiB0aGF0IGtpbGxlZCB0aGUgd2hvbGUgbG9naW4gd2luZG93LgogIC8vIEl0IG5ldmVyIHN1cmZhY2VkIGJlY2F1c2UgdGhlIG5pbC1lcnJvciBidWcgYWJvdmUgbWVhbnQgdGhpcyBsaW5lIHdhcyBuZXZlcgogIC8vIHJlYWNoZWQuIEtlcHQgYmVoaW5kIGEgdHJ5L2NhdGNoIHNvIGEgZnV0dXJlIEFQSSBjaGFuZ2UgZGVncmFkZXMgaW50byBhCiAgLy8gcmVhZGFibGUgZXJyb3Igc3RhdGUgaW5zdGVhZCBvZiBhIHNpbGVudCBjcmFzaC4KICBsZXQgc3RvcmUgPSBudWxsOwogIHRyeSB7CiAgICBzdG9yZSA9IEVDX1dFQlZJRVcuY29uZmlndXJhdGlvbi53ZWJzaXRlRGF0YVN0b3JlLmh0dHBDb29raWVTdG9yZTsKICB9IGNhdGNoIChlKSB7CiAgICBmaW5pc2hXaXRoRXJyb3IoJ1RoZSBlLUJpY2hlbGNoZW4gc2Vzc2lvbiBjb3VsZCBub3QgYmUgcmVhZC4nLCBTdHJpbmcoZSkpOwogICAgcmV0dXJuOwogIH0KICBpZiAoIXN0b3JlIHx8IHR5cGVvZiBzdG9yZS5nZXRBbGxDb29raWVzICE9PSAnZnVuY3Rpb24nKSB7CiAgICBmaW5pc2hXaXRoRXJyb3IoJ1RoZSBlLUJpY2hlbGNoZW4gc2Vzc2lvbiBjb3VsZCBub3QgYmUgcmVhZC4nLCAnV0tIVFRQQ29va2llU3RvcmUuZ2V0QWxsQ29va2llcyB1bmF2YWlsYWJsZScpOwogICAgcmV0dXJuOwogIH0KICBzdG9yZS5nZXRBbGxDb29raWVzKGZ1bmN0aW9uKGNvb2tpZXMpIHsKICAgIGxldCBjb29raWVSb3dzID0gZWR1Y2F0aW9uQ29va2llcyhjb29raWVzKTsKICAgIEVDX1dFQlZJRVcuZXZhbHVhdGVKYXZhU2NyaXB0Q29tcGxldGlvbkhhbmRsZXIoJCgnbmF2aWdhdG9yLnVzZXJBZ2VudCB8fCAiTW96aWxsYS81LjAiJyksIGZ1bmN0aW9uKHVhVmFsdWUsIHVhRXJyb3IpIHsKICAgICAgY29uc3QgdWEgPSBTdHJpbmcoanNWYWx1ZSh1YVZhbHVlKSB8fCAnTW96aWxsYS81LjAgKE1hY2ludG9zaCkgQXBwbGVXZWJLaXQnKTsKICAgICAgY29uc3QgbWVyZ2VkID0ge307CiAgICAgIGNvb2tpZVJvd3MuZm9yRWFjaChmdW5jdGlvbihjKSB7IG1lcmdlZFtjLm5hbWVdID0gYy52YWx1ZTsgfSk7CiAgICAgIGNvbnN0IGNvb2tpZUhlYWRlciA9IE9iamVjdC5rZXlzKG1lcmdlZCkubWFwKGZ1bmN0aW9uKGspIHsgcmV0dXJuIGsgKyAnPScgKyBtZXJnZWRba107IH0pLmpvaW4oJzsgJyk7CiAgICAgIGlmICghY29va2llSGVhZGVyKSB7CiAgICAgICAgRUNfRklOSVNIRUQgPSBmYWxzZTsKICAgICAgICB3cml0ZVN0YXRlKHsKICAgICAgICAgIHN0YXR1czogJ3dhaXRpbmcnLAogICAgICAgICAgc3RhZ2U6ICdzZXNzaW9uJywKICAgICAgICAgIG1lc3NhZ2U6ICdlLUJpY2hlbGNoZW4gaXMgb3BlbiwgYnV0IHRoZSBhdXRoZW50aWNhdGVkIHNlc3Npb24gaXMgbm90IGF2YWlsYWJsZSB5ZXQuJywKICAgICAgICAgIHBhZ2VVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKQogICAgICAgIH0pOwogICAgICAgIHJldHVybjsKICAgICAgfQogICAgICB0cnkgeyBpZiAoRUNfVElNRVIpIEVDX1RJTUVSLmludmFsaWRhdGU7IH0gY2F0Y2ggKF8pIHt9CiAgICAgIHdyaXRlU3RhdGUoewogICAgICAgIHN0YXR1czogJ3JlYWR5JywKICAgICAgICBwYWdlVXJsOiBTdHJpbmcocGFnZVVybCB8fCAnJyksCiAgICAgICAgZGF0YTogcGF5bG9hZCwKICAgICAgICBzZXNzaW9uOiB7CiAgICAgICAgICBjb29raWVIZWFkZXI6IGNvb2tpZUhlYWRlciwKICAgICAgICAgIGNvb2tpZU5hbWVzOiBPYmplY3Qua2V5cyhtZXJnZWQpLnNvcnQoKSwKICAgICAgICAgIGNvb2tpZXM6IGNvb2tpZVJvd3MsCiAgICAgICAgICB1c2VyQWdlbnQ6IHVhLAogICAgICAgICAgY2FwdHVyZWRBdDogbmV3IERhdGUoKS50b0lTT1N0cmluZygpLAogICAgICAgICAgdGFyZ2V0VXJsOiBTdHJpbmcocGFnZVVybCB8fCAnJyksCiAgICAgICAgICBicm93c2VyOiAnbWFjT1MgV0tXZWJWaWV3IHYzMTMnCiAgICAgICAgfSwKICAgICAgICBlbmdpbmU6ICdXS1dlYlZpZXctdjMxMycsCiAgICAgICAgc3RhcnRlZEF0OiBuZXcgRGF0ZShFQ19TVEFSVEVEX0FUKS50b0lTT1N0cmluZygpCiAgICAgIH0pOwogICAgICB0cnkgeyBFQ19XSU5ET1cub3JkZXJPdXQobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgICAgICQuTlNUaHJlYWQuc2xlZXBGb3JUaW1lSW50ZXJ2YWwoMC4xOCk7CiAgICAgIHRyeSB7IEVDX0FQUC50ZXJtaW5hdGUobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgICB9KTsKICB9KTsKfQoKZnVuY3Rpb24gYnVpbGRDb250cm9sbGVyU2NyaXB0KCkgewogIC8vIFRoZSByZWFkIGV4cHJlc3Npb24gaXMgYW4gYXN5bmMgSUlGRS4gV2UgbGF1bmNoIGl0IG9uY2UgYW5kIHN0b3JlIGl0cyByZXN1bHQKICAvLyBpbiBhIHBhZ2UtZ2xvYmFsIG9iamVjdC4gZXZhbHVhdGVKYXZhU2NyaXB0IGl0c2VsZiBvbmx5IHJldHVybnMgYSBzeW5jaHJvbm91cwogIC8vIHN0YXR1cyBzbmFwc2hvdCwgd2hpY2ggd29ya3Mgb24gb2xkZXIgV0tXZWJWaWV3IHZlcnNpb25zIGFzIHdlbGwuCiAgcmV0dXJuIGAoKCkgPT4gewogICAgY29uc3QgaHJlZiA9IFN0cmluZyhsb2NhdGlvbi5ocmVmIHx8ICcnKTsKICAgIGNvbnN0IG9uRWIgPSBocmVmLmluZGV4T2YoJy9lYmljaGVsY2hlbi9hcHAvJykgPj0gMDsKICAgIGlmICghb25FYikgcmV0dXJuIEpTT04uc3RyaW5naWZ5KHtwaGFzZTonbG9naW4nLHVybDpocmVmfSk7CiAgICBpZiAoIXdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTMpIHsKICAgICAgd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMxMyA9IHtwaGFzZTonc3RhcnRpbmcnLHVybDpocmVmLGVycm9yOicnLGRhdGE6bnVsbCxzdGFydGVkQXQ6RGF0ZS5ub3coKX07CiAgICAgIGNvbnN0IHMgPSB3aW5kb3cuX19lbnRyZXRpZW5Db25uZWN0TmF0aXZlMzEzOwogICAgICBzLnBoYXNlID0gJ3JlYWRpbmcnOwogICAgICBQcm9taXNlLnJlc29sdmUoJHtFQ19SRUFEX0VYUFJFU1NJT059KQogICAgICAgIC50aGVuKHYgPT4geyBzLmRhdGEgPSB2OyBzLnBoYXNlID0gJ3JlYWR5Jzsgcy51cmwgPSBTdHJpbmcobG9jYXRpb24uaHJlZiB8fCBocmVmKTsgfSkKICAgICAgICAuY2F0Y2goZSA9PiB7CiAgICAgICAgICBzLmVycm9yID0gU3RyaW5nKGUgJiYgKGUubWVzc2FnZSB8fCBlKSB8fCAndW5rbm93biBlcnJvcicpOwogICAgICAgICAgcy5waGFzZSA9ICd3YWl0aW5nJzsKICAgICAgICAgIHMudXJsID0gU3RyaW5nKGxvY2F0aW9uLmhyZWYgfHwgaHJlZik7CiAgICAgICAgICBzZXRUaW1lb3V0KCgpID0+IHsgdHJ5IHsgZGVsZXRlIHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTM7IH0gY2F0Y2ggKF8pIHt9IH0sIDEyMDApOwogICAgICAgIH0pOwogICAgfQogICAgY29uc3QgcyA9IHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTM7CiAgICByZXR1cm4gSlNPTi5zdHJpbmdpZnkoe3BoYXNlOnMucGhhc2UsdXJsOlN0cmluZyhzLnVybHx8aHJlZiksZXJyb3I6U3RyaW5nKHMuZXJyb3J8fCcnKSxkYXRhOnMuZGF0YXx8bnVsbCxhZ2U6RGF0ZS5ub3coKS1OdW1iZXIocy5zdGFydGVkQXR8fERhdGUubm93KCkpfSk7CiAgfSkoKWA7Cn0KCmZ1bmN0aW9uIHBvbGxXZWJWaWV3KCkgewogIGlmIChFQ19GSU5JU0hFRCB8fCBFQ19CVVNZIHx8ICFFQ19XRUJWSUVXKSByZXR1cm47CiAgdHJ5IHsKICAgIGlmIChFQ19XSU5ET1cgJiYgIUJvb2xlYW4oRUNfV0lORE9XLmlzVmlzaWJsZSkpIHsKICAgICAgRUNfRklOSVNIRUQgPSB0cnVlOwogICAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J2Nsb3NlZCcsIG1lc3NhZ2U6J0xvZ2luIHdpbmRvdyBjbG9zZWQgYnkgdXNlci4nfSk7CiAgICAgIHRyeSB7IEVDX0FQUC50ZXJtaW5hdGUobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgICAgIHJldHVybjsKICAgIH0KICB9IGNhdGNoIChfKSB7fQoKICBFQ19CVVNZID0gdHJ1ZTsKICBjb25zdCBzY3JpcHQgPSBidWlsZENvbnRyb2xsZXJTY3JpcHQoKTsKICBFQ19XRUJWSUVXLmV2YWx1YXRlSmF2YVNjcmlwdENvbXBsZXRpb25IYW5kbGVyKCQoc2NyaXB0KSwgZnVuY3Rpb24ocmVzdWx0LCBlcnJvcikgewogICAgRUNfQlVTWSA9IGZhbHNlOwogICAgaWYgKEVDX0ZJTklTSEVEKSByZXR1cm47CiAgICAvLyB2MzEzOiBBIG5pbCBOU0Vycm9yIGFycml2ZXMgaW4gSlhBIGFzIGEgVFJVVEhZIHdyYXBwZXIgb2JqZWN0LCBzbyB0aGUgb2xkCiAgICAvLyBgaWYgKGVycm9yKWAgdG9vayB0aGUgZmFpbHVyZSBicmFuY2ggb24gZXZlcnkgc2luZ2xlIHN1Y2Nlc3NmdWwgY2FsbCBhbmQKICAgIC8vIHRoZSByZXN1bHQgd2FzIG5ldmVyIHBhcnNlZCDigJQgdGhlIGxvZ2luIHdpbmRvdyBzdGF5ZWQgb3BlbiBmb3JldmVyIGFuZCB0aGUKICAgIC8vIHN0YXRlIGZpbGUgd2FzIHN0dWNrIG9uIHN0YWdlICJuYXZpZ2F0aW9uIiAvIGRldGFpbCAiW2lkIG5pbF0iLgogICAgLy8gVGhlIHJlc3VsdCBub3cgZGVjaWRlczsgdGhlIGVycm9yIG9iamVjdCBpcyBvbmx5IHVzZWQgZm9yIGl0cyBtZXNzYWdlLgogICAgbGV0IG91dGVyID0gbnVsbDsKICAgIHRyeSB7IG91dGVyID0gSlNPTi5wYXJzZShTdHJpbmcoanNWYWx1ZShyZXN1bHQpIHx8ICd7fScpKTsgfSBjYXRjaCAoXykgeyBvdXRlciA9IG51bGw7IH0KICAgIGlmICghb3V0ZXIgfHwgIW91dGVyLnBoYXNlKSB7CiAgICAgIGNvbnN0IGRldGFpbCA9IGVycm9yVGV4dChlcnJvcik7CiAgICAgIGlmIChkZXRhaWwpIHdyaXRlU3RhdGUoe3N0YXR1czond2FpdGluZycsIHN0YWdlOiduYXZpZ2F0aW9uJywgZGV0YWlsOmRldGFpbCwgcGFnZVVybDonJ30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBjb25zdCBwaGFzZSA9IFN0cmluZyhvdXRlci5waGFzZSB8fCAnd2FpdGluZycpOwogICAgY29uc3QgcGFnZVVybCA9IFN0cmluZyhvdXRlci51cmwgfHwgJycpOwogICAgaWYgKHBoYXNlID09PSAnbG9naW4nKSB7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidsb2dpbicsIHBhZ2VVcmw6cGFnZVVybCwgZW5naW5lOidXS1dlYlZpZXcnfSk7CiAgICAgIHJldHVybjsKICAgIH0KICAgIGlmIChwaGFzZSA9PT0gJ3JlYWRpbmcnIHx8IHBoYXNlID09PSAnc3RhcnRpbmcnKSB7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidyZWFkaW5nJywgcGFnZVVybDpwYWdlVXJsLCBlbmdpbmU6J1dLV2ViVmlldyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKHBoYXNlID09PSAnd2FpdGluZycpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J2xvYWRpbmcnLCBwYWdlVXJsOnBhZ2VVcmwsIGRldGFpbDpTdHJpbmcob3V0ZXIuZXJyb3IgfHwgJycpLCBlbmdpbmU6J1dLV2ViVmlldyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKHBoYXNlID09PSAncmVhZHknICYmIG91dGVyLmRhdGEpIHsKICAgICAgbGV0IHBheWxvYWQgPSBudWxsOwogICAgICB0cnkgewogICAgICAgIHBheWxvYWQgPSB0eXBlb2Ygb3V0ZXIuZGF0YSA9PT0gJ3N0cmluZycgPyBKU09OLnBhcnNlKG91dGVyLmRhdGEpIDogb3V0ZXIuZGF0YTsKICAgICAgfSBjYXRjaCAoZSkgewogICAgICAgIGZpbmlzaFdpdGhFcnJvcignVGhlIGUtQmljaGVsY2hlbiBkYXRhIGNvdWxkIG5vdCBiZSBkZWNvZGVkLicsIFN0cmluZyhlKSk7CiAgICAgICAgcmV0dXJuOwogICAgICB9CiAgICAgIGZpbmFsaXplUGF5bG9hZChwYXlsb2FkLCBwYWdlVXJsKTsKICAgIH0KICB9KTsKfQoKZnVuY3Rpb24gcnVuKGFyZ3YpIHsKICB0cnkgewogICAgaWYgKCFhcmd2IHx8IGFyZ3YubGVuZ3RoIDwgMykgdGhyb3cgbmV3IEVycm9yKCdNaXNzaW5nIG5hdGl2ZSBsb2dpbiBhcmd1bWVudHMuJyk7CiAgICBFQ19TVEFURV9QQVRIID0gU3RyaW5nKGFyZ3ZbMF0pOwogICAgY29uc3QgZXhwcmVzc2lvblBhdGggPSBTdHJpbmcoYXJndlsxXSk7CiAgICBFQ19TVEFSVF9VUkwgPSBTdHJpbmcoYXJndlsyXSk7CiAgICBjb25zdCByZWFkRXJyID0gUmVmKCk7CiAgICBjb25zdCByZWFkT2JqID0gJC5OU1N0cmluZy5zdHJpbmdXaXRoQ29udGVudHNPZkZpbGVFbmNvZGluZ0Vycm9yKCQoZXhwcmVzc2lvblBhdGgpLCAkLk5TVVRGOFN0cmluZ0VuY29kaW5nLCByZWFkRXJyKTsKICAgIEVDX1JFQURfRVhQUkVTU0lPTiA9IFN0cmluZyhqc1ZhbHVlKHJlYWRPYmopIHx8ICcnKTsKICAgIGlmICghRUNfUkVBRF9FWFBSRVNTSU9OKSB0aHJvdyBuZXcgRXJyb3IoJ1RoZSBlLUJpY2hlbGNoZW4gcmVhZCBzY3JpcHQgaXMgZW1wdHkuJyk7CgogICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidzdGFydGluZycsIGVuZ2luZTonV0tXZWJWaWV3Jywgc3RhcnRlZEF0Om5ldyBEYXRlKEVDX1NUQVJURURfQVQpLnRvSVNPU3RyaW5nKCl9KTsKCiAgICBFQ19BUFAgPSAkLk5TQXBwbGljYXRpb24uc2hhcmVkQXBwbGljYXRpb247CiAgICBFQ19BUFAuc2V0QWN0aXZhdGlvblBvbGljeSgkLk5TQXBwbGljYXRpb25BY3RpdmF0aW9uUG9saWN5UmVndWxhcik7CgogICAgY29uc3QgcmVjdCA9ICQuTlNNYWtlUmVjdCgwLCAwLCAxMDgwLCA3NjApOwogICAgY29uc3Qgc3R5bGUgPSAkLk5TV2luZG93U3R5bGVNYXNrVGl0bGVkIHwgJC5OU1dpbmRvd1N0eWxlTWFza0Nsb3NhYmxlIHwgJC5OU1dpbmRvd1N0eWxlTWFza01pbmlhdHVyaXphYmxlIHwgJC5OU1dpbmRvd1N0eWxlTWFza1Jlc2l6YWJsZTsKICAgIEVDX1dJTkRPVyA9ICQuTlNXaW5kb3cuYWxsb2MuaW5pdFdpdGhDb250ZW50UmVjdFN0eWxlTWFza0JhY2tpbmdEZWZlcihyZWN0LCBzdHlsZSwgJC5OU0JhY2tpbmdTdG9yZUJ1ZmZlcmVkLCBmYWxzZSk7CiAgICBFQ19XSU5ET1cuc2V0VGl0bGUoJCgnZS1CaWNoZWxjaGVuIOKAkyBFbnRyZXRpZW5Db25uZWN0JykpOwogICAgRUNfV0lORE9XLnNldFJlbGVhc2VkV2hlbkNsb3NlZChmYWxzZSk7CiAgICBFQ19XSU5ET1cuY2VudGVyOwoKICAgIGNvbnN0IGNvbmZpZyA9ICQuV0tXZWJWaWV3Q29uZmlndXJhdGlvbi5hbGxvYy5pbml0OwogICAgY29uZmlnLndlYnNpdGVEYXRhU3RvcmUgPSAkLldLV2Vic2l0ZURhdGFTdG9yZS5kZWZhdWx0RGF0YVN0b3JlOwogICAgRUNfV0VCVklFVyA9ICQuV0tXZWJWaWV3LmFsbG9jLmluaXRXaXRoRnJhbWVDb25maWd1cmF0aW9uKHJlY3QsIGNvbmZpZyk7CiAgICBFQ19XRUJWSUVXLnNldEFsbG93c0JhY2tGb3J3YXJkTmF2aWdhdGlvbkdlc3R1cmVzKHRydWUpOwogICAgRUNfV0lORE9XLnNldENvbnRlbnRWaWV3KEVDX1dFQlZJRVcpOwogICAgRUNfV0lORE9XLm1ha2VLZXlBbmRPcmRlckZyb250KG51bGwpOwogICAgRUNfQVBQLmFjdGl2YXRlSWdub3JpbmdPdGhlckFwcHModHJ1ZSk7CgogICAgY29uc3QgdXJsID0gJC5OU1VSTC5VUkxXaXRoU3RyaW5nKCQoRUNfU1RBUlRfVVJMKSk7CiAgICBpZiAoIXVybCkgdGhyb3cgbmV3IEVycm9yKCdJbnZhbGlkIGUtQmljaGVsY2hlbiBVUkwuJyk7CiAgICBjb25zdCByZXF1ZXN0ID0gJC5OU1VSTFJlcXVlc3QucmVxdWVzdFdpdGhVUkwodXJsKTsKICAgIEVDX1dFQlZJRVcubG9hZFJlcXVlc3QocmVxdWVzdCk7CgogICAgRUNfVElNRVIgPSAkLk5TVGltZXIuc2NoZWR1bGVkVGltZXJXaXRoVGltZUludGVydmFsUmVwZWF0c0Jsb2NrKDAuOCwgdHJ1ZSwgZnVuY3Rpb24oXykgeyBwb2xsV2ViVmlldygpOyB9KTsKICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidsb2dpbicsIGVuZ2luZTonV0tXZWJWaWV3JywgcGFnZVVybDpFQ19TVEFSVF9VUkx9KTsKICAgIEVDX0FQUC5ydW47CiAgfSBjYXRjaCAoZSkgewogICAgZmluaXNoV2l0aEVycm9yKCdUaGUgbWFjT1MgbG9naW4gd2luZG93IGNvdWxkIG5vdCBiZSBzdGFydGVkLicsIFN0cmluZyhlICYmIChlLm1lc3NhZ2UgfHwgZSkgfHwgZSkpOwogIH0KfQo="
+MAC_WK_SCRIPT_B64 = "T2JqQy5pbXBvcnQoJ0NvY29hJyk7Ck9iakMuaW1wb3J0KCdXZWJLaXQnKTsKT2JqQy5pbXBvcnQoJ0ZvdW5kYXRpb24nKTsKCi8qCiAqIEVudHJldGllbkNvbm5lY3QgdjMxNCDigJMgbmF0aXZlIG1hY09TIGUtQmljaGVsY2hlbiBsb2dpbiB3aW5kb3cuCiAqIFJ1bnMgdGhyb3VnaCAvdXNyL2Jpbi9vc2FzY3JpcHQgLWwgSmF2YVNjcmlwdCBhbmQgdXNlcyBXS1dlYlZpZXcgKFNhZmFyaS9XZWJLaXQpLAogKiBzbyBubyBDaHJvbWUsIEVkZ2Ugb3IgcmVtb3RlbHkgY29udHJvbGxlZCBGaXJlZm94IGlzIHJlcXVpcmVkLgogKi8KCmxldCBFQ19BUFAgPSBudWxsOwpsZXQgRUNfV0lORE9XID0gbnVsbDsKbGV0IEVDX1dFQlZJRVcgPSBudWxsOwpsZXQgRUNfVElNRVIgPSBudWxsOwpsZXQgRUNfQlVTWSA9IGZhbHNlOwpsZXQgRUNfRklOSVNIRUQgPSBmYWxzZTsKbGV0IEVDX1NUQVRFX1BBVEggPSAnJzsKbGV0IEVDX1JFQURfRVhQUkVTU0lPTiA9ICcnOwpsZXQgRUNfU1RBUlRfVVJMID0gJyc7CmxldCBFQ19TVEFSVEVEX0FUID0gRGF0ZS5ub3coKTsKCmZ1bmN0aW9uIGpzVmFsdWUodmFsdWUpIHsKICB0cnkgewogICAgaWYgKHZhbHVlID09PSB1bmRlZmluZWQgfHwgdmFsdWUgPT09IG51bGwpIHJldHVybiBudWxsOwogICAgaWYgKHZhbHVlLmpzICE9PSB1bmRlZmluZWQpIHJldHVybiB2YWx1ZS5qczsKICB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLmRlZXBVbndyYXAodmFsdWUpOyB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLnVud3JhcCh2YWx1ZSk7IH0gY2F0Y2ggKF8pIHt9CiAgcmV0dXJuIFN0cmluZyh2YWx1ZSk7Cn0KCi8vIHYzMTM6IFJldHVybnMgYSB1c2FibGUgbWVzc2FnZSBmb3IgYSBSRUFMIGVycm9yLCBhbmQgJycgZm9yIGFuIE9iakMgbmlsIHRoYXQKLy8gSlhBIGhhbmRzIG92ZXIgYXMgYSB0cnV0aHkgd3JhcHBlciAoaXRzIFN0cmluZygpIGZvcm0gaXMgIltpZCBuaWxdIikuCmZ1bmN0aW9uIGVycm9yVGV4dChlcnIpIHsKICBpZiAoIWVycikgcmV0dXJuICcnOwogIGxldCBkZXNjID0gbnVsbDsKICB0cnkgeyBkZXNjID0ganNWYWx1ZShlcnIubG9jYWxpemVkRGVzY3JpcHRpb24pOyB9IGNhdGNoIChfKSB7IGRlc2MgPSBudWxsOyB9CiAgaWYgKGRlc2MgIT09IG51bGwgJiYgZGVzYyAhPT0gdW5kZWZpbmVkKSB7CiAgICBjb25zdCB0ZXh0ID0gU3RyaW5nKGRlc2MpLnRyaW0oKTsKICAgIHJldHVybiAoIXRleHQgfHwgdGV4dCA9PT0gJ251bGwnIHx8IHRleHQgPT09ICd1bmRlZmluZWQnKSA/ICcnIDogdGV4dDsKICB9CiAgbGV0IHJhdyA9ICcnOwogIHRyeSB7IHJhdyA9IFN0cmluZyhlcnIpLnRyaW0oKTsgfSBjYXRjaCAoXykgeyByYXcgPSAnJzsgfQogIGlmICghcmF3IHx8IHJhdyA9PT0gJ1tpZCBuaWxdJyB8fCByYXcgPT09ICdudWxsJyB8fCByYXcgPT09ICd1bmRlZmluZWQnKSByZXR1cm4gJyc7CiAgcmV0dXJuIHJhdzsKfQoKZnVuY3Rpb24gd3JpdGVTdGF0ZShvYmopIHsKICB0cnkgewogICAgb2JqID0gb2JqIHx8IHt9OwogICAgaWYgKCFvYmoudXBkYXRlZEF0KSBvYmoudXBkYXRlZEF0ID0gbmV3IERhdGUoKS50b0lTT1N0cmluZygpOwogICAgY29uc3QgdGV4dCA9ICQoSlNPTi5zdHJpbmdpZnkob2JqKSk7CiAgICBjb25zdCBlcnIgPSBSZWYoKTsKICAgIGNvbnN0IG9rID0gdGV4dC53cml0ZVRvRmlsZUF0b21pY2FsbHlFbmNvZGluZ0Vycm9yKCQoRUNfU1RBVEVfUEFUSCksIHRydWUsICQuTlNVVEY4U3RyaW5nRW5jb2RpbmcsIGVycik7CiAgICByZXR1cm4gQm9vbGVhbihvayk7CiAgfSBjYXRjaCAoXykgewogICAgcmV0dXJuIGZhbHNlOwogIH0KfQoKZnVuY3Rpb24gZmluaXNoV2l0aEVycm9yKG1lc3NhZ2UsIGRldGFpbCkgewogIGlmIChFQ19GSU5JU0hFRCkgcmV0dXJuOwogIEVDX0ZJTklTSEVEID0gdHJ1ZTsKICB3cml0ZVN0YXRlKHsKICAgIHN0YXR1czogJ2Vycm9yJywKICAgIGVycm9yOiBTdHJpbmcobWVzc2FnZSB8fCAnV0tXZWJWaWV3IGVycm9yJyksCiAgICBkZXRhaWw6IFN0cmluZyhkZXRhaWwgfHwgJycpLAogICAgc3RhcnRlZEF0OiBuZXcgRGF0ZShFQ19TVEFSVEVEX0FUKS50b0lTT1N0cmluZygpCiAgfSk7CiAgdHJ5IHsgaWYgKEVDX1RJTUVSKSBFQ19USU1FUi5pbnZhbGlkYXRlOyB9IGNhdGNoIChfKSB7fQogIHRyeSB7IGlmIChFQ19XSU5ET1cpIEVDX1dJTkRPVy5vcmRlck91dChudWxsKTsgfSBjYXRjaCAoXykge30KICAkLk5TVGhyZWFkLnNsZWVwRm9yVGltZUludGVydmFsKDAuMTIpOwogIHRyeSB7IEVDX0FQUC50ZXJtaW5hdGUobnVsbCk7IH0gY2F0Y2ggKF8pIHt9Cn0KCmZ1bmN0aW9uIGVkdWNhdGlvbkNvb2tpZXMoY29va2llcykgewogIGNvbnN0IG91dCA9IFtdOwogIHRyeSB7CiAgICBjb25zdCBjb3VudCA9IE51bWJlcihjb29raWVzLmNvdW50IHx8IDApOwogICAgZm9yIChsZXQgaSA9IDA7IGkgPCBjb3VudDsgaSsrKSB7CiAgICAgIGNvbnN0IGMgPSBjb29raWVzLm9iamVjdEF0SW5kZXgoaSk7CiAgICAgIGNvbnN0IGRvbWFpbiA9IFN0cmluZyhqc1ZhbHVlKGMuZG9tYWluKSB8fCAnJyk7CiAgICAgIGNvbnN0IG5hbWUgPSBTdHJpbmcoanNWYWx1ZShjLm5hbWUpIHx8ICcnKTsKICAgICAgaWYgKCFuYW1lIHx8IGRvbWFpbi50b0xvd2VyQ2FzZSgpLmluZGV4T2YoJ2VkdWNhdGlvbi5sdScpIDwgMCkgY29udGludWU7CiAgICAgIG91dC5wdXNoKHsKICAgICAgICBuYW1lOiBuYW1lLAogICAgICAgIHZhbHVlOiBTdHJpbmcoanNWYWx1ZShjLnZhbHVlKSB8fCAnJyksCiAgICAgICAgZG9tYWluOiBkb21haW4sCiAgICAgICAgcGF0aDogU3RyaW5nKGpzVmFsdWUoYy5wYXRoKSB8fCAnLycpLAogICAgICAgIHNlY3VyZTogQm9vbGVhbihqc1ZhbHVlKGMuc2VjdXJlKSksCiAgICAgICAgaHR0cE9ubHk6IEJvb2xlYW4oanNWYWx1ZShjLkhUVFBPbmx5KSkKICAgICAgfSk7CiAgICB9CiAgfSBjYXRjaCAoXykge30KICByZXR1cm4gb3V0Owp9CgpmdW5jdGlvbiBmaW5hbGl6ZVBheWxvYWQocGF5bG9hZCwgcGFnZVVybCkgewogIGlmIChFQ19GSU5JU0hFRCkgcmV0dXJuOwogIEVDX0ZJTklTSEVEID0gdHJ1ZTsKCiAgLy8gdjMxMzogVGhlIFdLSFRUUENvb2tpZVN0b3JlIHNlbGVjdG9yIGlzIGBnZXRBbGxDb29raWVzOmAsIHNvIHRoZSBKWEEgbmFtZSBpcwogIC8vIGBnZXRBbGxDb29raWVzYC4gVGhlIHByZXZpb3VzIGBnZXRBbGxDb29raWVzV2l0aENvbXBsZXRpb25IYW5kbGVyYCBkaWQgbm90CiAgLy8gZXhpc3QgYW5kIHJhaXNlZCBhbiB1bmNhdWdodCBOU0V4Y2VwdGlvbiB0aGF0IGtpbGxlZCB0aGUgd2hvbGUgbG9naW4gd2luZG93LgogIC8vIEl0IG5ldmVyIHN1cmZhY2VkIGJlY2F1c2UgdGhlIG5pbC1lcnJvciBidWcgYWJvdmUgbWVhbnQgdGhpcyBsaW5lIHdhcyBuZXZlcgogIC8vIHJlYWNoZWQuIEtlcHQgYmVoaW5kIGEgdHJ5L2NhdGNoIHNvIGEgZnV0dXJlIEFQSSBjaGFuZ2UgZGVncmFkZXMgaW50byBhCiAgLy8gcmVhZGFibGUgZXJyb3Igc3RhdGUgaW5zdGVhZCBvZiBhIHNpbGVudCBjcmFzaC4KICBsZXQgc3RvcmUgPSBudWxsOwogIHRyeSB7CiAgICBzdG9yZSA9IEVDX1dFQlZJRVcuY29uZmlndXJhdGlvbi53ZWJzaXRlRGF0YVN0b3JlLmh0dHBDb29raWVTdG9yZTsKICB9IGNhdGNoIChlKSB7CiAgICBmaW5pc2hXaXRoRXJyb3IoJ1RoZSBlLUJpY2hlbGNoZW4gc2Vzc2lvbiBjb3VsZCBub3QgYmUgcmVhZC4nLCBTdHJpbmcoZSkpOwogICAgcmV0dXJuOwogIH0KICBpZiAoIXN0b3JlIHx8IHR5cGVvZiBzdG9yZS5nZXRBbGxDb29raWVzICE9PSAnZnVuY3Rpb24nKSB7CiAgICBmaW5pc2hXaXRoRXJyb3IoJ1RoZSBlLUJpY2hlbGNoZW4gc2Vzc2lvbiBjb3VsZCBub3QgYmUgcmVhZC4nLCAnV0tIVFRQQ29va2llU3RvcmUuZ2V0QWxsQ29va2llcyB1bmF2YWlsYWJsZScpOwogICAgcmV0dXJuOwogIH0KICBzdG9yZS5nZXRBbGxDb29raWVzKGZ1bmN0aW9uKGNvb2tpZXMpIHsKICAgIGxldCBjb29raWVSb3dzID0gZWR1Y2F0aW9uQ29va2llcyhjb29raWVzKTsKICAgIEVDX1dFQlZJRVcuZXZhbHVhdGVKYXZhU2NyaXB0Q29tcGxldGlvbkhhbmRsZXIoJCgnbmF2aWdhdG9yLnVzZXJBZ2VudCB8fCAiTW96aWxsYS81LjAiJyksIGZ1bmN0aW9uKHVhVmFsdWUsIHVhRXJyb3IpIHsKICAgICAgY29uc3QgdWEgPSBTdHJpbmcoanNWYWx1ZSh1YVZhbHVlKSB8fCAnTW96aWxsYS81LjAgKE1hY2ludG9zaCkgQXBwbGVXZWJLaXQnKTsKICAgICAgY29uc3QgbWVyZ2VkID0ge307CiAgICAgIGNvb2tpZVJvd3MuZm9yRWFjaChmdW5jdGlvbihjKSB7IG1lcmdlZFtjLm5hbWVdID0gYy52YWx1ZTsgfSk7CiAgICAgIGNvbnN0IGNvb2tpZUhlYWRlciA9IE9iamVjdC5rZXlzKG1lcmdlZCkubWFwKGZ1bmN0aW9uKGspIHsgcmV0dXJuIGsgKyAnPScgKyBtZXJnZWRba107IH0pLmpvaW4oJzsgJyk7CiAgICAgIGlmICghY29va2llSGVhZGVyKSB7CiAgICAgICAgRUNfRklOSVNIRUQgPSBmYWxzZTsKICAgICAgICB3cml0ZVN0YXRlKHsKICAgICAgICAgIHN0YXR1czogJ3dhaXRpbmcnLAogICAgICAgICAgc3RhZ2U6ICdzZXNzaW9uJywKICAgICAgICAgIG1lc3NhZ2U6ICdlLUJpY2hlbGNoZW4gaXMgb3BlbiwgYnV0IHRoZSBhdXRoZW50aWNhdGVkIHNlc3Npb24gaXMgbm90IGF2YWlsYWJsZSB5ZXQuJywKICAgICAgICAgIHBhZ2VVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKQogICAgICAgIH0pOwogICAgICAgIHJldHVybjsKICAgICAgfQogICAgICB0cnkgeyBpZiAoRUNfVElNRVIpIEVDX1RJTUVSLmludmFsaWRhdGU7IH0gY2F0Y2ggKF8pIHt9CiAgICAgIHdyaXRlU3RhdGUoewogICAgICAgIHN0YXR1czogJ3JlYWR5JywKICAgICAgICBwYWdlVXJsOiBTdHJpbmcocGFnZVVybCB8fCAnJyksCiAgICAgICAgZGF0YTogcGF5bG9hZCwKICAgICAgICBzZXNzaW9uOiB7CiAgICAgICAgICBjb29raWVIZWFkZXI6IGNvb2tpZUhlYWRlciwKICAgICAgICAgIGNvb2tpZU5hbWVzOiBPYmplY3Qua2V5cyhtZXJnZWQpLnNvcnQoKSwKICAgICAgICAgIGNvb2tpZXM6IGNvb2tpZVJvd3MsCiAgICAgICAgICB1c2VyQWdlbnQ6IHVhLAogICAgICAgICAgY2FwdHVyZWRBdDogbmV3IERhdGUoKS50b0lTT1N0cmluZygpLAogICAgICAgICAgdGFyZ2V0VXJsOiBTdHJpbmcocGFnZVVybCB8fCAnJyksCiAgICAgICAgICBicm93c2VyOiAnbWFjT1MgV0tXZWJWaWV3IHYzMTQnCiAgICAgICAgfSwKICAgICAgICBlbmdpbmU6ICdXS1dlYlZpZXctdjMxNCcsCiAgICAgICAgc3RhcnRlZEF0OiBuZXcgRGF0ZShFQ19TVEFSVEVEX0FUKS50b0lTT1N0cmluZygpCiAgICAgIH0pOwogICAgICB0cnkgeyBFQ19XSU5ET1cub3JkZXJPdXQobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgICAgICQuTlNUaHJlYWQuc2xlZXBGb3JUaW1lSW50ZXJ2YWwoMC4xOCk7CiAgICAgIHRyeSB7IEVDX0FQUC50ZXJtaW5hdGUobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgICB9KTsKICB9KTsKfQoKZnVuY3Rpb24gYnVpbGRDb250cm9sbGVyU2NyaXB0KCkgewogIC8vIFRoZSByZWFkIGV4cHJlc3Npb24gaXMgYW4gYXN5bmMgSUlGRS4gV2UgbGF1bmNoIGl0IG9uY2UgYW5kIHN0b3JlIGl0cyByZXN1bHQKICAvLyBpbiBhIHBhZ2UtZ2xvYmFsIG9iamVjdC4gZXZhbHVhdGVKYXZhU2NyaXB0IGl0c2VsZiBvbmx5IHJldHVybnMgYSBzeW5jaHJvbm91cwogIC8vIHN0YXR1cyBzbmFwc2hvdCwgd2hpY2ggd29ya3Mgb24gb2xkZXIgV0tXZWJWaWV3IHZlcnNpb25zIGFzIHdlbGwuCiAgcmV0dXJuIGAoKCkgPT4gewogICAgY29uc3QgaHJlZiA9IFN0cmluZyhsb2NhdGlvbi5ocmVmIHx8ICcnKTsKICAgIGNvbnN0IG9uRWIgPSBocmVmLmluZGV4T2YoJy9lYmljaGVsY2hlbi9hcHAvJykgPj0gMDsKICAgIGlmICghb25FYikgcmV0dXJuIEpTT04uc3RyaW5naWZ5KHtwaGFzZTonbG9naW4nLHVybDpocmVmfSk7CiAgICBpZiAoIXdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTQpIHsKICAgICAgd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMxNCA9IHtwaGFzZTonc3RhcnRpbmcnLHVybDpocmVmLGVycm9yOicnLGRhdGE6bnVsbCxzdGFydGVkQXQ6RGF0ZS5ub3coKX07CiAgICAgIGNvbnN0IHMgPSB3aW5kb3cuX19lbnRyZXRpZW5Db25uZWN0TmF0aXZlMzE0OwogICAgICBzLnBoYXNlID0gJ3JlYWRpbmcnOwogICAgICBQcm9taXNlLnJlc29sdmUoJHtFQ19SRUFEX0VYUFJFU1NJT059KQogICAgICAgIC50aGVuKHYgPT4geyBzLmRhdGEgPSB2OyBzLnBoYXNlID0gJ3JlYWR5Jzsgcy51cmwgPSBTdHJpbmcobG9jYXRpb24uaHJlZiB8fCBocmVmKTsgfSkKICAgICAgICAuY2F0Y2goZSA9PiB7CiAgICAgICAgICBzLmVycm9yID0gU3RyaW5nKGUgJiYgKGUubWVzc2FnZSB8fCBlKSB8fCAndW5rbm93biBlcnJvcicpOwogICAgICAgICAgcy5waGFzZSA9ICd3YWl0aW5nJzsKICAgICAgICAgIHMudXJsID0gU3RyaW5nKGxvY2F0aW9uLmhyZWYgfHwgaHJlZik7CiAgICAgICAgICBzZXRUaW1lb3V0KCgpID0+IHsgdHJ5IHsgZGVsZXRlIHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTQ7IH0gY2F0Y2ggKF8pIHt9IH0sIDEyMDApOwogICAgICAgIH0pOwogICAgfQogICAgY29uc3QgcyA9IHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTQ7CiAgICByZXR1cm4gSlNPTi5zdHJpbmdpZnkoe3BoYXNlOnMucGhhc2UsdXJsOlN0cmluZyhzLnVybHx8aHJlZiksZXJyb3I6U3RyaW5nKHMuZXJyb3J8fCcnKSxkYXRhOnMuZGF0YXx8bnVsbCxhZ2U6RGF0ZS5ub3coKS1OdW1iZXIocy5zdGFydGVkQXR8fERhdGUubm93KCkpfSk7CiAgfSkoKWA7Cn0KCmZ1bmN0aW9uIHBvbGxXZWJWaWV3KCkgewogIGlmIChFQ19GSU5JU0hFRCB8fCBFQ19CVVNZIHx8ICFFQ19XRUJWSUVXKSByZXR1cm47CiAgdHJ5IHsKICAgIGlmIChFQ19XSU5ET1cgJiYgIUJvb2xlYW4oRUNfV0lORE9XLmlzVmlzaWJsZSkpIHsKICAgICAgRUNfRklOSVNIRUQgPSB0cnVlOwogICAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J2Nsb3NlZCcsIG1lc3NhZ2U6J0xvZ2luIHdpbmRvdyBjbG9zZWQgYnkgdXNlci4nfSk7CiAgICAgIHRyeSB7IEVDX0FQUC50ZXJtaW5hdGUobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgICAgIHJldHVybjsKICAgIH0KICB9IGNhdGNoIChfKSB7fQoKICBFQ19CVVNZID0gdHJ1ZTsKICBjb25zdCBzY3JpcHQgPSBidWlsZENvbnRyb2xsZXJTY3JpcHQoKTsKICBFQ19XRUJWSUVXLmV2YWx1YXRlSmF2YVNjcmlwdENvbXBsZXRpb25IYW5kbGVyKCQoc2NyaXB0KSwgZnVuY3Rpb24ocmVzdWx0LCBlcnJvcikgewogICAgRUNfQlVTWSA9IGZhbHNlOwogICAgaWYgKEVDX0ZJTklTSEVEKSByZXR1cm47CiAgICAvLyB2MzEzOiBBIG5pbCBOU0Vycm9yIGFycml2ZXMgaW4gSlhBIGFzIGEgVFJVVEhZIHdyYXBwZXIgb2JqZWN0LCBzbyB0aGUgb2xkCiAgICAvLyBgaWYgKGVycm9yKWAgdG9vayB0aGUgZmFpbHVyZSBicmFuY2ggb24gZXZlcnkgc2luZ2xlIHN1Y2Nlc3NmdWwgY2FsbCBhbmQKICAgIC8vIHRoZSByZXN1bHQgd2FzIG5ldmVyIHBhcnNlZCDigJQgdGhlIGxvZ2luIHdpbmRvdyBzdGF5ZWQgb3BlbiBmb3JldmVyIGFuZCB0aGUKICAgIC8vIHN0YXRlIGZpbGUgd2FzIHN0dWNrIG9uIHN0YWdlICJuYXZpZ2F0aW9uIiAvIGRldGFpbCAiW2lkIG5pbF0iLgogICAgLy8gVGhlIHJlc3VsdCBub3cgZGVjaWRlczsgdGhlIGVycm9yIG9iamVjdCBpcyBvbmx5IHVzZWQgZm9yIGl0cyBtZXNzYWdlLgogICAgbGV0IG91dGVyID0gbnVsbDsKICAgIHRyeSB7IG91dGVyID0gSlNPTi5wYXJzZShTdHJpbmcoanNWYWx1ZShyZXN1bHQpIHx8ICd7fScpKTsgfSBjYXRjaCAoXykgeyBvdXRlciA9IG51bGw7IH0KICAgIGlmICghb3V0ZXIgfHwgIW91dGVyLnBoYXNlKSB7CiAgICAgIGNvbnN0IGRldGFpbCA9IGVycm9yVGV4dChlcnJvcik7CiAgICAgIGlmIChkZXRhaWwpIHdyaXRlU3RhdGUoe3N0YXR1czond2FpdGluZycsIHN0YWdlOiduYXZpZ2F0aW9uJywgZGV0YWlsOmRldGFpbCwgcGFnZVVybDonJ30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBjb25zdCBwaGFzZSA9IFN0cmluZyhvdXRlci5waGFzZSB8fCAnd2FpdGluZycpOwogICAgY29uc3QgcGFnZVVybCA9IFN0cmluZyhvdXRlci51cmwgfHwgJycpOwogICAgaWYgKHBoYXNlID09PSAnbG9naW4nKSB7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidsb2dpbicsIHBhZ2VVcmw6cGFnZVVybCwgZW5naW5lOidXS1dlYlZpZXcnfSk7CiAgICAgIHJldHVybjsKICAgIH0KICAgIGlmIChwaGFzZSA9PT0gJ3JlYWRpbmcnIHx8IHBoYXNlID09PSAnc3RhcnRpbmcnKSB7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidyZWFkaW5nJywgcGFnZVVybDpwYWdlVXJsLCBlbmdpbmU6J1dLV2ViVmlldyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKHBoYXNlID09PSAnd2FpdGluZycpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J2xvYWRpbmcnLCBwYWdlVXJsOnBhZ2VVcmwsIGRldGFpbDpTdHJpbmcob3V0ZXIuZXJyb3IgfHwgJycpLCBlbmdpbmU6J1dLV2ViVmlldyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKHBoYXNlID09PSAncmVhZHknICYmIG91dGVyLmRhdGEpIHsKICAgICAgbGV0IHBheWxvYWQgPSBudWxsOwogICAgICB0cnkgewogICAgICAgIHBheWxvYWQgPSB0eXBlb2Ygb3V0ZXIuZGF0YSA9PT0gJ3N0cmluZycgPyBKU09OLnBhcnNlKG91dGVyLmRhdGEpIDogb3V0ZXIuZGF0YTsKICAgICAgfSBjYXRjaCAoZSkgewogICAgICAgIGZpbmlzaFdpdGhFcnJvcignVGhlIGUtQmljaGVsY2hlbiBkYXRhIGNvdWxkIG5vdCBiZSBkZWNvZGVkLicsIFN0cmluZyhlKSk7CiAgICAgICAgcmV0dXJuOwogICAgICB9CiAgICAgIGZpbmFsaXplUGF5bG9hZChwYXlsb2FkLCBwYWdlVXJsKTsKICAgIH0KICB9KTsKfQoKZnVuY3Rpb24gcnVuKGFyZ3YpIHsKICB0cnkgewogICAgaWYgKCFhcmd2IHx8IGFyZ3YubGVuZ3RoIDwgMykgdGhyb3cgbmV3IEVycm9yKCdNaXNzaW5nIG5hdGl2ZSBsb2dpbiBhcmd1bWVudHMuJyk7CiAgICBFQ19TVEFURV9QQVRIID0gU3RyaW5nKGFyZ3ZbMF0pOwogICAgY29uc3QgZXhwcmVzc2lvblBhdGggPSBTdHJpbmcoYXJndlsxXSk7CiAgICBFQ19TVEFSVF9VUkwgPSBTdHJpbmcoYXJndlsyXSk7CiAgICBjb25zdCByZWFkRXJyID0gUmVmKCk7CiAgICBjb25zdCByZWFkT2JqID0gJC5OU1N0cmluZy5zdHJpbmdXaXRoQ29udGVudHNPZkZpbGVFbmNvZGluZ0Vycm9yKCQoZXhwcmVzc2lvblBhdGgpLCAkLk5TVVRGOFN0cmluZ0VuY29kaW5nLCByZWFkRXJyKTsKICAgIEVDX1JFQURfRVhQUkVTU0lPTiA9IFN0cmluZyhqc1ZhbHVlKHJlYWRPYmopIHx8ICcnKTsKICAgIGlmICghRUNfUkVBRF9FWFBSRVNTSU9OKSB0aHJvdyBuZXcgRXJyb3IoJ1RoZSBlLUJpY2hlbGNoZW4gcmVhZCBzY3JpcHQgaXMgZW1wdHkuJyk7CgogICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidzdGFydGluZycsIGVuZ2luZTonV0tXZWJWaWV3Jywgc3RhcnRlZEF0Om5ldyBEYXRlKEVDX1NUQVJURURfQVQpLnRvSVNPU3RyaW5nKCl9KTsKCiAgICBFQ19BUFAgPSAkLk5TQXBwbGljYXRpb24uc2hhcmVkQXBwbGljYXRpb247CiAgICBFQ19BUFAuc2V0QWN0aXZhdGlvblBvbGljeSgkLk5TQXBwbGljYXRpb25BY3RpdmF0aW9uUG9saWN5UmVndWxhcik7CgogICAgY29uc3QgcmVjdCA9ICQuTlNNYWtlUmVjdCgwLCAwLCAxMDgwLCA3NjApOwogICAgY29uc3Qgc3R5bGUgPSAkLk5TV2luZG93U3R5bGVNYXNrVGl0bGVkIHwgJC5OU1dpbmRvd1N0eWxlTWFza0Nsb3NhYmxlIHwgJC5OU1dpbmRvd1N0eWxlTWFza01pbmlhdHVyaXphYmxlIHwgJC5OU1dpbmRvd1N0eWxlTWFza1Jlc2l6YWJsZTsKICAgIEVDX1dJTkRPVyA9ICQuTlNXaW5kb3cuYWxsb2MuaW5pdFdpdGhDb250ZW50UmVjdFN0eWxlTWFza0JhY2tpbmdEZWZlcihyZWN0LCBzdHlsZSwgJC5OU0JhY2tpbmdTdG9yZUJ1ZmZlcmVkLCBmYWxzZSk7CiAgICBFQ19XSU5ET1cuc2V0VGl0bGUoJCgnZS1CaWNoZWxjaGVuIOKAkyBFbnRyZXRpZW5Db25uZWN0JykpOwogICAgRUNfV0lORE9XLnNldFJlbGVhc2VkV2hlbkNsb3NlZChmYWxzZSk7CiAgICBFQ19XSU5ET1cuY2VudGVyOwoKICAgIGNvbnN0IGNvbmZpZyA9ICQuV0tXZWJWaWV3Q29uZmlndXJhdGlvbi5hbGxvYy5pbml0OwogICAgY29uZmlnLndlYnNpdGVEYXRhU3RvcmUgPSAkLldLV2Vic2l0ZURhdGFTdG9yZS5kZWZhdWx0RGF0YVN0b3JlOwogICAgRUNfV0VCVklFVyA9ICQuV0tXZWJWaWV3LmFsbG9jLmluaXRXaXRoRnJhbWVDb25maWd1cmF0aW9uKHJlY3QsIGNvbmZpZyk7CiAgICBFQ19XRUJWSUVXLnNldEFsbG93c0JhY2tGb3J3YXJkTmF2aWdhdGlvbkdlc3R1cmVzKHRydWUpOwogICAgRUNfV0lORE9XLnNldENvbnRlbnRWaWV3KEVDX1dFQlZJRVcpOwogICAgRUNfV0lORE9XLm1ha2VLZXlBbmRPcmRlckZyb250KG51bGwpOwogICAgRUNfQVBQLmFjdGl2YXRlSWdub3JpbmdPdGhlckFwcHModHJ1ZSk7CgogICAgY29uc3QgdXJsID0gJC5OU1VSTC5VUkxXaXRoU3RyaW5nKCQoRUNfU1RBUlRfVVJMKSk7CiAgICBpZiAoIXVybCkgdGhyb3cgbmV3IEVycm9yKCdJbnZhbGlkIGUtQmljaGVsY2hlbiBVUkwuJyk7CiAgICBjb25zdCByZXF1ZXN0ID0gJC5OU1VSTFJlcXVlc3QucmVxdWVzdFdpdGhVUkwodXJsKTsKICAgIEVDX1dFQlZJRVcubG9hZFJlcXVlc3QocmVxdWVzdCk7CgogICAgRUNfVElNRVIgPSAkLk5TVGltZXIuc2NoZWR1bGVkVGltZXJXaXRoVGltZUludGVydmFsUmVwZWF0c0Jsb2NrKDAuOCwgdHJ1ZSwgZnVuY3Rpb24oXykgeyBwb2xsV2ViVmlldygpOyB9KTsKICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidsb2dpbicsIGVuZ2luZTonV0tXZWJWaWV3JywgcGFnZVVybDpFQ19TVEFSVF9VUkx9KTsKICAgIEVDX0FQUC5ydW47CiAgfSBjYXRjaCAoZSkgewogICAgZmluaXNoV2l0aEVycm9yKCdUaGUgbWFjT1MgbG9naW4gd2luZG93IGNvdWxkIG5vdCBiZSBzdGFydGVkLicsIFN0cmluZyhlICYmIChlLm1lc3NhZ2UgfHwgZSkgfHwgZSkpOwogIH0KfQo="
 MAC_WK_PROCESS: subprocess.Popen | None = None
 MAC_WK_LOCK = threading.RLock()
 
 
-def _mac_wk_script_candidates() -> list[pathlib.Path]:
-    """Diagnostic candidates only; v313 runs the checksum-verified embedded copy."""
-    candidates: list[pathlib.Path] = []
-    env_path = str(os.environ.get("ENTRETIENCONNECT_WKWEBVIEW_MODULE") or "").strip()
-    if env_path:
-        candidates.append(pathlib.Path(env_path).expanduser())
-    candidates.extend([
-        ROOT / MAC_WK_SCRIPT_NAME,
-        pathlib.Path.cwd() / MAC_WK_SCRIPT_NAME,
-        pathlib.Path(sys.argv[0]).resolve().parent / MAC_WK_SCRIPT_NAME,
-    ])
-    return candidates
-
-
 def _mac_wk_resolve_script() -> pathlib.Path:
-    """Create the WKWebView module from the embedded v313 source every time.
+    """Create the WKWebView module from the embedded v314 source every time.
 
     This deliberately does not depend on the bundle path, App Translocation, a
     previous updater cache, or an external helper file.  Atomic replacement also
     prevents an old v307 file from being reused after a partial update.
     """
-    target_dir = DATA_ROOT / "native-runtime" / "v313"
+    target_dir = DATA_ROOT / "native-runtime" / "v314"
     target = target_dir / MAC_WK_SCRIPT_NAME
     try:
         target_dir.mkdir(parents=True, exist_ok=True)
         data = base64.b64decode(MAC_WK_SCRIPT_B64.encode("ascii"), validate=True)
-        if len(data) < 1000 or b"EntretienConnect v313" not in data:
-            raise RuntimeError("embedded v313 module is incomplete")
+        if len(data) < 1000 or b"EntretienConnect v314" not in data:
+            raise RuntimeError("embedded v314 module is incomplete")
         expected = hashlib.sha256(data).hexdigest()
         current_ok = False
         try:
@@ -4012,7 +3117,7 @@ def _mac_wk_resolve_script() -> pathlib.Path:
         return target
     except Exception as exc:
         raise RuntimeError(
-            "WKWebView v313 konnte nicht vorbereitet werden (" + str(target) + "): " + str(exc)
+            "WKWebView v314 konnte nicht vorbereitet werden (" + str(target) + "): " + str(exc)
         ) from exc
 
 def _mac_wk_read_state() -> dict:
@@ -4215,7 +3320,7 @@ def _mac_wk_read_payload(selected_group_id: int | None = None) -> dict:
 def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: str = "") -> dict:
     if platform.system().lower() == "darwin":
         return _mac_wk_launch(profile, user_agent)
-    return _launch_browser_v306(profile, preferred_browser, user_agent)
+    return _launch_browser_cdp(profile, preferred_browser, user_agent)
 
 
 def debug_browser_running() -> bool:
@@ -4225,12 +3330,12 @@ def debug_browser_running() -> bool:
         # already closed. This prevents /read-browser?quiet=1 from reporting a
         # false "browserClosed" between login and data transfer.
         return _mac_wk_process_alive() or str(state.get("status") or "") == "ready"
-    return _debug_browser_running_v306()
+    return _debug_browser_running_cdp()
 
 
 def check_login_ready() -> dict:
     if ACTIVE_BROWSER_MODE != "mac-wkwebview":
-        return _check_login_ready_v306()
+        return _check_login_ready_cdp()
     state = _mac_wk_read_state()
     status = str(state.get("status") or "starting")
     if status == "ready":
@@ -4279,7 +3384,7 @@ def check_login_ready() -> dict:
 def read_browser_and_store(selected_group_id=None) -> dict:
     global LATEST_DATA, LATEST_AT
     if ACTIVE_BROWSER_MODE != "mac-wkwebview":
-        return _read_browser_and_store_v306(selected_group_id)
+        return _read_browser_and_store_cdp(selected_group_id)
     if not READ_BROWSER_LOCK.acquire(blocking=False):
         raise RuntimeError("Lecture déjà en cours – merci de patienter.")
     try:
@@ -4298,7 +3403,7 @@ def focus_app_tab() -> dict:
         # closes, the user's original EntretienConnect window is revealed again.
         # Avoid AppleScript browser automation permission prompts.
         return {"method": "native-window-closed", "foundExistingTab": True, "openedNewTab": False}
-    return _focus_app_tab_v306()
+    return _focus_app_tab_cdp()
 
 
 def close_ebichelchen_target() -> dict:
@@ -4315,13 +3420,13 @@ def close_ebichelchen_target() -> dict:
             except Exception:
                 result["transferFileRemoved"] = False
         return result
-    return _close_ebichelchen_target_v306()
+    return _close_ebichelchen_target_cdp()
 
 
 def force_close_launched_browser(force: bool = False) -> dict:
     if ACTIVE_BROWSER_MODE == "mac-wkwebview" or _mac_wk_process_alive():
         return _mac_wk_terminate(mark_closed=False)
-    return _force_close_launched_browser_v306(force=force)
+    return _force_close_launched_browser_cdp(force=force)
 
 
 def soft_reset_login() -> dict:
@@ -4344,7 +3449,7 @@ def soft_reset_login() -> dict:
             "profilePreserved": True,
             "engine": "WKWebView",
         }
-    return _soft_reset_login_v306()
+    return _soft_reset_login_cdp()
 
 
 def reset_login_session(profile: str = "default", preserve_profile: bool = False) -> dict:
@@ -4359,7 +3464,7 @@ def reset_login_session(profile: str = "default", preserve_profile: bool = False
             "browserRunning": False,
             "engine": "WKWebView",
         }
-    return _reset_login_session_v306(profile, preserve_profile)
+    return _reset_login_session_cdp(profile, preserve_profile)
 
 
 # v311: Beim Laden des Moduls liegt garantiert keine Sitzung im Speicher. Eine noch
