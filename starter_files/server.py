@@ -21,6 +21,7 @@ sys.dont_write_bytecode = True
 import webbrowser
 import threading
 import os
+import re
 import time
 import subprocess
 import shutil
@@ -734,7 +735,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path.split("?", 1)[0] == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 320, "nativeLoginEngine": ("WKWebView-v320" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 324, "nativeLoginEngine": ("WKWebView-v320" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -1020,9 +1021,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 msg = tok.get("error_description") or tok.get("error") or "Échec de l'échange du code."
         _last_login_result = {"ok": bool(ok), "message": ("" if ok else msg), "at": time.time()}
         if ok:
+            # v324: Der Tab schliesst sich schneller. Vorher wartete er 1,5 Sekunden,
+            # und die App fragte anschliessend nur alle 3 Sekunden nach – zusammen bis
+            # zu viereinhalb Sekunden, in denen nach der Anmeldung scheinbar nichts
+            # geschah. Das war der ganze Unterschied zum e-Bichelchen-Login.
             inner = ("<div style='font-size:42px'>✅</div><h2>Connexion réussie</h2>"
-                     "<p>Vous pouvez fermer cet onglet et revenir à EntretienConnect.</p>"
-                     "<script>setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);</script>")
+                     "<p>Cet onglet se ferme tout seul.</p>"
+                     "<script>setTimeout(function(){ try{ window.close(); }catch(e){} }, 400);</script>")
         else:
             inner = ("<div style='font-size:42px'>⚠️</div><h2>Connexion impossible</h2>"
                      "<p>" + _html.escape(msg) + "</p><p>Fermez cet onglet et réessayez depuis EntretienConnect.</p>")
@@ -1159,11 +1164,36 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 })
             if attachments:
                 payload["message"]["attachments"] = attachments
-            code, body = _graph_post("https://graph.microsoft.com/v1.0/me/sendMail", token, payload)
-            if code == 202:
-                results.append({"id": m.get("id"), "ok": True})
-            else:
-                results.append({"id": m.get("id"), "ok": False, "error": "HTTP " + str(code) + " " + body[:200]})
+            # v322: Jede Nachricht einzeln absichern. Vorher riss ein Netzwerkaussetzer
+            # bei Nachricht 3 die gesamte Antwort ab (die Verbindung brach ohne Antwort
+            # zusammen). Die bereits verschickten Mails waren dann für die App verloren –
+            # sie galten als nicht gesendet, und ein zweiter Versuch schickte sie den
+            # Eltern ein zweites Mal.
+            try:
+                code, body = _graph_post("https://graph.microsoft.com/v1.0/me/sendMail", token, payload)
+                # 429 = Microsoft drosselt. Dabei wurde NICHTS verschickt, ein zweiter
+                # Versuch ist also gefahrlos.
+                if code == 429:
+                    wait = 0.0
+                    match = re.search(r'"Retry-After"\s*:\s*"?(\d+)', body or "")
+                    if match:
+                        wait = float(match.group(1))
+                    time.sleep(max(1.0, min(wait or 5.0, 15.0)))
+                    code, body = _graph_post("https://graph.microsoft.com/v1.0/me/sendMail", token, payload)
+                if code == 202:
+                    results.append({"id": m.get("id"), "ok": True})
+                else:
+                    results.append({"id": m.get("id"), "ok": False, "error": "HTTP " + str(code) + " " + body[:200]})
+            except Exception as exc:
+                # Hier ist UNBEKANNT, ob Microsoft die Mail noch angenommen hat. Deshalb
+                # nicht als schlichter Fehlschlag melden: Ein blindes Wiederholen könnte
+                # dieselbe Mail ein zweites Mal zustellen.
+                results.append({
+                    "id": m.get("id"),
+                    "ok": False,
+                    "uncertain": True,
+                    "error": "Verbindung unterbrochen: " + str(exc)[:160],
+                })
         return self._json(200, {"ok": True, "results": results})
 
     def handle_signatures(self):

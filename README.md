@@ -1,15 +1,21 @@
-# EntretienConnect v320
+# EntretienConnect v324
 
-Deux mesures contre l’alerte « Es konnte keine Verbindung zum Server erstellt werden » affichée par e-Bichelchen dans la fenêtre de connexion.
+La connexion Microsoft réagit maintenant aussi vite que celle d’e-Bichelchen.
 
-**1. User-Agent complet.** La fenêtre s’annonçait comme
-`Mozilla/5.0 (Macintosh; …) AppleWebKit/605.1.15 (KHTML, like Gecko)` — sans `Version/… Safari/…`. Pour e-Bichelchen, ou pour une protection placée devant, ce n’est pas un navigateur reconnaissable. La fenêtre envoie désormais un User-Agent Safari complet (`applicationNameForUserAgent`, avec `setCustomUserAgent` en second recours). Mesuré sur banc d’essai, en-tête reçu par le serveur et `navigator.userAgent` dans la page :
-`Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15`
+Le procédé était déjà le bon : code d’autorisation avec PKCE, aucun code à recopier (la méthode par code d’appareil ne sert plus que de secours). Ce qui donnait l’impression de lenteur, c’était l’attente **après** l’identification :
 
-**2. Solution de secours.** Le choix du navigateur est de nouveau visible sur macOS, et surtout il agit. « Fenêtre native » (par défaut) ouvre la fenêtre intégrée comme avant ; « Google Chrome » ou « Microsoft Edge » repasse par la voie Chromium, complète et éprouvée. À utiliser si e-Bichelchen refuse de fonctionner dans la fenêtre intégrée. Jusqu’ici cette liste était masquée sur macOS parce qu’elle n’avait aucun effet.
+| | e-Bichelchen | Microsoft avant | Microsoft maintenant |
+|---|---|---|---|
+| Cadence d’interrogation | 850–1400 ms | 3000 ms | 900 ms |
+| Fermeture de l’onglet de retour | — | 1500 ms | 400 ms |
+| Attente cumulée | — | **jusqu’à 4,5 s** | **moins d’1,5 s** |
 
-Vérifié : la page d’identification ne reçoit toujours aucune requête avant la connexion (acquis de v317), la lecture après identification fonctionne, et l’aiguillage `auto` → fenêtre native / `chrome`,`edge` → voie Chromium a été testé.
+Une interrogation coûte 0,85 ms, mesuré : elle s’adresse à l’assistant local, la cadence plus courte ne charge rien.
 
-Honnêtement : je ne peux pas prouver que le User-Agent était la cause, faute d’accès au vrai serveur. Si l’alerte persiste, choisissez « Google Chrome » dans la liste — c’est précisément à cela que sert la solution de secours.
+**Pourquoi la connexion Microsoft ne se fait pas dans la fenêtre native, comme e-Bichelchen :** Microsoft déconseille et bloque fréquemment l’authentification dans une fenêtre intégrée, et les stratégies d’accès conditionnel d’un établissement peuvent la refuser. Le navigateur du système est ici la voie prévue et sûre. Comme la connexion actuelle fonctionne, la déplacer serait un pari — et un pari de ce genre a déjà coûté une version aujourd’hui (v315). Le trajet reste donc le même ; seule l’attente inutile a disparu.
 
-Rappel : v317 a supprimé les requêtes lancées pendant l’identification, v316 a annulé la modification de v315 (les cookies exportés ne suffisent pas pour un appel HTTP autonome), v314 a retiré ~900 lignes de code inaccessible, v313 a réparé la fenêtre native.
+Rappel v323 : avertissement en cas de variable mal orthographiée dans un modèle, contrôle des adresses renforcé (chevrons, points doublés).
+
+Reste ouvert dans la partie e-mail : la taille des pièces jointes n’est pas vérifiée avant l’envoi, et le jeton d’accès n’est lu qu’une fois avant la boucle d’envoi.
+
+L’assistant e-Bichelchen et la fenêtre de connexion native restent inchangés depuis v320.

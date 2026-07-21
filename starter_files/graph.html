@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v320</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v324</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 320;
+const APP_VERSION = 324;
 
 window.addEventListener("error", function(ev){
   try{
@@ -1638,6 +1638,12 @@ function langOptionsHtml(selected, compact=false){ selected=normalizeLang(select
 function isValidEmailFormat(email){
   const v=String(email||"").trim();
   if(!v) return true;
+  // v323: Zwei Formen kamen bisher durch und wurden erst von Microsoft abgelehnt –
+  // mit einer Fehlermeldung, mit der niemand etwas anfangen kann. Besser hier
+  // im Feld markieren: spitze Klammern (aus « Name <adresse> » kopiert) und
+  // doppelte Punkte.
+  if(/[<>]/.test(v)) return false;
+  if(v.includes("..")) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 }
 function invalidStudentEmails(){
@@ -3536,10 +3542,11 @@ function rawContactEmails(stu){ return contactEmailKeys().map(k=>String((stu&&st
 function contactEmails(stu){ return contactDetails(stu).map(c=>c.email); }
 function ebMissingImportCount(){
   if(!ebReady()) return 0;
-  const existing=new Set((state.students||[]).map(st=>ebNormName(st.name)).filter(Boolean));
+  // v321: derselbe tolerante Abgleich wie beim Import – sonst zählt die Anzeige
+  // Schüler als « fehlt », die nur anders geschrieben schon in der Liste stehen.
   return ebStudents().filter(e=>{
     const name=String(e.fullName||e.name||"").trim();
-    return name && !existing.has(ebNormName(name));
+    return name && !ebFindByName(state.students||[], name);
   }).length;
 }
 function ebApplyMessageOverride(msg, title, desc){
@@ -3754,7 +3761,8 @@ function importCsvText(csvText, opts={}){
     const lang2=looksLikeLang2 ? normalizeLang(c[4]||dl) : dl;
     // Mode complet : la langue du contact 1 définit la langue du message e-Bichelchen.
     const langEb=(emailEnabled()&&ebichelchenEnabled()) ? lang1 : normalizeLang(c[5]||lang1);
-    const matchByName=(state.students||[]).find(st=>ebNormName(st.name)===ebNormName(c[0]));
+    // v321: findet den Schüler auch, wenn die CSV die Namensteile anders anordnet.
+    const matchByName=ebFindByName(state.students||[], c[0]);
     if(ebMode || auto){
       if(matchByName){
         matchByName.email1=email1; matchByName.email2=email2; matchByName.lang1=lang1; matchByName.lang2=lang2; matchByName.langEb=langEb;
@@ -5132,8 +5140,34 @@ function bindRichToolbars(){
 }
 
 /* Signature/logo/template binding */
-function renderTemplatePreview(){ const lang=currentTemplateLang(); const ds=new Date().toISOString().slice(0,10); const map=sigMap(messageMap(ds,"14:20",{name:"Tim"},lang,Number(state.config.durationMin)||20)); document.getElementById("mailTemplatePreview").innerHTML=buildHtml(map,true,currentTemplateMode(),lang); renderSigMissing(); }
-function renderSigMissing(){ const box=document.getElementById("sigMissing"); if(!box) return; const txt=textFromHtml(state.template.signatureHtml||""); const hasTodo=/\[[^\]]*(compléter|Nom|Fonction|salle|E-mail|Téléphone)[^\]]*\]/i.test(txt); if(state.options.useSig!==false && hasTodo){ box.innerHTML='<div class="banner warn">Veuillez remplacer les espaces réservés surlignés en jaune dans la signature avant d’envoyer les e-mails.</div>'; } else box.innerHTML=""; }
+// v323: Ein Tippfehler in einem Platzhalter ging bisher wörtlich an die Eltern.
+// {TRIMESTR} statt {TRIMESTRE} wird beim Einsetzen nicht ersetzt und bleibt
+// unverändert in der fertigen E-Mail stehen.
+//
+// Das Muster ist bewusst eng: mindestens drei Zeichen, nur Grossbuchstaben und
+// Unterstriche. Damit werden echte Variablennamen erfasst, aber kein normaler
+// Text in geschweiften Klammern – "Raum {A12}" enthält Ziffern und "{ca. 20 Min}"
+// ein Leerzeichen, beide lösen keine Warnung aus.
+function unknownTemplateVars(html){
+  const found=String(html||"").match(/\{[A-Z][A-Z_]{2,}\}/g) || [];
+  return [...new Set(found)];
+}
+let lastPreviewUnknownVars=[];
+function renderTemplatePreview(){ const lang=currentTemplateLang(); const ds=new Date().toISOString().slice(0,10); const map=sigMap(messageMap(ds,"14:20",{name:"Tim"},lang,Number(state.config.durationMin)||20)); const html=buildHtml(map,true,currentTemplateMode(),lang); document.getElementById("mailTemplatePreview").innerHTML=html; lastPreviewUnknownVars=unknownTemplateVars(textFromHtml(html)); renderSigMissing(); }
+function renderSigMissing(){
+  const box=document.getElementById("sigMissing"); if(!box) return;
+  const bits=[];
+  const txt=textFromHtml(state.template.signatureHtml||"");
+  const hasTodo=/\[[^\]]*(compléter|Nom|Fonction|salle|E-mail|Téléphone)[^\]]*\]/i.test(txt);
+  if(state.options.useSig!==false && hasTodo){
+    bits.push('<div class="banner warn">Veuillez remplacer les espaces réservés surlignés en jaune dans la signature avant d’envoyer les e-mails.</div>');
+  }
+  if(lastPreviewUnknownVars.length){
+    bits.push('<div class="banner warn">Variable inconnue dans le modèle : '+lastPreviewUnknownVars.map(esc).join(", ")
+      +'. Elle sera envoyée telle quelle aux parents. Vérifiez l’orthographe (voir la liste des variables via « ? »).</div>');
+  }
+  box.innerHTML=bits.join("");
+}
 function setLogoFromDataUrl(dataUrl, mime, rerender=true, mode=null){
   const m=mime || ((String(dataUrl).match(/^data:([^;]+)/)||[])[1]) || "image/png";
   const ext=(m.split("/")[1]||"png").replace("jpeg","jpg");
@@ -5881,7 +5915,11 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
       bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
     }
-  },3000);
+  // v324: alle 900 ms statt alle 3000 ms. Der e-Bichelchen-Login fragt in einem
+  // ähnlichen Takt und wirkt deshalb spürbar flotter; hier vergingen nach der
+  // Anmeldung bis zu drei Sekunden, in denen scheinbar nichts passierte. Die
+  // Abfrage geht an den lokalen Helfer, kostet also praktisch nichts.
+  },900);
 }
 // Ancien flux « code d'appareil » — utilisé si le helper local n'est pas à jour,
 // ou via le lien de secours du flux sans code.
@@ -6451,6 +6489,30 @@ let ebData=null, ebAutoTimer=null, ebAutoStart=0, ebReadBusy=false, ebLoginPendi
 let ebSameBrowserPopup=null, ebSameBrowserMode=false;
 const EB_LOGIN_URL="https://ssl.education.lu/ebichelchen/app/login";
 function ebNormName(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
+// v321: Dieselbe Person, andere Reihenfolge der Namensteile.
+// e-Bichelchen und die CSV schreiben Namen nicht immer gleich an
+// (« Vasconcelos Gomes Amandine » vs. « Amandine Vasconcelos Gomes »). Der
+// Vergleich über den ganzen Namen fand das nicht und legte beim CSV-Import
+// einen zweiten Eintrag an — die Klasse stand danach doppelt in der Liste.
+function ebNameSortedKey(s){
+  return ebNormName(s).split(" ").filter(Boolean).sort().join(" ");
+}
+// Sucht einen Eintrag zu einem Namen: erst exakt, dann als Rückfall über die
+// Menge der Namensteile. Der Rückfall greift NUR bei mindestens zwei Teilen und
+// nur bei genau einem Kandidaten — sonst könnten zwei verschiedene Kinder
+// stillschweigend zu einem verschmelzen.
+function ebFindByName(list, name, nameOf){
+  const items=Array.isArray(list) ? list : [];
+  const get=nameOf || (x => x && x.name);
+  const want=ebNormName(name);
+  if(!want) return null;
+  const exact=items.find(x => ebNormName(get(x))===want);
+  if(exact) return exact;
+  const key=ebNameSortedKey(name);
+  if(!key || key.indexOf(" ")<0) return null;
+  const cands=items.filter(x => ebNameSortedKey(get(x))===key);
+  return cands.length===1 ? cands[0] : null;
+}
 function tzForDate(iso){ try{ const d=new Date(iso+"T12:00:00"); const off=-d.getTimezoneOffset(); const sign=off>=0?"+":"-"; const abs=Math.abs(off); return sign+String(Math.floor(abs/60)).padStart(2,"0")+":"+String(abs%60).padStart(2,"0"); }catch(e){ return "+02:00"; } }
 // HTML -> Klartext mit erhaltenen Zeilenumbrüchen (innerText eines losgelösten Knotens
 // verschluckt <br>; e-Bichelchen-Meldungen brauchen aber echte Umbrüche).
@@ -6562,8 +6624,7 @@ function ebMatchedIdFor(stu){
   if(!stu) return "";
   const map=state.ebichelchenMap||{};
   if(Object.prototype.hasOwnProperty.call(map, stu.id)) return map[stu.id];
-  const want=ebNormName(stu.name);
-  const hit=ebStudents().find(e=>ebNormName(e.fullName)===want);
+  const hit=ebFindByName(ebStudents(), stu.name, e=>e.fullName);
   return hit ? hit.id : "";
 }
 function autofillEbMap(){
@@ -6572,8 +6633,7 @@ function autofillEbMap(){
   state.students.forEach(stu=>{
     if(!(stu.name||"").trim()) return;
     if(Object.prototype.hasOwnProperty.call(state.ebichelchenMap, stu.id)) return;
-    const want=ebNormName(stu.name);
-    const hit=ebStudents().find(e=>ebNormName(e.fullName)===want);
+    const hit=ebFindByName(ebStudents(), stu.name, e=>e.fullName);
     if(hit) state.ebichelchenMap[stu.id]=hit.id;
   });
   saveState();
@@ -6599,13 +6659,13 @@ function importEbStudentsToList(auto=false){
   const dl=normalizeLang("fr");
   state.students=state.students||[];
   state.ebichelchenMap=state.ebichelchenMap||{};
-  const existing=new Set(state.students.map(st=>ebNormName(st.name)));
   let added=0;
   arr.forEach(e=>{
     const name=String(e.fullName||e.name||"").trim();
     if(!name) return;
-    const norm=ebNormName(name);
-    let stu=state.students.find(st=>ebNormName(st.name)===norm);
+    // v321: erkennt auch einen bereits per CSV angelegten Schüler, dessen Namensteile
+    // anders angeordnet sind – sonst stünde er nach dem Import doppelt in der Liste.
+    let stu=ebFindByName(state.students, name);
     if(!stu){
       stu={id:uid(),name,email1:"",email2:"",lang1:dl,lang2:dl,langEb:dl};
       state.students.push(stu);
@@ -7246,7 +7306,10 @@ document.getElementById("confirmGo").onclick=async()=>{
     pendingSend=[]; btn.disabled=false;
     return;
   }
-  let ok=0, fail=0, firstErr="", reminderOk=0, reminderFail=0, firstReminderErr="";
+  // v322: « unsicher » wird getrennt von « Fehlschlag » gezählt. Bei einem
+  // Verbindungsabbruch weiss niemand, ob Microsoft die Mail noch angenommen hat –
+  // ein blindes Wiederholen würde die Eltern doppelt anschreiben.
+  let ok=0, fail=0, uncertain=0, firstErr="", firstUncertainErr="", reminderOk=0, reminderFail=0, firstReminderErr="";
   let ebDone=0, ebReq=0, ebErr="", ebUnmatched=[];
   try{
     const r=await graphSend(pendingEmailNow);
@@ -7258,6 +7321,7 @@ document.getElementById("confirmGo").onclick=async()=>{
       pendingEmailNow.forEach(m=>{
         const res=byId[m.id];
         if(res&&res.ok){ ok++; sentSet.add(m.id); okConfirmIds.add(m.id); }
+        else if(res && res.uncertain){ uncertain++; if(!firstUncertainErr) firstUncertainErr=res.error||""; }
         else { fail++; if(!firstErr&&res) firstErr=res.error||""; }
       });
       persistSent();
@@ -7293,6 +7357,11 @@ document.getElementById("confirmGo").onclick=async()=>{
   const reminderPart=reminderOk ? ` Après l’envoi : ${reminderCount(reminderOk)} programmé${reminderOk===1?"":"s"} dans Outlook.` : (reminderFail ? ` ${reminderCount(reminderFail)} non programmé${reminderFail===1?"":"s"}${firstReminderErr?(" — "+esc(firstReminderErr)):""}.` : "");
   const confirmPart=`Maintenant : ${confirmationCount(ok)} ${sentWord(ok,true)}.`;
   const failPart=fail ? ` ${countFr(fail,"échec","échecs")} — ${esc(firstErr)}.` : "";
+  // v322: Verbindungsabbruch — Ausgang unbekannt. Ausdrücklich davor warnen, einfach
+  // erneut zu senden, sonst bekommen die Eltern die Nachricht womöglich zweimal.
+  const uncertainPart=uncertain
+    ? ` ${uncertain} e-mail(s) au statut incertain : la connexion a été interrompue pendant l’envoi. Vérifiez le dossier « Éléments envoyés » d’Outlook avant de renvoyer, sinon les parents risquent de recevoir le message deux fois.${firstUncertainErr?(" ("+esc(String(firstUncertainErr).slice(0,120))+")"):""}`
+    : "";
   let ebPart="";
   if(ebichelchenEnabled()){
     if(ebDone) ebPart+=` ${ebDone} message${ebDone===1?"":"s"} e-Bichelchen publié${ebDone===1?"":"s"}.`;
@@ -7301,7 +7370,7 @@ document.getElementById("confirmGo").onclick=async()=>{
     if(ebUnmatched && ebUnmatched.length) ebPart+=` Sans correspondance e-Bichelchen : ${[...new Set(ebUnmatched)].map(esc).join(", ")}.`;
   }
   const ebBad=ebichelchenEnabled() && ((ebReq && ebDone<ebReq) || (!ebDone && ebErr));
-  document.getElementById("mailBanner").innerHTML=`<div class="banner ${(fail||reminderFail||ebBad)?'warn':'ok'}">${confirmPart}${reminderPart}${ebPart}${failPart}</div>`+document.getElementById("mailBanner").innerHTML;
+  document.getElementById("mailBanner").innerHTML=`<div class="banner ${(fail||uncertain||reminderFail||ebBad)?'warn':'ok'}">${confirmPart}${reminderPart}${ebPart}${failPart}${uncertainPart}</div>`+document.getElementById("mailBanner").innerHTML;
   pendingSend=[]; pendingReminderPlan=[]; btn.disabled=false;
 };
 
