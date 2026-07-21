@@ -3,7 +3,7 @@ ObjC.import('WebKit');
 ObjC.import('Foundation');
 
 /*
- * EntretienConnect v311 – native macOS e-Bichelchen login window.
+ * EntretienConnect v312 – native macOS e-Bichelchen login window.
  * Runs through /usr/bin/osascript -l JavaScript and uses WKWebView (Safari/WebKit),
  * so no Chrome, Edge or remotely controlled Firefox is required.
  */
@@ -36,13 +36,6 @@ function writeState(obj) {
     const text = $(JSON.stringify(obj));
     const err = Ref();
     const ok = text.writeToFileAtomicallyEncodingError($(EC_STATE_PATH), true, $.NSUTF8StringEncoding, err);
-    // v311: This file can carry a live e-Bichelchen session cookie. writeToFile…
-    // creates it with the default mask (0644); restrict it to the current user.
-    try {
-      $.NSFileManager.defaultManager.setAttributesOfItemAtPathError(
-        $({ NSFilePosixPermissions: 384 }), $(EC_STATE_PATH), Ref()
-      );
-    } catch (_) {}
     return Boolean(ok);
   } catch (_) {
     return false;
