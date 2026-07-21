@@ -3,7 +3,7 @@ ObjC.import('WebKit');
 ObjC.import('Foundation');
 
 /*
- * EntretienConnect v312 – native macOS e-Bichelchen login window.
+ * EntretienConnect v313 – native macOS e-Bichelchen login window.
  * Runs through /usr/bin/osascript -l JavaScript and uses WKWebView (Safari/WebKit),
  * so no Chrome, Edge or remotely controlled Firefox is required.
  */
@@ -27,6 +27,22 @@ function jsValue(value) {
   try { return ObjC.deepUnwrap(value); } catch (_) {}
   try { return ObjC.unwrap(value); } catch (_) {}
   return String(value);
+}
+
+// v313: Returns a usable message for a REAL error, and '' for an ObjC nil that
+// JXA hands over as a truthy wrapper (its String() form is "[id nil]").
+function errorText(err) {
+  if (!err) return '';
+  let desc = null;
+  try { desc = jsValue(err.localizedDescription); } catch (_) { desc = null; }
+  if (desc !== null && desc !== undefined) {
+    const text = String(desc).trim();
+    return (!text || text === 'null' || text === 'undefined') ? '' : text;
+  }
+  let raw = '';
+  try { raw = String(err).trim(); } catch (_) { raw = ''; }
+  if (!raw || raw === '[id nil]' || raw === 'null' || raw === 'undefined') return '';
+  return raw;
 }
 
 function writeState(obj) {
@@ -83,8 +99,24 @@ function finalizePayload(payload, pageUrl) {
   if (EC_FINISHED) return;
   EC_FINISHED = true;
 
-  const store = EC_WEBVIEW.configuration.websiteDataStore.httpCookieStore;
-  store.getAllCookiesWithCompletionHandler(function(cookies) {
+  // v313: The WKHTTPCookieStore selector is `getAllCookies:`, so the JXA name is
+  // `getAllCookies`. The previous `getAllCookiesWithCompletionHandler` did not
+  // exist and raised an uncaught NSException that killed the whole login window.
+  // It never surfaced because the nil-error bug above meant this line was never
+  // reached. Kept behind a try/catch so a future API change degrades into a
+  // readable error state instead of a silent crash.
+  let store = null;
+  try {
+    store = EC_WEBVIEW.configuration.websiteDataStore.httpCookieStore;
+  } catch (e) {
+    finishWithError('The e-Bichelchen session could not be read.', String(e));
+    return;
+  }
+  if (!store || typeof store.getAllCookies !== 'function') {
+    finishWithError('The e-Bichelchen session could not be read.', 'WKHTTPCookieStore.getAllCookies unavailable');
+    return;
+  }
+  store.getAllCookies(function(cookies) {
     let cookieRows = educationCookies(cookies);
     EC_WEBVIEW.evaluateJavaScriptCompletionHandler($('navigator.userAgent || "Mozilla/5.0"'), function(uaValue, uaError) {
       const ua = String(jsValue(uaValue) || 'Mozilla/5.0 (Macintosh) AppleWebKit');
@@ -113,9 +145,9 @@ function finalizePayload(payload, pageUrl) {
           userAgent: ua,
           capturedAt: new Date().toISOString(),
           targetUrl: String(pageUrl || ''),
-          browser: 'macOS WKWebView v310'
+          browser: 'macOS WKWebView v313'
         },
-        engine: 'WKWebView-v310',
+        engine: 'WKWebView-v313',
         startedAt: new Date(EC_STARTED_AT).toISOString()
       });
       try { EC_WINDOW.orderOut(null); } catch (_) {}
@@ -133,9 +165,9 @@ function buildControllerScript() {
     const href = String(location.href || '');
     const onEb = href.indexOf('/ebichelchen/app/') >= 0;
     if (!onEb) return JSON.stringify({phase:'login',url:href});
-    if (!window.__entretienConnectNative310) {
-      window.__entretienConnectNative310 = {phase:'starting',url:href,error:'',data:null,startedAt:Date.now()};
-      const s = window.__entretienConnectNative310;
+    if (!window.__entretienConnectNative313) {
+      window.__entretienConnectNative313 = {phase:'starting',url:href,error:'',data:null,startedAt:Date.now()};
+      const s = window.__entretienConnectNative313;
       s.phase = 'reading';
       Promise.resolve(${EC_READ_EXPRESSION})
         .then(v => { s.data = v; s.phase = 'ready'; s.url = String(location.href || href); })
@@ -143,10 +175,10 @@ function buildControllerScript() {
           s.error = String(e && (e.message || e) || 'unknown error');
           s.phase = 'waiting';
           s.url = String(location.href || href);
-          setTimeout(() => { try { delete window.__entretienConnectNative310; } catch (_) {} }, 1200);
+          setTimeout(() => { try { delete window.__entretienConnectNative313; } catch (_) {} }, 1200);
         });
     }
-    const s = window.__entretienConnectNative310;
+    const s = window.__entretienConnectNative313;
     return JSON.stringify({phase:s.phase,url:String(s.url||href),error:String(s.error||''),data:s.data||null,age:Date.now()-Number(s.startedAt||Date.now())});
   })()`;
 }
@@ -167,13 +199,18 @@ function pollWebView() {
   EC_WEBVIEW.evaluateJavaScriptCompletionHandler($(script), function(result, error) {
     EC_BUSY = false;
     if (EC_FINISHED) return;
-    if (error) {
-      writeState({status:'waiting', stage:'navigation', detail:String(jsValue(error.localizedDescription) || error), pageUrl:''});
-      return;
-    }
+    // v313: A nil NSError arrives in JXA as a TRUTHY wrapper object, so the old
+    // `if (error)` took the failure branch on every single successful call and
+    // the result was never parsed — the login window stayed open forever and the
+    // state file was stuck on stage "navigation" / detail "[id nil]".
+    // The result now decides; the error object is only used for its message.
     let outer = null;
     try { outer = JSON.parse(String(jsValue(result) || '{}')); } catch (_) { outer = null; }
-    if (!outer) return;
+    if (!outer || !outer.phase) {
+      const detail = errorText(error);
+      if (detail) writeState({status:'waiting', stage:'navigation', detail:detail, pageUrl:''});
+      return;
+    }
     const phase = String(outer.phase || 'waiting');
     const pageUrl = String(outer.url || '');
     if (phase === 'login') {
