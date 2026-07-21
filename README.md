@@ -1,14 +1,16 @@
-# EntretienConnect v314
+# EntretienConnect v315
 
-Nettoyage sans changement de comportement. Seul du code devenu inaccessible a été retiré, environ 900 lignes.
+Sur macOS, la fenêtre de connexion native n’a plus qu’une seule tâche : constater que l’identification est terminée et transmettre la session. Tout le reste — classes, élèves, catégorie « Message » — est lu par l’assistant local en Python, avec exactement les mêmes cookies.
 
-- Suppression complète de la couche Firefox WebDriver BiDi (Firefox piloté à distance) : la classe de contrôle, la couche WebSocket dédiée, la création d’un profil Firefox et la lecture de session par cette voie. Son point d’entrée n’était plus appelé depuis v306.
-- Suppression de la couche intermédiaire devenue inutile, qui ne faisait que transmettre chaque appel. Il reste deux couches au lieu de trois : la voie Chromium/CDP (Windows) et la fenêtre native (macOS).
-- Suppression de quelques fonctions sans appelant (préchauffage du navigateur, ouverture d’onglet à distance, deux aides JSON inutilisées).
+Pourquoi : la même analyse existait en double, environ 430 lignes de JavaScript injectées dans la page d’un côté, le code Python de l’autre. La première lecture venait du JavaScript, le choix de classe du Python. Deux implémentations du même résultat, à maintenir en parallèle à chaque évolution d’e-Bichelchen.
 
-La voie Windows a été comparée fonction par fonction avec l’état précédent : les neuf points d’entrée sont restés identiques au caractère près. Volontairement conservés : la voie « Firefox actuel » (toujours sélectionnable sous Windows) et les outils de création d’entrées de test.
+- Le script injecté dans la fenêtre passe de ~430 lignes à 27 : une seule requête qui vérifie que la session répond.
+- Un seul chemin de lecture pour la première lecture comme pour le choix de classe.
+- Le fichier de transfert ne contient plus aucune donnée d’élève, seulement les cookies et un compteur de classes.
+- Si la première lecture échoue, elle peut être relancée sans nouvelle identification : la session reste en mémoire.
 
-Rappel des correctifs précédents :
+Le gros lecteur JavaScript reste en place et inchangé — la voie Windows (Chromium/CDP) l’utilise toujours.
 
-- v313 — la fenêtre de connexion native fonctionne enfin : une erreur ObjC absente (`nil`) arrive en JXA sous forme d’objet non vide, si bien que `if (error)` prenait la branche d’échec à chaque appel réussi ; et la lecture des cookies appelait une méthode inexistante (`getAllCookies:` est le bon sélecteur).
-- v311 / v312 — détection de session expirée, vérification unique avant publication multiple, blocage d’une publication simultanée, fichier de transfert en droits 0600 supprimé dès la reprise en mémoire, mémorisation de l’adresse des matières, choix du navigateur masqué sur macOS, accès local uniquement (en-tête Host).
+Vérifications : les objets produits par les deux voies ont été comparés champ par champ sur les mêmes données ; élèves et classe sont identiques au caractère près, et tous les champs lus par l’interface (`group`, `groups`, `students`, `messageSubject`, `needsGroupSelection`) concordent. Les deux cas ont été testés de bout en bout : une seule classe (sélection automatique) et plusieurs classes (choix dans EntretienConnect, puis relecture).
+
+Rappel : v313 a réparé la fenêtre native (erreur ObjC `nil` traitée comme un échec, et sélecteur de cookies inexistant) ; v314 a retiré ~900 lignes de code inaccessible ; v311/v312 ont apporté la détection de session expirée, la vérification avant publication multiple, le blocage des publications simultanées et l’accès local uniquement.
