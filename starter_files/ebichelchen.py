@@ -14,6 +14,7 @@ import mimetypes
 import os
 import pathlib
 import platform
+import re
 import secrets
 import shutil
 import sqlite3
@@ -266,20 +267,64 @@ def debug_browser_running() -> bool:
         return False
 
 
-def _activate_browser_app(browser_name: str) -> bool:
-    """Best-effort OS activation without changing the e-Bichelchen route.
+def _find_macos_helper_pid(profile_dir: pathlib.Path | str) -> int | None:
+    """Find the exact isolated Chromium process by its unique CDP/profile flags."""
+    if platform.system().lower() != "darwin":
+        return None
+    profile_text = str(profile_dir)
+    port_flag = f"--remote-debugging-port={CDP_PORT}"
+    profile_flag = f"--user-data-dir={profile_text}"
+    try:
+        out = subprocess.check_output(
+            ["/bin/ps", "-axo", "pid=,command="],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=2,
+        )
+        for line in out.splitlines():
+            if port_flag not in line or profile_flag not in line:
+                continue
+            m = re.match(r"\s*(\d+)\s+", line)
+            if m:
+                return int(m.group(1))
+    except Exception:
+        pass
+    return None
 
-    v300 (macOS): do *not* call ``open -a Google Chrome`` here. EntretienConnect
-    usually runs in the user's normal Chrome instance while e-Bichelchen runs in a
-    second isolated Chrome process. ``open -a`` activates the bundle, not that exact
-    process, and therefore often brings the EntretienConnect window back to the
-    foreground immediately after the white helper window appears. The isolated
-    window is focused through its concrete CDP target instead.
+
+def _activate_macos_process(process_id: int | None) -> bool:
+    """Bring one precise Chrome/Edge instance forward without browser automation.
+
+    NSRunningApplication addresses the process by PID, so the user's normal Chrome
+    window is not activated accidentally. This does not require controlling tabs or
+    reading browser data through AppleScript.
     """
+    if platform.system().lower() != "darwin" or not process_id:
+        return False
+    script = f"""
+ObjC.import('AppKit');
+const app = $.NSRunningApplication.runningApplicationWithProcessIdentifier({int(process_id)});
+app ? (app.activateWithOptions(3) ? 'ok' : 'failed') : 'missing';
+"""
+    try:
+        cp = subprocess.run(
+            ["/usr/bin/osascript", "-l", "JavaScript", "-e", script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=3,
+        )
+        return cp.returncode == 0 and "ok" in (cp.stdout or "").lower()
+    except Exception:
+        return False
+
+
+def _activate_browser_app(browser_name: str, process_id: int | None = None) -> bool:
+    """Best-effort activation of the exact isolated helper browser."""
     system = platform.system().lower()
     try:
         if system == "darwin":
-            return False
+            return _activate_macos_process(process_id)
         if system == "windows":
             # Beim Python-Starter reicht normalerweise der neue Browserprozess; der
             # Windows-PowerShell-Starter besitzt zusätzlich eine stärkere user32-Fokussierung.
@@ -289,7 +334,7 @@ def _activate_browser_app(browser_name: str) -> bool:
     return False
 
 
-def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0) -> dict:
+def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0, process_id: int | None = None) -> dict:
     """Activate the exact isolated e-Bichelchen tab/window via DevTools.
 
     This is deliberately target-specific. It never opens or activates the user's
@@ -304,7 +349,7 @@ def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0) ->
             cdp_call(target.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=912, timeout=2)
             # On Windows this remains a harmless best-effort activation. On macOS
             # Page.bringToFront is intentionally the only activation mechanism.
-            os_active = _activate_browser_app(browser_name)
+            os_active = _activate_browser_app(browser_name, process_id)
             return {"focused": True, "method": "cdp", "targetId": target.get("id"), "url": target.get("url"), "osActive": os_active}
         except Exception as exc:
             last_error = str(exc)
@@ -359,8 +404,14 @@ def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: st
         except Exception:
             existing = None
         if existing:
-            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=1.5)
-            return {"alreadyRunning": True, "reusedWindow": True, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            helper_pid = None
+            warm = BROWSER_PROCESSES.get(profile)
+            if warm is not None and warm.poll() is None:
+                helper_pid = warm.pid
+            if not helper_pid:
+                helper_pid = _find_macos_helper_pid(profile_dir)
+            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=1.5, process_id=helper_pid)
+            return {"alreadyRunning": True, "reusedWindow": True, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "processId": helper_pid, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
 
         # Kein verwendbares Loginfenster: den isolierten Helferbrowser schließen.
         ws = version.get("webSocketDebuggerUrl") if isinstance(version, dict) else None
@@ -408,8 +459,17 @@ def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: st
     for _ in range(48):
         try:
             version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=0.5)
-            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=3.0)
-            return {"alreadyRunning": False, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            helper_pid = proc.pid if proc and proc.poll() is None else _find_macos_helper_pid(profile_dir)
+            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=3.0, process_id=helper_pid)
+            # Chrome can finish creating its native window a fraction after the CDP
+            # target exists. A second exact-PID activation prevents the login window
+            # from remaining behind the normal EntretienConnect browser window.
+            if platform.system().lower() == "darwin" and helper_pid:
+                def _refocus_exact_helper():
+                    time.sleep(0.55)
+                    _activate_macos_process(helper_pid)
+                threading.Thread(target=_refocus_exact_helper, daemon=True).start()
+            return {"alreadyRunning": False, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "processId": helper_pid, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
         except Exception:
             if proc.poll() is not None:
                 raise RuntimeError(f"{browser_name} s’est fermé avant l’ouverture de la fenêtre e-Bichelchen.")
@@ -3189,7 +3249,7 @@ def _read_direct_with_session(session: dict, selected_group_id: int | None = Non
 
 
 # ===================================================================
-# v318 – native macOS login window (WKWebView / Safari WebKit)
+# v318 legacy native macOS login window (disabled by v319)
 # -------------------------------------------------------------------
 # The main EntretienConnect UI remains in the user's default browser.
 # On macOS, e-Bichelchen is opened in a small native WKWebView window,
@@ -3481,8 +3541,9 @@ def _mac_wk_read_payload(selected_group_id: int | None = None) -> dict:
 
 
 def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: str = "") -> dict:
-    if platform.system().lower() == "darwin":
-        return _mac_wk_launch(profile, preferred_browser, user_agent)
+    # v319: e-Bichelchen rejects the embedded WKWebView on affected Macs. Do not
+    # show that known-broken window first; open the isolated Chrome/Edge helper
+    # directly and use the same stable CDP path as Windows.
     return _launch_browser_cdp(profile, preferred_browser, user_agent)
 
 

@@ -1,17 +1,17 @@
 {
-  "version": "v318",
+  "version": "v319",
   "files": [
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "1203566001d4cf31fbd443dad4dd6e4ee890f9007a911c1f6738b4b7a06f88e5",
-      "size": 73711
+      "sha256": "95bd77cbe06faed3016ba42a2e96c98c89d2546537789f9b091e05b845c96eb3",
+      "size": 73664
     },
     {
       "target": "ebichelchen.py",
       "url": "starter_files/ebichelchen.py",
-      "sha256": "998ba934663ee80fcdb7f2058ab69f2a8742580a7bec9994e17a2db1a6b53015",
-      "size": 182066
+      "sha256": "be41f6c37788eccaeb7beda75441ba5de7d3bda81587d7e5915460c5830b18df",
+      "size": 184669
     },
     {
       "target": "EntretienConnect.ps1",
@@ -46,7 +46,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "f8476c5662485ffa43add0d80247c9b302de281613afd3508a51c238e2e99ab4",
+      "sha256": "e6dc083d776aba94a0b36348fb80a94b719096ad448c26d53b9972a9c7270e50",
       "size": 5
     },
     {

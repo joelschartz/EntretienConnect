@@ -1,8 +1,8 @@
-# EntretienConnect v318
+# EntretienConnect v319
 
-Le blocage de connexion e-Bichelchen sur macOS est corrigé.
+La connexion e-Bichelchen sur macOS utilise désormais directement la fenêtre isolée Chrome/Edge.
 
-- La lecture ne démarre plus sur l’écran public de connexion, qu’il soit affiché sous `/app/login` ou directement sous `/app/`.
-- Si e-Bichelchen refuse malgré tout la fenêtre WebKit native et affiche son message de connexion au serveur, EntretienConnect ferme cette fenêtre et ouvre automatiquement une seule fenêtre isolée Chrome/Edge.
-- Le même verrou de connexion protège également ce mode de secours.
-- L’annulation, la fermeture et une nouvelle tentative fonctionnent correctement après le basculement automatique.
+- La fenêtre WebKit refusée par e-Bichelchen n’est plus ouverte.
+- La fenêtre de connexion Chrome/Edge est amenée au premier plan par son processus exact, sans activer par erreur la fenêtre Chrome normale d’EntretienConnect.
+- Le verrou de connexion de v318 reste actif : aucune lecture de classe ne démarre sur l’écran public de connexion ou de tutoriel.
+- Windows conserve le même parcours Chrome/Edge éprouvé.
