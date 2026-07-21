@@ -673,8 +673,36 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         # Etwas ruhiger im Terminal
         pass
 
+    def _host_header_is_local(self) -> bool:
+        """v311: Schutz vor DNS-Rebinding.
+
+        Der Helfer lauscht nur auf 127.0.0.1, aber eine fremde Webseite kann einen
+        eigenen Namen auf 127.0.0.1 auflösen lassen und wäre dann für den Browser
+        gleichursprünglich – und käme an Microsoft-Konto und Schülerdaten. Ein
+        echter lokaler Aufruf trägt immer eine Loopback-Adresse im Host-Header.
+        """
+        host = str(self.headers.get("Host") or "")
+        if not host:
+            return True  # HTTP/1.0-Aufrufe ohne Host-Header, z. B. curl
+        name = host.rsplit(":", 1)[0].strip().strip("[]").lower()
+        return name in ("127.0.0.1", "localhost", "::1", "")
+
+    def _reject_foreign_host(self) -> bool:
+        if self._host_header_is_local():
+            return False
+        self.send_response(403)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        try:
+            self.wfile.write("EntretienConnect: seuls les accès locaux sont autorisés.\n".encode("utf-8"))
+        except Exception:
+            pass
+        return True
+
     def do_GET(self):
         global last_heartbeat_time
+        if self._reject_foreign_host():
+            return
         if self.path.split("?",1)[0] == "/api/app/heartbeat":
             last_heartbeat_time = time.time()
             return self._json(200, {"ok": True, "serverTime": datetime.now(timezone.utc).isoformat()})
@@ -706,7 +734,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path.split("?", 1)[0] == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 310, "nativeLoginEngine": ("WKWebView-v310" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 311, "nativeLoginEngine": ("WKWebView-v311" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -845,6 +873,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 except Exception as exc:
                     browser_closed = not eb.debug_browser_running()
                     error_text = str(exc)
+                    # v311: Eine abgelaufene Sitzung ist kein Wartezustand – die Oberfläche
+                    # soll sofort wieder « Connecter » anbieten statt weiterzupollen.
+                    session_expired = isinstance(exc, getattr(eb, "EbSessionExpired", ()))
+                    if session_expired:
+                        return self._json(200, {"ok": False, "waiting": False, "browserClosed": True, "sessionExpired": True, "error": error_text})
                     retry_soon = ("Relecture en cours" in error_text or "sélectionnée automatiquement" in error_text)
                     return self._json(200 if quiet else 500, {"ok": False, "waiting": bool(quiet and not browser_closed), "browserClosed": browser_closed, "retrySoon": retry_soon, "error": error_text})
             if path == "/api/eb/focus-app":
@@ -891,7 +924,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return self._json(200 if result.get("ok") else 500, result)
             return self._json(404, {"ok": False, "error": "Route e-Bichelchen inconnue."})
         except Exception as exc:
-            return self._json(500, {"ok": False, "error": str(exc), "created": [], "deleted": [], "errors": []})
+            # v311: Abgelaufene Sitzung getrennt melden, damit die Oberfläche zum
+            # Neuverbinden auffordert statt einen Speicherfehler anzuzeigen.
+            expired = isinstance(exc, getattr(eb, "EbSessionExpired", ()))
+            return self._json(500, {"ok": False, "error": str(exc), "sessionExpired": bool(expired), "created": [], "deleted": [], "errors": []})
 
     def handle_find_logo(self):
         try:
@@ -1139,6 +1175,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         global last_heartbeat_time
+        if self._reject_foreign_host():
+            return
         if self.path.split("?",1)[0] == "/api/app/heartbeat":
             last_heartbeat_time = time.time()
             return self._json(200, {"ok": True, "serverTime": datetime.now(timezone.utc).isoformat()})

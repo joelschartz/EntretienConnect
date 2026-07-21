@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.10.32 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.11.0 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -47,7 +47,39 @@ def _user_app_data_dir() -> pathlib.Path:
         path.mkdir(parents=True, exist_ok=True)
     except Exception:
         path = ROOT
+    # v311: Im App-Speicher liegen kurzlebige e-Bichelchen-Sitzungsdaten. Der Ordner
+    # gehört ausschließlich dem angemeldeten Benutzer.
+    try:
+        path.chmod(0o700)
+    except Exception:
+        pass
     return path
+
+
+def _write_private_text(path: pathlib.Path, text: str) -> None:
+    """Schreibt atomar und ausschließlich für den eigenen Benutzer lesbar (0600).
+
+    v311: Wird für alles verwendet, was eine gültige e-Bichelchen-Sitzung enthalten
+    kann. Ohne das entstünde die Datei mit der Standardmaske (0644).
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+    except Exception:
+        try:
+            tmp.unlink()
+        except Exception:
+            pass
+        raise
+    os.replace(str(tmp), str(path))
+    try:
+        path.chmod(0o600)
+    except Exception:
+        pass
+
 
 DATA_ROOT = _user_app_data_dir()
 PROFILE_ROOT = DATA_ROOT / "profiles"
@@ -61,6 +93,8 @@ try:
 except Exception:
     SSL_CONTEXT = None
 
+HELPER_VERSION = "1.11.0"
+
 LATEST_DATA = None
 LATEST_AT = None
 LOCK = threading.Lock()
@@ -72,6 +106,68 @@ LATEST_SESSION_AT: str | None = None
 ACTIVE_BROWSER_MODE = "cdp"  # cdp | firefox-current
 ACTIVE_BROWSER_USER_AGENT = ""
 FIREFOX_SESSIONSTORE_CACHE: dict[str, tuple[float, int, list[dict], dict]] = {}
+# v311: Nur eine Mehrfach-Veröffentlichung gleichzeitig. Zwei offene App-Tabs oder ein
+# Doppelklick haben vorher zwei parallele Läufe gestartet – und damit doppelte Einträge.
+PUBLISH_LOCK = threading.Lock()
+# v311: Der zuletzt erfolgreiche Fächer-Endpunkt. Ohne diesen Hinweis probiert
+# _read_subjects_direct bei jedem Lesen bis zu neun Varianten nacheinander durch.
+SUBJECTS_ENDPOINT_HINT_FILE = DATA_ROOT / "eb-endpoints.json"
+
+
+class EbSessionExpired(RuntimeError):
+    """Die übernommene e-Bichelchen-Sitzung ist nicht mehr gültig.
+
+    v311: Vorher lief das stumm ins Leere – ssl.education.lu antwortet auf eine
+    abgelaufene Sitzung mit einer Weiterleitung auf die IAM-Anmeldeseite, also mit
+    Status 200 und HTML. Das sah wie eine leere Antwort aus und erzeugte
+    Folgefehler wie « Kategorie Message nicht gefunden » oder einen Abbruch
+    mitten in der Veröffentlichung.
+    """
+
+    def __init__(self, message: str = ""):
+        super().__init__(message or "La session e-Bichelchen a expiré. Reconnectez e-Bichelchen, puis réessayez.")
+
+
+def _response_is_login_redirect(final_url: str, text: str, content_type: str) -> bool:
+    """Erkennt die IAM-/e-Bichelchen-Anmeldeseite anstelle einer API-Antwort."""
+    url = str(final_url or "").lower()
+    if "/iam/" in url or "login" in url.rsplit("/", 1)[-1] or "sso" in url:
+        return True
+    ctype = str(content_type or "").lower()
+    body = str(text or "")
+    if "json" in ctype:
+        return False
+    head = body.lstrip()[:400].lower()
+    if head.startswith("<!doctype html") or head.startswith("<html"):
+        return True
+    return False
+
+
+def _forget_session(reason: str = "") -> None:
+    """Verwirft die gespeicherte Sitzung, damit die Oberfläche neu verbinden lässt."""
+    global LATEST_SESSION, LATEST_SESSION_AT
+    with LOCK:
+        LATEST_SESSION = None
+        LATEST_SESSION_AT = None
+
+
+def _load_subjects_endpoint_hint() -> str:
+    try:
+        data = json.loads(SUBJECTS_ENDPOINT_HINT_FILE.read_text(encoding="utf-8"))
+        value = data.get("subjectsPath") if isinstance(data, dict) else None
+        return str(value or "")
+    except Exception:
+        return ""
+
+
+def _save_subjects_endpoint_hint(method: str, base_path: str) -> None:
+    try:
+        _write_private_text(
+            SUBJECTS_ENDPOINT_HINT_FILE,
+            json.dumps({"subjectsMethod": method, "subjectsPath": base_path}, ensure_ascii=False),
+        )
+    except Exception:
+        pass
 
 
 def _json_response(handler: BaseHTTPRequestHandler, data, status: int = 200):
@@ -1009,7 +1105,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   } : null;
 
   const payload = {
-    version: "1.10.32",
+    version: "__HELPER_VERSION__",
     importedAt: new Date().toISOString(),
     pageUrl: location.href,
     groups,
@@ -1029,7 +1125,7 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   return JSON.stringify(payload);
 })()
 """
-    return js.replace("__SELECTED_GROUP_ID__", selected_literal)
+    return js.replace("__SELECTED_GROUP_ID__", selected_literal).replace("__HELPER_VERSION__", HELPER_VERSION)
 
 def find_ebichelchen_target() -> dict:
     targets = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json", timeout=3)
@@ -1432,16 +1528,32 @@ def _session_request(session: dict, method: str, path: str, json_body=None, time
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     status = 0
     text = ""
+    final_url = url
+    content_type = ""
     try:
         with urllib.request.urlopen(req, timeout=timeout, context=SSL_CONTEXT) as resp:
             status = int(resp.getcode() or 0)
+            final_url = str(resp.geturl() or url)
+            content_type = str(resp.headers.get("Content-Type") or "")
             text = resp.read().decode("utf-8", "replace")
     except Exception as exc:
         status = int(getattr(exc, "code", 0) or 0)
         try:
+            final_url = str(exc.geturl() or url)
+        except Exception:
+            final_url = url
+        try:
+            content_type = str(exc.headers.get("Content-Type") or "")
+        except Exception:
+            content_type = ""
+        try:
             text = exc.read().decode("utf-8", "replace")
         except Exception:
             text = str(exc)
+    # v311: Abgelaufene Sitzung sichtbar machen, statt eine leere Antwort weiterzureichen.
+    if status in (401, 403) or _response_is_login_redirect(final_url, text, content_type):
+        _forget_session("session-expired")
+        raise EbSessionExpired()
     try:
         body = json.loads(text) if text else None
     except Exception:
@@ -1592,11 +1704,19 @@ def _read_subjects_direct(session: dict, group: dict) -> tuple[list, str | None,
         bases[1] + "?groupIds=" + gid_q,
         bases[2] + "?groupId=" + gid_q,
     ]
+    # v311: Der zuletzt erfolgreiche Pfad kommt zuerst dran. Bei unveränderter
+    # e-Bichelchen-Version braucht das Lesen damit eine Anfrage statt bis zu neun.
+    hint = _load_subjects_endpoint_hint()
+    if hint:
+        hinted = hint.replace("__GID__", gid_q)
+        if hinted in get_paths:
+            get_paths = [hinted] + [p for p in get_paths if p != hinted]
     for path in get_paths:
         res = _session_request(session, "GET", path, timeout=3.0)
         subjects = _normalize_subjects_py(res.get("body"), "direct-get " + path) if res.get("ok") else []
         attempts.append({"url": path, "method": "GET", "status": res.get("status"), "subjects": len(subjects), "messageSubjectId": (_detect_message_subject_py(subjects) or {}).get("id")})
         if _detect_message_subject_py(subjects):
+            _save_subjects_endpoint_hint("GET", path.replace(gid_q, "__GID__"))
             return subjects, "direct-get " + path, attempts
     bodies = [{"groupId": gid}, {"groupIds": [gid]}, [gid], {"ids": [gid]}]
     for body in bodies:
@@ -2385,7 +2505,7 @@ def get_saved_session() -> dict:
     with LOCK:
         session = dict(LATEST_SESSION or {})
     if not session.get("cookieHeader"):
-        raise RuntimeError("Keine gespeicherte e-Bichelchen-Sitzung gefunden. Bitte einmal neu verbinden/einlesen.")
+        raise RuntimeError("Aucune session e-Bichelchen enregistrée. Reconnectez e-Bichelchen une fois.")
     return session
 
 
@@ -2423,15 +2543,32 @@ def direct_ebichelchen_request(method: str, path: str, fields: dict | None = Non
         data, content_type = encode_multipart_form(fields)
         headers["Content-Type"] = content_type
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    final_url = url
+    content_type = ""
     try:
         with urllib.request.urlopen(req, timeout=20, context=SSL_CONTEXT) as resp:
             status = resp.getcode()
             status_text = getattr(resp, "reason", "") or ""
+            final_url = str(resp.geturl() or url)
+            content_type = str(resp.headers.get("Content-Type") or "")
             text = resp.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as exc:
         status = exc.code
         status_text = getattr(exc, "reason", "") or ""
+        try:
+            final_url = str(exc.geturl() or url)
+        except Exception:
+            final_url = url
+        try:
+            content_type = str(exc.headers.get("Content-Type") or "")
+        except Exception:
+            content_type = ""
         text = exc.read().decode("utf-8", "replace")
+    # v311: Eine abgelaufene Sitzung darf nicht als « e-Bichelchen hat nicht gespeichert »
+    # erscheinen – sonst sucht der Benutzer den Fehler beim Eintrag statt bei der Anmeldung.
+    if int(status or 0) in (401, 403) or _response_is_login_redirect(final_url, text, content_type):
+        _forget_session("session-expired")
+        raise EbSessionExpired()
     try:
         body = json.loads(text) if text else None
     except Exception:
@@ -2795,6 +2932,20 @@ def create_single_test_entry(body: dict) -> dict:
     return record
 
 
+def check_session_alive() -> dict:
+    """Prüft die gespeicherte Sitzung mit einer einzigen billigen Anfrage.
+
+    v311: Wird vor einer Mehrfach-Veröffentlichung aufgerufen. Vorher konnte eine
+    zwischenzeitlich abgelaufene Sitzung erst beim zwölften von fünfundzwanzig
+    Schülern auffallen – mit elf bereits erstellten Einträgen.
+    """
+    session = get_saved_session()
+    groups, _ = _firefox_groups(session)
+    if not groups:
+        raise EbSessionExpired()
+    return {"alive": True, "groups": len(groups)}
+
+
 def create_bulk_entries(body: dict) -> dict:
     """Erstellt mehrere individuell adressierte Nachricht/Message-Einträge.
 
@@ -2802,6 +2953,16 @@ def create_bulk_entries(body: dict) -> dict:
     Test-Eintrag. Wenn unterwegs ein Fehler auftritt, werden bereits erstellte Einträge trotzdem
     in der Antwort zurückgegeben, damit sie sofort wieder gelöscht werden können.
     """
+    # v311: Zwei App-Tabs oder ein Doppelklick dürfen nicht zwei parallele Läufe starten.
+    if not PUBLISH_LOCK.acquire(blocking=False):
+        raise RuntimeError("Une publication est déjà en cours. Merci d'attendre qu'elle se termine.")
+    try:
+        return _create_bulk_entries_locked(body)
+    finally:
+        PUBLISH_LOCK.release()
+
+
+def _create_bulk_entries_locked(body: dict) -> dict:
     if not body.get("confirmBulk"):
         raise RuntimeError("Sicherheitsbestätigung für Mehrfach-Erstellung fehlt.")
     items = body.get("items") or []
@@ -2817,8 +2978,12 @@ def create_bulk_entries(body: dict) -> dict:
     if len(items) > 60:
         raise RuntimeError("Sicherheitsstopp: mehr als 60 Einträge auf einmal sind blockiert.")
 
+    # v311: Sitzung EINMAL vorab prüfen, statt mitten in der Liste zu scheitern.
+    check_session_alive()
+
     created: list[dict] = []
     error = None
+    session_expired = False
     for idx, item in enumerate(items, start=1):
         try:
             payload = validate_single_entry_payload((item or {}).get("payload") or {})
@@ -2857,13 +3022,20 @@ def create_bulk_entries(body: dict) -> dict:
         except Exception as exc:
             name = ((item or {}).get("student") or {}).get("fullName") or f"Eintrag {idx}"
             error = f"Abbruch bei {name}: {exc}"
+            session_expired = isinstance(exc, EbSessionExpired)
             break
 
     print("\n🟠 Mehrfach-Erstellung:")
     print(f"   erstellt: {len(created)} von {len(items)}")
     if error:
         print("   Fehler: " + error)
-        return {"ok": False, "created": created, "error": error, "requested": len(items)}
+        return {
+            "ok": False,
+            "created": created,
+            "error": error,
+            "requested": len(items),
+            "sessionExpired": bool(session_expired),
+        }
     return {"ok": True, "created": created, "requested": len(items)}
 
 
@@ -3581,7 +3753,7 @@ def _read_direct_with_session(session: dict, selected_group_id: int) -> dict:
     if not message_subject:
         raise RuntimeError("Die Kategorie « Nachricht / Message » konnte für die gewählte Klasse nicht gelesen werden.")
     return {
-        "version": "1.10.32",
+        "version": HELPER_VERSION,
         "importedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "pageUrl": EB_URL,
         "groups": groups,
@@ -3665,7 +3837,7 @@ def read_from_firefox_bidi(selected_group_id: int | None = None) -> dict:
             ),
         }
     )
-    payload["version"] = "1.10.32"
+    payload["version"] = HELPER_VERSION
     payload["pageUrl"] = url
     return payload
 
@@ -3758,7 +3930,7 @@ def reset_login_session(profile: str = "default", preserve_profile: bool = False
 
 
 # ===================================================================
-# v310 – native macOS login window (WKWebView / Safari WebKit)
+# v311 – native macOS login window (WKWebView / Safari WebKit)
 # -------------------------------------------------------------------
 # The main EntretienConnect UI remains in the user's default browser.
 # On macOS, e-Bichelchen is opened in a small native WKWebView window,
@@ -3784,13 +3956,13 @@ MAC_WK_SCRIPT_NAME = "EntretienConnect-WKWebView.js"
 # v308: The module remains a normal packaged file, but is also embedded here.
 # This makes the native login independent of App Translocation, updater caches,
 # and the directory from which server.py was started.
-MAC_WK_SCRIPT_B64 = "T2JqQy5pbXBvcnQoJ0NvY29hJyk7Ck9iakMuaW1wb3J0KCdXZWJLaXQnKTsKT2JqQy5pbXBvcnQoJ0ZvdW5kYXRpb24nKTsKCi8qCiAqIEVudHJldGllbkNvbm5lY3QgdjMxMCDigJMgbmF0aXZlIG1hY09TIGUtQmljaGVsY2hlbiBsb2dpbiB3aW5kb3cuCiAqIFJ1bnMgdGhyb3VnaCAvdXNyL2Jpbi9vc2FzY3JpcHQgLWwgSmF2YVNjcmlwdCBhbmQgdXNlcyBXS1dlYlZpZXcgKFNhZmFyaS9XZWJLaXQpLAogKiBzbyBubyBDaHJvbWUsIEVkZ2Ugb3IgcmVtb3RlbHkgY29udHJvbGxlZCBGaXJlZm94IGlzIHJlcXVpcmVkLgogKi8KCmxldCBFQ19BUFAgPSBudWxsOwpsZXQgRUNfV0lORE9XID0gbnVsbDsKbGV0IEVDX1dFQlZJRVcgPSBudWxsOwpsZXQgRUNfVElNRVIgPSBudWxsOwpsZXQgRUNfQlVTWSA9IGZhbHNlOwpsZXQgRUNfRklOSVNIRUQgPSBmYWxzZTsKbGV0IEVDX1NUQVRFX1BBVEggPSAnJzsKbGV0IEVDX1JFQURfRVhQUkVTU0lPTiA9ICcnOwpsZXQgRUNfU1RBUlRfVVJMID0gJyc7CmxldCBFQ19TVEFSVEVEX0FUID0gRGF0ZS5ub3coKTsKCmZ1bmN0aW9uIGpzVmFsdWUodmFsdWUpIHsKICB0cnkgewogICAgaWYgKHZhbHVlID09PSB1bmRlZmluZWQgfHwgdmFsdWUgPT09IG51bGwpIHJldHVybiBudWxsOwogICAgaWYgKHZhbHVlLmpzICE9PSB1bmRlZmluZWQpIHJldHVybiB2YWx1ZS5qczsKICB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLmRlZXBVbndyYXAodmFsdWUpOyB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLnVud3JhcCh2YWx1ZSk7IH0gY2F0Y2ggKF8pIHt9CiAgcmV0dXJuIFN0cmluZyh2YWx1ZSk7Cn0KCmZ1bmN0aW9uIHdyaXRlU3RhdGUob2JqKSB7CiAgdHJ5IHsKICAgIG9iaiA9IG9iaiB8fCB7fTsKICAgIGlmICghb2JqLnVwZGF0ZWRBdCkgb2JqLnVwZGF0ZWRBdCA9IG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKTsKICAgIGNvbnN0IHRleHQgPSAkKEpTT04uc3RyaW5naWZ5KG9iaikpOwogICAgY29uc3QgZXJyID0gUmVmKCk7CiAgICBjb25zdCBvayA9IHRleHQud3JpdGVUb0ZpbGVBdG9taWNhbGx5RW5jb2RpbmdFcnJvcigkKEVDX1NUQVRFX1BBVEgpLCB0cnVlLCAkLk5TVVRGOFN0cmluZ0VuY29kaW5nLCBlcnIpOwogICAgcmV0dXJuIEJvb2xlYW4ob2spOwogIH0gY2F0Y2ggKF8pIHsKICAgIHJldHVybiBmYWxzZTsKICB9Cn0KCmZ1bmN0aW9uIGZpbmlzaFdpdGhFcnJvcihtZXNzYWdlLCBkZXRhaWwpIHsKICBpZiAoRUNfRklOSVNIRUQpIHJldHVybjsKICBFQ19GSU5JU0hFRCA9IHRydWU7CiAgd3JpdGVTdGF0ZSh7CiAgICBzdGF0dXM6ICdlcnJvcicsCiAgICBlcnJvcjogU3RyaW5nKG1lc3NhZ2UgfHwgJ1dLV2ViVmlldyBlcnJvcicpLAogICAgZGV0YWlsOiBTdHJpbmcoZGV0YWlsIHx8ICcnKSwKICAgIHN0YXJ0ZWRBdDogbmV3IERhdGUoRUNfU1RBUlRFRF9BVCkudG9JU09TdHJpbmcoKQogIH0pOwogIHRyeSB7IGlmIChFQ19USU1FUikgRUNfVElNRVIuaW52YWxpZGF0ZTsgfSBjYXRjaCAoXykge30KICB0cnkgeyBpZiAoRUNfV0lORE9XKSBFQ19XSU5ET1cub3JkZXJPdXQobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgJC5OU1RocmVhZC5zbGVlcEZvclRpbWVJbnRlcnZhbCgwLjEyKTsKICB0cnkgeyBFQ19BUFAudGVybWluYXRlKG51bGwpOyB9IGNhdGNoIChfKSB7fQp9CgpmdW5jdGlvbiBlZHVjYXRpb25Db29raWVzKGNvb2tpZXMpIHsKICBjb25zdCBvdXQgPSBbXTsKICB0cnkgewogICAgY29uc3QgY291bnQgPSBOdW1iZXIoY29va2llcy5jb3VudCB8fCAwKTsKICAgIGZvciAobGV0IGkgPSAwOyBpIDwgY291bnQ7IGkrKykgewogICAgICBjb25zdCBjID0gY29va2llcy5vYmplY3RBdEluZGV4KGkpOwogICAgICBjb25zdCBkb21haW4gPSBTdHJpbmcoanNWYWx1ZShjLmRvbWFpbikgfHwgJycpOwogICAgICBjb25zdCBuYW1lID0gU3RyaW5nKGpzVmFsdWUoYy5uYW1lKSB8fCAnJyk7CiAgICAgIGlmICghbmFtZSB8fCBkb21haW4udG9Mb3dlckNhc2UoKS5pbmRleE9mKCdlZHVjYXRpb24ubHUnKSA8IDApIGNvbnRpbnVlOwogICAgICBvdXQucHVzaCh7CiAgICAgICAgbmFtZTogbmFtZSwKICAgICAgICB2YWx1ZTogU3RyaW5nKGpzVmFsdWUoYy52YWx1ZSkgfHwgJycpLAogICAgICAgIGRvbWFpbjogZG9tYWluLAogICAgICAgIHBhdGg6IFN0cmluZyhqc1ZhbHVlKGMucGF0aCkgfHwgJy8nKSwKICAgICAgICBzZWN1cmU6IEJvb2xlYW4oanNWYWx1ZShjLnNlY3VyZSkpLAogICAgICAgIGh0dHBPbmx5OiBCb29sZWFuKGpzVmFsdWUoYy5IVFRQT25seSkpCiAgICAgIH0pOwogICAgfQogIH0gY2F0Y2ggKF8pIHt9CiAgcmV0dXJuIG91dDsKfQoKZnVuY3Rpb24gZmluYWxpemVQYXlsb2FkKHBheWxvYWQsIHBhZ2VVcmwpIHsKICBpZiAoRUNfRklOSVNIRUQpIHJldHVybjsKICBFQ19GSU5JU0hFRCA9IHRydWU7CgogIGNvbnN0IHN0b3JlID0gRUNfV0VCVklFVy5jb25maWd1cmF0aW9uLndlYnNpdGVEYXRhU3RvcmUuaHR0cENvb2tpZVN0b3JlOwogIHN0b3JlLmdldEFsbENvb2tpZXNXaXRoQ29tcGxldGlvbkhhbmRsZXIoZnVuY3Rpb24oY29va2llcykgewogICAgbGV0IGNvb2tpZVJvd3MgPSBlZHVjYXRpb25Db29raWVzKGNvb2tpZXMpOwogICAgRUNfV0VCVklFVy5ldmFsdWF0ZUphdmFTY3JpcHRDb21wbGV0aW9uSGFuZGxlcigkKCduYXZpZ2F0b3IudXNlckFnZW50IHx8ICJNb3ppbGxhLzUuMCInKSwgZnVuY3Rpb24odWFWYWx1ZSwgdWFFcnJvcikgewogICAgICBjb25zdCB1YSA9IFN0cmluZyhqc1ZhbHVlKHVhVmFsdWUpIHx8ICdNb3ppbGxhLzUuMCAoTWFjaW50b3NoKSBBcHBsZVdlYktpdCcpOwogICAgICBjb25zdCBtZXJnZWQgPSB7fTsKICAgICAgY29va2llUm93cy5mb3JFYWNoKGZ1bmN0aW9uKGMpIHsgbWVyZ2VkW2MubmFtZV0gPSBjLnZhbHVlOyB9KTsKICAgICAgY29uc3QgY29va2llSGVhZGVyID0gT2JqZWN0LmtleXMobWVyZ2VkKS5tYXAoZnVuY3Rpb24oaykgeyByZXR1cm4gayArICc9JyArIG1lcmdlZFtrXTsgfSkuam9pbignOyAnKTsKICAgICAgaWYgKCFjb29raWVIZWFkZXIpIHsKICAgICAgICBFQ19GSU5JU0hFRCA9IGZhbHNlOwogICAgICAgIHdyaXRlU3RhdGUoewogICAgICAgICAgc3RhdHVzOiAnd2FpdGluZycsCiAgICAgICAgICBzdGFnZTogJ3Nlc3Npb24nLAogICAgICAgICAgbWVzc2FnZTogJ2UtQmljaGVsY2hlbiBpcyBvcGVuLCBidXQgdGhlIGF1dGhlbnRpY2F0ZWQgc2Vzc2lvbiBpcyBub3QgYXZhaWxhYmxlIHlldC4nLAogICAgICAgICAgcGFnZVVybDogU3RyaW5nKHBhZ2VVcmwgfHwgJycpCiAgICAgICAgfSk7CiAgICAgICAgcmV0dXJuOwogICAgICB9CiAgICAgIHRyeSB7IGlmIChFQ19USU1FUikgRUNfVElNRVIuaW52YWxpZGF0ZTsgfSBjYXRjaCAoXykge30KICAgICAgd3JpdGVTdGF0ZSh7CiAgICAgICAgc3RhdHVzOiAncmVhZHknLAogICAgICAgIHBhZ2VVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKSwKICAgICAgICBkYXRhOiBwYXlsb2FkLAogICAgICAgIHNlc3Npb246IHsKICAgICAgICAgIGNvb2tpZUhlYWRlcjogY29va2llSGVhZGVyLAogICAgICAgICAgY29va2llTmFtZXM6IE9iamVjdC5rZXlzKG1lcmdlZCkuc29ydCgpLAogICAgICAgICAgY29va2llczogY29va2llUm93cywKICAgICAgICAgIHVzZXJBZ2VudDogdWEsCiAgICAgICAgICBjYXB0dXJlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCksCiAgICAgICAgICB0YXJnZXRVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKSwKICAgICAgICAgIGJyb3dzZXI6ICdtYWNPUyBXS1dlYlZpZXcgdjMxMCcKICAgICAgICB9LAogICAgICAgIGVuZ2luZTogJ1dLV2ViVmlldy12MzEwJywKICAgICAgICBzdGFydGVkQXQ6IG5ldyBEYXRlKEVDX1NUQVJURURfQVQpLnRvSVNPU3RyaW5nKCkKICAgICAgfSk7CiAgICAgIHRyeSB7IEVDX1dJTkRPVy5vcmRlck91dChudWxsKTsgfSBjYXRjaCAoXykge30KICAgICAgJC5OU1RocmVhZC5zbGVlcEZvclRpbWVJbnRlcnZhbCgwLjE4KTsKICAgICAgdHJ5IHsgRUNfQVBQLnRlcm1pbmF0ZShudWxsKTsgfSBjYXRjaCAoXykge30KICAgIH0pOwogIH0pOwp9CgpmdW5jdGlvbiBidWlsZENvbnRyb2xsZXJTY3JpcHQoKSB7CiAgLy8gVGhlIHJlYWQgZXhwcmVzc2lvbiBpcyBhbiBhc3luYyBJSUZFLiBXZSBsYXVuY2ggaXQgb25jZSBhbmQgc3RvcmUgaXRzIHJlc3VsdAogIC8vIGluIGEgcGFnZS1nbG9iYWwgb2JqZWN0LiBldmFsdWF0ZUphdmFTY3JpcHQgaXRzZWxmIG9ubHkgcmV0dXJucyBhIHN5bmNocm9ub3VzCiAgLy8gc3RhdHVzIHNuYXBzaG90LCB3aGljaCB3b3JrcyBvbiBvbGRlciBXS1dlYlZpZXcgdmVyc2lvbnMgYXMgd2VsbC4KICByZXR1cm4gYCgoKSA9PiB7CiAgICBjb25zdCBocmVmID0gU3RyaW5nKGxvY2F0aW9uLmhyZWYgfHwgJycpOwogICAgY29uc3Qgb25FYiA9IGhyZWYuaW5kZXhPZignL2ViaWNoZWxjaGVuL2FwcC8nKSA+PSAwOwogICAgaWYgKCFvbkViKSByZXR1cm4gSlNPTi5zdHJpbmdpZnkoe3BoYXNlOidsb2dpbicsdXJsOmhyZWZ9KTsKICAgIGlmICghd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMxMCkgewogICAgICB3aW5kb3cuX19lbnRyZXRpZW5Db25uZWN0TmF0aXZlMzEwID0ge3BoYXNlOidzdGFydGluZycsdXJsOmhyZWYsZXJyb3I6JycsZGF0YTpudWxsLHN0YXJ0ZWRBdDpEYXRlLm5vdygpfTsKICAgICAgY29uc3QgcyA9IHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTA7CiAgICAgIHMucGhhc2UgPSAncmVhZGluZyc7CiAgICAgIFByb21pc2UucmVzb2x2ZSgke0VDX1JFQURfRVhQUkVTU0lPTn0pCiAgICAgICAgLnRoZW4odiA9PiB7IHMuZGF0YSA9IHY7IHMucGhhc2UgPSAncmVhZHknOyBzLnVybCA9IFN0cmluZyhsb2NhdGlvbi5ocmVmIHx8IGhyZWYpOyB9KQogICAgICAgIC5jYXRjaChlID0+IHsKICAgICAgICAgIHMuZXJyb3IgPSBTdHJpbmcoZSAmJiAoZS5tZXNzYWdlIHx8IGUpIHx8ICd1bmtub3duIGVycm9yJyk7CiAgICAgICAgICBzLnBoYXNlID0gJ3dhaXRpbmcnOwogICAgICAgICAgcy51cmwgPSBTdHJpbmcobG9jYXRpb24uaHJlZiB8fCBocmVmKTsKICAgICAgICAgIHNldFRpbWVvdXQoKCkgPT4geyB0cnkgeyBkZWxldGUgd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMxMDsgfSBjYXRjaCAoXykge30gfSwgMTIwMCk7CiAgICAgICAgfSk7CiAgICB9CiAgICBjb25zdCBzID0gd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMxMDsKICAgIHJldHVybiBKU09OLnN0cmluZ2lmeSh7cGhhc2U6cy5waGFzZSx1cmw6U3RyaW5nKHMudXJsfHxocmVmKSxlcnJvcjpTdHJpbmcocy5lcnJvcnx8JycpLGRhdGE6cy5kYXRhfHxudWxsLGFnZTpEYXRlLm5vdygpLU51bWJlcihzLnN0YXJ0ZWRBdHx8RGF0ZS5ub3coKSl9KTsKICB9KSgpYDsKfQoKZnVuY3Rpb24gcG9sbFdlYlZpZXcoKSB7CiAgaWYgKEVDX0ZJTklTSEVEIHx8IEVDX0JVU1kgfHwgIUVDX1dFQlZJRVcpIHJldHVybjsKICB0cnkgewogICAgaWYgKEVDX1dJTkRPVyAmJiAhQm9vbGVhbihFQ19XSU5ET1cuaXNWaXNpYmxlKSkgewogICAgICBFQ19GSU5JU0hFRCA9IHRydWU7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonY2xvc2VkJywgbWVzc2FnZTonTG9naW4gd2luZG93IGNsb3NlZCBieSB1c2VyLid9KTsKICAgICAgdHJ5IHsgRUNfQVBQLnRlcm1pbmF0ZShudWxsKTsgfSBjYXRjaCAoXykge30KICAgICAgcmV0dXJuOwogICAgfQogIH0gY2F0Y2ggKF8pIHt9CgogIEVDX0JVU1kgPSB0cnVlOwogIGNvbnN0IHNjcmlwdCA9IGJ1aWxkQ29udHJvbGxlclNjcmlwdCgpOwogIEVDX1dFQlZJRVcuZXZhbHVhdGVKYXZhU2NyaXB0Q29tcGxldGlvbkhhbmRsZXIoJChzY3JpcHQpLCBmdW5jdGlvbihyZXN1bHQsIGVycm9yKSB7CiAgICBFQ19CVVNZID0gZmFsc2U7CiAgICBpZiAoRUNfRklOSVNIRUQpIHJldHVybjsKICAgIGlmIChlcnJvcikgewogICAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J3dhaXRpbmcnLCBzdGFnZTonbmF2aWdhdGlvbicsIGRldGFpbDpTdHJpbmcoanNWYWx1ZShlcnJvci5sb2NhbGl6ZWREZXNjcmlwdGlvbikgfHwgZXJyb3IpLCBwYWdlVXJsOicnfSk7CiAgICAgIHJldHVybjsKICAgIH0KICAgIGxldCBvdXRlciA9IG51bGw7CiAgICB0cnkgeyBvdXRlciA9IEpTT04ucGFyc2UoU3RyaW5nKGpzVmFsdWUocmVzdWx0KSB8fCAne30nKSk7IH0gY2F0Y2ggKF8pIHsgb3V0ZXIgPSBudWxsOyB9CiAgICBpZiAoIW91dGVyKSByZXR1cm47CiAgICBjb25zdCBwaGFzZSA9IFN0cmluZyhvdXRlci5waGFzZSB8fCAnd2FpdGluZycpOwogICAgY29uc3QgcGFnZVVybCA9IFN0cmluZyhvdXRlci51cmwgfHwgJycpOwogICAgaWYgKHBoYXNlID09PSAnbG9naW4nKSB7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidsb2dpbicsIHBhZ2VVcmw6cGFnZVVybCwgZW5naW5lOidXS1dlYlZpZXcnfSk7CiAgICAgIHJldHVybjsKICAgIH0KICAgIGlmIChwaGFzZSA9PT0gJ3JlYWRpbmcnIHx8IHBoYXNlID09PSAnc3RhcnRpbmcnKSB7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidyZWFkaW5nJywgcGFnZVVybDpwYWdlVXJsLCBlbmdpbmU6J1dLV2ViVmlldyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKHBoYXNlID09PSAnd2FpdGluZycpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J2xvYWRpbmcnLCBwYWdlVXJsOnBhZ2VVcmwsIGRldGFpbDpTdHJpbmcob3V0ZXIuZXJyb3IgfHwgJycpLCBlbmdpbmU6J1dLV2ViVmlldyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKHBoYXNlID09PSAncmVhZHknICYmIG91dGVyLmRhdGEpIHsKICAgICAgbGV0IHBheWxvYWQgPSBudWxsOwogICAgICB0cnkgewogICAgICAgIHBheWxvYWQgPSB0eXBlb2Ygb3V0ZXIuZGF0YSA9PT0gJ3N0cmluZycgPyBKU09OLnBhcnNlKG91dGVyLmRhdGEpIDogb3V0ZXIuZGF0YTsKICAgICAgfSBjYXRjaCAoZSkgewogICAgICAgIGZpbmlzaFdpdGhFcnJvcignVGhlIGUtQmljaGVsY2hlbiBkYXRhIGNvdWxkIG5vdCBiZSBkZWNvZGVkLicsIFN0cmluZyhlKSk7CiAgICAgICAgcmV0dXJuOwogICAgICB9CiAgICAgIGZpbmFsaXplUGF5bG9hZChwYXlsb2FkLCBwYWdlVXJsKTsKICAgIH0KICB9KTsKfQoKZnVuY3Rpb24gcnVuKGFyZ3YpIHsKICB0cnkgewogICAgaWYgKCFhcmd2IHx8IGFyZ3YubGVuZ3RoIDwgMykgdGhyb3cgbmV3IEVycm9yKCdNaXNzaW5nIG5hdGl2ZSBsb2dpbiBhcmd1bWVudHMuJyk7CiAgICBFQ19TVEFURV9QQVRIID0gU3RyaW5nKGFyZ3ZbMF0pOwogICAgY29uc3QgZXhwcmVzc2lvblBhdGggPSBTdHJpbmcoYXJndlsxXSk7CiAgICBFQ19TVEFSVF9VUkwgPSBTdHJpbmcoYXJndlsyXSk7CiAgICBjb25zdCByZWFkRXJyID0gUmVmKCk7CiAgICBjb25zdCByZWFkT2JqID0gJC5OU1N0cmluZy5zdHJpbmdXaXRoQ29udGVudHNPZkZpbGVFbmNvZGluZ0Vycm9yKCQoZXhwcmVzc2lvblBhdGgpLCAkLk5TVVRGOFN0cmluZ0VuY29kaW5nLCByZWFkRXJyKTsKICAgIEVDX1JFQURfRVhQUkVTU0lPTiA9IFN0cmluZyhqc1ZhbHVlKHJlYWRPYmopIHx8ICcnKTsKICAgIGlmICghRUNfUkVBRF9FWFBSRVNTSU9OKSB0aHJvdyBuZXcgRXJyb3IoJ1RoZSBlLUJpY2hlbGNoZW4gcmVhZCBzY3JpcHQgaXMgZW1wdHkuJyk7CgogICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidzdGFydGluZycsIGVuZ2luZTonV0tXZWJWaWV3Jywgc3RhcnRlZEF0Om5ldyBEYXRlKEVDX1NUQVJURURfQVQpLnRvSVNPU3RyaW5nKCl9KTsKCiAgICBFQ19BUFAgPSAkLk5TQXBwbGljYXRpb24uc2hhcmVkQXBwbGljYXRpb247CiAgICBFQ19BUFAuc2V0QWN0aXZhdGlvblBvbGljeSgkLk5TQXBwbGljYXRpb25BY3RpdmF0aW9uUG9saWN5UmVndWxhcik7CgogICAgY29uc3QgcmVjdCA9ICQuTlNNYWtlUmVjdCgwLCAwLCAxMDgwLCA3NjApOwogICAgY29uc3Qgc3R5bGUgPSAkLk5TV2luZG93U3R5bGVNYXNrVGl0bGVkIHwgJC5OU1dpbmRvd1N0eWxlTWFza0Nsb3NhYmxlIHwgJC5OU1dpbmRvd1N0eWxlTWFza01pbmlhdHVyaXphYmxlIHwgJC5OU1dpbmRvd1N0eWxlTWFza1Jlc2l6YWJsZTsKICAgIEVDX1dJTkRPVyA9ICQuTlNXaW5kb3cuYWxsb2MuaW5pdFdpdGhDb250ZW50UmVjdFN0eWxlTWFza0JhY2tpbmdEZWZlcihyZWN0LCBzdHlsZSwgJC5OU0JhY2tpbmdTdG9yZUJ1ZmZlcmVkLCBmYWxzZSk7CiAgICBFQ19XSU5ET1cuc2V0VGl0bGUoJCgnZS1CaWNoZWxjaGVuIOKAkyBFbnRyZXRpZW5Db25uZWN0JykpOwogICAgRUNfV0lORE9XLnNldFJlbGVhc2VkV2hlbkNsb3NlZChmYWxzZSk7CiAgICBFQ19XSU5ET1cuY2VudGVyOwoKICAgIGNvbnN0IGNvbmZpZyA9ICQuV0tXZWJWaWV3Q29uZmlndXJhdGlvbi5hbGxvYy5pbml0OwogICAgY29uZmlnLndlYnNpdGVEYXRhU3RvcmUgPSAkLldLV2Vic2l0ZURhdGFTdG9yZS5kZWZhdWx0RGF0YVN0b3JlOwogICAgRUNfV0VCVklFVyA9ICQuV0tXZWJWaWV3LmFsbG9jLmluaXRXaXRoRnJhbWVDb25maWd1cmF0aW9uKHJlY3QsIGNvbmZpZyk7CiAgICBFQ19XRUJWSUVXLnNldEFsbG93c0JhY2tGb3J3YXJkTmF2aWdhdGlvbkdlc3R1cmVzKHRydWUpOwogICAgRUNfV0lORE9XLnNldENvbnRlbnRWaWV3KEVDX1dFQlZJRVcpOwogICAgRUNfV0lORE9XLm1ha2VLZXlBbmRPcmRlckZyb250KG51bGwpOwogICAgRUNfQVBQLmFjdGl2YXRlSWdub3JpbmdPdGhlckFwcHModHJ1ZSk7CgogICAgY29uc3QgdXJsID0gJC5OU1VSTC5VUkxXaXRoU3RyaW5nKCQoRUNfU1RBUlRfVVJMKSk7CiAgICBpZiAoIXVybCkgdGhyb3cgbmV3IEVycm9yKCdJbnZhbGlkIGUtQmljaGVsY2hlbiBVUkwuJyk7CiAgICBjb25zdCByZXF1ZXN0ID0gJC5OU1VSTFJlcXVlc3QucmVxdWVzdFdpdGhVUkwodXJsKTsKICAgIEVDX1dFQlZJRVcubG9hZFJlcXVlc3QocmVxdWVzdCk7CgogICAgRUNfVElNRVIgPSAkLk5TVGltZXIuc2NoZWR1bGVkVGltZXJXaXRoVGltZUludGVydmFsUmVwZWF0c0Jsb2NrKDAuOCwgdHJ1ZSwgZnVuY3Rpb24oXykgeyBwb2xsV2ViVmlldygpOyB9KTsKICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidsb2dpbicsIGVuZ2luZTonV0tXZWJWaWV3JywgcGFnZVVybDpFQ19TVEFSVF9VUkx9KTsKICAgIEVDX0FQUC5ydW47CiAgfSBjYXRjaCAoZSkgewogICAgZmluaXNoV2l0aEVycm9yKCdUaGUgbWFjT1MgbG9naW4gd2luZG93IGNvdWxkIG5vdCBiZSBzdGFydGVkLicsIFN0cmluZyhlICYmIChlLm1lc3NhZ2UgfHwgZSkgfHwgZSkpOwogIH0KfQo="
+MAC_WK_SCRIPT_B64 = "T2JqQy5pbXBvcnQoJ0NvY29hJyk7Ck9iakMuaW1wb3J0KCdXZWJLaXQnKTsKT2JqQy5pbXBvcnQoJ0ZvdW5kYXRpb24nKTsKCi8qCiAqIEVudHJldGllbkNvbm5lY3QgdjMxMSDigJMgbmF0aXZlIG1hY09TIGUtQmljaGVsY2hlbiBsb2dpbiB3aW5kb3cuCiAqIFJ1bnMgdGhyb3VnaCAvdXNyL2Jpbi9vc2FzY3JpcHQgLWwgSmF2YVNjcmlwdCBhbmQgdXNlcyBXS1dlYlZpZXcgKFNhZmFyaS9XZWJLaXQpLAogKiBzbyBubyBDaHJvbWUsIEVkZ2Ugb3IgcmVtb3RlbHkgY29udHJvbGxlZCBGaXJlZm94IGlzIHJlcXVpcmVkLgogKi8KCmxldCBFQ19BUFAgPSBudWxsOwpsZXQgRUNfV0lORE9XID0gbnVsbDsKbGV0IEVDX1dFQlZJRVcgPSBudWxsOwpsZXQgRUNfVElNRVIgPSBudWxsOwpsZXQgRUNfQlVTWSA9IGZhbHNlOwpsZXQgRUNfRklOSVNIRUQgPSBmYWxzZTsKbGV0IEVDX1NUQVRFX1BBVEggPSAnJzsKbGV0IEVDX1JFQURfRVhQUkVTU0lPTiA9ICcnOwpsZXQgRUNfU1RBUlRfVVJMID0gJyc7CmxldCBFQ19TVEFSVEVEX0FUID0gRGF0ZS5ub3coKTsKCmZ1bmN0aW9uIGpzVmFsdWUodmFsdWUpIHsKICB0cnkgewogICAgaWYgKHZhbHVlID09PSB1bmRlZmluZWQgfHwgdmFsdWUgPT09IG51bGwpIHJldHVybiBudWxsOwogICAgaWYgKHZhbHVlLmpzICE9PSB1bmRlZmluZWQpIHJldHVybiB2YWx1ZS5qczsKICB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLmRlZXBVbndyYXAodmFsdWUpOyB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLnVud3JhcCh2YWx1ZSk7IH0gY2F0Y2ggKF8pIHt9CiAgcmV0dXJuIFN0cmluZyh2YWx1ZSk7Cn0KCmZ1bmN0aW9uIHdyaXRlU3RhdGUob2JqKSB7CiAgdHJ5IHsKICAgIG9iaiA9IG9iaiB8fCB7fTsKICAgIGlmICghb2JqLnVwZGF0ZWRBdCkgb2JqLnVwZGF0ZWRBdCA9IG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKTsKICAgIGNvbnN0IHRleHQgPSAkKEpTT04uc3RyaW5naWZ5KG9iaikpOwogICAgY29uc3QgZXJyID0gUmVmKCk7CiAgICBjb25zdCBvayA9IHRleHQud3JpdGVUb0ZpbGVBdG9taWNhbGx5RW5jb2RpbmdFcnJvcigkKEVDX1NUQVRFX1BBVEgpLCB0cnVlLCAkLk5TVVRGOFN0cmluZ0VuY29kaW5nLCBlcnIpOwogICAgLy8gdjMxMTogVGhpcyBmaWxlIGNhbiBjYXJyeSBhIGxpdmUgZS1CaWNoZWxjaGVuIHNlc3Npb24gY29va2llLiB3cml0ZVRvRmlsZeKApgogICAgLy8gY3JlYXRlcyBpdCB3aXRoIHRoZSBkZWZhdWx0IG1hc2sgKDA2NDQpOyByZXN0cmljdCBpdCB0byB0aGUgY3VycmVudCB1c2VyLgogICAgdHJ5IHsKICAgICAgJC5OU0ZpbGVNYW5hZ2VyLmRlZmF1bHRNYW5hZ2VyLnNldEF0dHJpYnV0ZXNPZkl0ZW1BdFBhdGhFcnJvcigKICAgICAgICAkKHsgTlNGaWxlUG9zaXhQZXJtaXNzaW9uczogMzg0IH0pLCAkKEVDX1NUQVRFX1BBVEgpLCBSZWYoKQogICAgICApOwogICAgfSBjYXRjaCAoXykge30KICAgIHJldHVybiBCb29sZWFuKG9rKTsKICB9IGNhdGNoIChfKSB7CiAgICByZXR1cm4gZmFsc2U7CiAgfQp9CgpmdW5jdGlvbiBmaW5pc2hXaXRoRXJyb3IobWVzc2FnZSwgZGV0YWlsKSB7CiAgaWYgKEVDX0ZJTklTSEVEKSByZXR1cm47CiAgRUNfRklOSVNIRUQgPSB0cnVlOwogIHdyaXRlU3RhdGUoewogICAgc3RhdHVzOiAnZXJyb3InLAogICAgZXJyb3I6IFN0cmluZyhtZXNzYWdlIHx8ICdXS1dlYlZpZXcgZXJyb3InKSwKICAgIGRldGFpbDogU3RyaW5nKGRldGFpbCB8fCAnJyksCiAgICBzdGFydGVkQXQ6IG5ldyBEYXRlKEVDX1NUQVJURURfQVQpLnRvSVNPU3RyaW5nKCkKICB9KTsKICB0cnkgeyBpZiAoRUNfVElNRVIpIEVDX1RJTUVSLmludmFsaWRhdGU7IH0gY2F0Y2ggKF8pIHt9CiAgdHJ5IHsgaWYgKEVDX1dJTkRPVykgRUNfV0lORE9XLm9yZGVyT3V0KG51bGwpOyB9IGNhdGNoIChfKSB7fQogICQuTlNUaHJlYWQuc2xlZXBGb3JUaW1lSW50ZXJ2YWwoMC4xMik7CiAgdHJ5IHsgRUNfQVBQLnRlcm1pbmF0ZShudWxsKTsgfSBjYXRjaCAoXykge30KfQoKZnVuY3Rpb24gZWR1Y2F0aW9uQ29va2llcyhjb29raWVzKSB7CiAgY29uc3Qgb3V0ID0gW107CiAgdHJ5IHsKICAgIGNvbnN0IGNvdW50ID0gTnVtYmVyKGNvb2tpZXMuY291bnQgfHwgMCk7CiAgICBmb3IgKGxldCBpID0gMDsgaSA8IGNvdW50OyBpKyspIHsKICAgICAgY29uc3QgYyA9IGNvb2tpZXMub2JqZWN0QXRJbmRleChpKTsKICAgICAgY29uc3QgZG9tYWluID0gU3RyaW5nKGpzVmFsdWUoYy5kb21haW4pIHx8ICcnKTsKICAgICAgY29uc3QgbmFtZSA9IFN0cmluZyhqc1ZhbHVlKGMubmFtZSkgfHwgJycpOwogICAgICBpZiAoIW5hbWUgfHwgZG9tYWluLnRvTG93ZXJDYXNlKCkuaW5kZXhPZignZWR1Y2F0aW9uLmx1JykgPCAwKSBjb250aW51ZTsKICAgICAgb3V0LnB1c2goewogICAgICAgIG5hbWU6IG5hbWUsCiAgICAgICAgdmFsdWU6IFN0cmluZyhqc1ZhbHVlKGMudmFsdWUpIHx8ICcnKSwKICAgICAgICBkb21haW46IGRvbWFpbiwKICAgICAgICBwYXRoOiBTdHJpbmcoanNWYWx1ZShjLnBhdGgpIHx8ICcvJyksCiAgICAgICAgc2VjdXJlOiBCb29sZWFuKGpzVmFsdWUoYy5zZWN1cmUpKSwKICAgICAgICBodHRwT25seTogQm9vbGVhbihqc1ZhbHVlKGMuSFRUUE9ubHkpKQogICAgICB9KTsKICAgIH0KICB9IGNhdGNoIChfKSB7fQogIHJldHVybiBvdXQ7Cn0KCmZ1bmN0aW9uIGZpbmFsaXplUGF5bG9hZChwYXlsb2FkLCBwYWdlVXJsKSB7CiAgaWYgKEVDX0ZJTklTSEVEKSByZXR1cm47CiAgRUNfRklOSVNIRUQgPSB0cnVlOwoKICBjb25zdCBzdG9yZSA9IEVDX1dFQlZJRVcuY29uZmlndXJhdGlvbi53ZWJzaXRlRGF0YVN0b3JlLmh0dHBDb29raWVTdG9yZTsKICBzdG9yZS5nZXRBbGxDb29raWVzV2l0aENvbXBsZXRpb25IYW5kbGVyKGZ1bmN0aW9uKGNvb2tpZXMpIHsKICAgIGxldCBjb29raWVSb3dzID0gZWR1Y2F0aW9uQ29va2llcyhjb29raWVzKTsKICAgIEVDX1dFQlZJRVcuZXZhbHVhdGVKYXZhU2NyaXB0Q29tcGxldGlvbkhhbmRsZXIoJCgnbmF2aWdhdG9yLnVzZXJBZ2VudCB8fCAiTW96aWxsYS81LjAiJyksIGZ1bmN0aW9uKHVhVmFsdWUsIHVhRXJyb3IpIHsKICAgICAgY29uc3QgdWEgPSBTdHJpbmcoanNWYWx1ZSh1YVZhbHVlKSB8fCAnTW96aWxsYS81LjAgKE1hY2ludG9zaCkgQXBwbGVXZWJLaXQnKTsKICAgICAgY29uc3QgbWVyZ2VkID0ge307CiAgICAgIGNvb2tpZVJvd3MuZm9yRWFjaChmdW5jdGlvbihjKSB7IG1lcmdlZFtjLm5hbWVdID0gYy52YWx1ZTsgfSk7CiAgICAgIGNvbnN0IGNvb2tpZUhlYWRlciA9IE9iamVjdC5rZXlzKG1lcmdlZCkubWFwKGZ1bmN0aW9uKGspIHsgcmV0dXJuIGsgKyAnPScgKyBtZXJnZWRba107IH0pLmpvaW4oJzsgJyk7CiAgICAgIGlmICghY29va2llSGVhZGVyKSB7CiAgICAgICAgRUNfRklOSVNIRUQgPSBmYWxzZTsKICAgICAgICB3cml0ZVN0YXRlKHsKICAgICAgICAgIHN0YXR1czogJ3dhaXRpbmcnLAogICAgICAgICAgc3RhZ2U6ICdzZXNzaW9uJywKICAgICAgICAgIG1lc3NhZ2U6ICdlLUJpY2hlbGNoZW4gaXMgb3BlbiwgYnV0IHRoZSBhdXRoZW50aWNhdGVkIHNlc3Npb24gaXMgbm90IGF2YWlsYWJsZSB5ZXQuJywKICAgICAgICAgIHBhZ2VVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKQogICAgICAgIH0pOwogICAgICAgIHJldHVybjsKICAgICAgfQogICAgICB0cnkgeyBpZiAoRUNfVElNRVIpIEVDX1RJTUVSLmludmFsaWRhdGU7IH0gY2F0Y2ggKF8pIHt9CiAgICAgIHdyaXRlU3RhdGUoewogICAgICAgIHN0YXR1czogJ3JlYWR5JywKICAgICAgICBwYWdlVXJsOiBTdHJpbmcocGFnZVVybCB8fCAnJyksCiAgICAgICAgZGF0YTogcGF5bG9hZCwKICAgICAgICBzZXNzaW9uOiB7CiAgICAgICAgICBjb29raWVIZWFkZXI6IGNvb2tpZUhlYWRlciwKICAgICAgICAgIGNvb2tpZU5hbWVzOiBPYmplY3Qua2V5cyhtZXJnZWQpLnNvcnQoKSwKICAgICAgICAgIGNvb2tpZXM6IGNvb2tpZVJvd3MsCiAgICAgICAgICB1c2VyQWdlbnQ6IHVhLAogICAgICAgICAgY2FwdHVyZWRBdDogbmV3IERhdGUoKS50b0lTT1N0cmluZygpLAogICAgICAgICAgdGFyZ2V0VXJsOiBTdHJpbmcocGFnZVVybCB8fCAnJyksCiAgICAgICAgICBicm93c2VyOiAnbWFjT1MgV0tXZWJWaWV3IHYzMTAnCiAgICAgICAgfSwKICAgICAgICBlbmdpbmU6ICdXS1dlYlZpZXctdjMxMCcsCiAgICAgICAgc3RhcnRlZEF0OiBuZXcgRGF0ZShFQ19TVEFSVEVEX0FUKS50b0lTT1N0cmluZygpCiAgICAgIH0pOwogICAgICB0cnkgeyBFQ19XSU5ET1cub3JkZXJPdXQobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgICAgICQuTlNUaHJlYWQuc2xlZXBGb3JUaW1lSW50ZXJ2YWwoMC4xOCk7CiAgICAgIHRyeSB7IEVDX0FQUC50ZXJtaW5hdGUobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgICB9KTsKICB9KTsKfQoKZnVuY3Rpb24gYnVpbGRDb250cm9sbGVyU2NyaXB0KCkgewogIC8vIFRoZSByZWFkIGV4cHJlc3Npb24gaXMgYW4gYXN5bmMgSUlGRS4gV2UgbGF1bmNoIGl0IG9uY2UgYW5kIHN0b3JlIGl0cyByZXN1bHQKICAvLyBpbiBhIHBhZ2UtZ2xvYmFsIG9iamVjdC4gZXZhbHVhdGVKYXZhU2NyaXB0IGl0c2VsZiBvbmx5IHJldHVybnMgYSBzeW5jaHJvbm91cwogIC8vIHN0YXR1cyBzbmFwc2hvdCwgd2hpY2ggd29ya3Mgb24gb2xkZXIgV0tXZWJWaWV3IHZlcnNpb25zIGFzIHdlbGwuCiAgcmV0dXJuIGAoKCkgPT4gewogICAgY29uc3QgaHJlZiA9IFN0cmluZyhsb2NhdGlvbi5ocmVmIHx8ICcnKTsKICAgIGNvbnN0IG9uRWIgPSBocmVmLmluZGV4T2YoJy9lYmljaGVsY2hlbi9hcHAvJykgPj0gMDsKICAgIGlmICghb25FYikgcmV0dXJuIEpTT04uc3RyaW5naWZ5KHtwaGFzZTonbG9naW4nLHVybDpocmVmfSk7CiAgICBpZiAoIXdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTApIHsKICAgICAgd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMxMCA9IHtwaGFzZTonc3RhcnRpbmcnLHVybDpocmVmLGVycm9yOicnLGRhdGE6bnVsbCxzdGFydGVkQXQ6RGF0ZS5ub3coKX07CiAgICAgIGNvbnN0IHMgPSB3aW5kb3cuX19lbnRyZXRpZW5Db25uZWN0TmF0aXZlMzEwOwogICAgICBzLnBoYXNlID0gJ3JlYWRpbmcnOwogICAgICBQcm9taXNlLnJlc29sdmUoJHtFQ19SRUFEX0VYUFJFU1NJT059KQogICAgICAgIC50aGVuKHYgPT4geyBzLmRhdGEgPSB2OyBzLnBoYXNlID0gJ3JlYWR5Jzsgcy51cmwgPSBTdHJpbmcobG9jYXRpb24uaHJlZiB8fCBocmVmKTsgfSkKICAgICAgICAuY2F0Y2goZSA9PiB7CiAgICAgICAgICBzLmVycm9yID0gU3RyaW5nKGUgJiYgKGUubWVzc2FnZSB8fCBlKSB8fCAndW5rbm93biBlcnJvcicpOwogICAgICAgICAgcy5waGFzZSA9ICd3YWl0aW5nJzsKICAgICAgICAgIHMudXJsID0gU3RyaW5nKGxvY2F0aW9uLmhyZWYgfHwgaHJlZik7CiAgICAgICAgICBzZXRUaW1lb3V0KCgpID0+IHsgdHJ5IHsgZGVsZXRlIHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTA7IH0gY2F0Y2ggKF8pIHt9IH0sIDEyMDApOwogICAgICAgIH0pOwogICAgfQogICAgY29uc3QgcyA9IHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTA7CiAgICByZXR1cm4gSlNPTi5zdHJpbmdpZnkoe3BoYXNlOnMucGhhc2UsdXJsOlN0cmluZyhzLnVybHx8aHJlZiksZXJyb3I6U3RyaW5nKHMuZXJyb3J8fCcnKSxkYXRhOnMuZGF0YXx8bnVsbCxhZ2U6RGF0ZS5ub3coKS1OdW1iZXIocy5zdGFydGVkQXR8fERhdGUubm93KCkpfSk7CiAgfSkoKWA7Cn0KCmZ1bmN0aW9uIHBvbGxXZWJWaWV3KCkgewogIGlmIChFQ19GSU5JU0hFRCB8fCBFQ19CVVNZIHx8ICFFQ19XRUJWSUVXKSByZXR1cm47CiAgdHJ5IHsKICAgIGlmIChFQ19XSU5ET1cgJiYgIUJvb2xlYW4oRUNfV0lORE9XLmlzVmlzaWJsZSkpIHsKICAgICAgRUNfRklOSVNIRUQgPSB0cnVlOwogICAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J2Nsb3NlZCcsIG1lc3NhZ2U6J0xvZ2luIHdpbmRvdyBjbG9zZWQgYnkgdXNlci4nfSk7CiAgICAgIHRyeSB7IEVDX0FQUC50ZXJtaW5hdGUobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgICAgIHJldHVybjsKICAgIH0KICB9IGNhdGNoIChfKSB7fQoKICBFQ19CVVNZID0gdHJ1ZTsKICBjb25zdCBzY3JpcHQgPSBidWlsZENvbnRyb2xsZXJTY3JpcHQoKTsKICBFQ19XRUJWSUVXLmV2YWx1YXRlSmF2YVNjcmlwdENvbXBsZXRpb25IYW5kbGVyKCQoc2NyaXB0KSwgZnVuY3Rpb24ocmVzdWx0LCBlcnJvcikgewogICAgRUNfQlVTWSA9IGZhbHNlOwogICAgaWYgKEVDX0ZJTklTSEVEKSByZXR1cm47CiAgICBpZiAoZXJyb3IpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOid3YWl0aW5nJywgc3RhZ2U6J25hdmlnYXRpb24nLCBkZXRhaWw6U3RyaW5nKGpzVmFsdWUoZXJyb3IubG9jYWxpemVkRGVzY3JpcHRpb24pIHx8IGVycm9yKSwgcGFnZVVybDonJ30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBsZXQgb3V0ZXIgPSBudWxsOwogICAgdHJ5IHsgb3V0ZXIgPSBKU09OLnBhcnNlKFN0cmluZyhqc1ZhbHVlKHJlc3VsdCkgfHwgJ3t9JykpOyB9IGNhdGNoIChfKSB7IG91dGVyID0gbnVsbDsgfQogICAgaWYgKCFvdXRlcikgcmV0dXJuOwogICAgY29uc3QgcGhhc2UgPSBTdHJpbmcob3V0ZXIucGhhc2UgfHwgJ3dhaXRpbmcnKTsKICAgIGNvbnN0IHBhZ2VVcmwgPSBTdHJpbmcob3V0ZXIudXJsIHx8ICcnKTsKICAgIGlmIChwaGFzZSA9PT0gJ2xvZ2luJykgewogICAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J29wZW4nLCBzdGFnZTonbG9naW4nLCBwYWdlVXJsOnBhZ2VVcmwsIGVuZ2luZTonV0tXZWJWaWV3J30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBpZiAocGhhc2UgPT09ICdyZWFkaW5nJyB8fCBwaGFzZSA9PT0gJ3N0YXJ0aW5nJykgewogICAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J29wZW4nLCBzdGFnZToncmVhZGluZycsIHBhZ2VVcmw6cGFnZVVybCwgZW5naW5lOidXS1dlYlZpZXcnfSk7CiAgICAgIHJldHVybjsKICAgIH0KICAgIGlmIChwaGFzZSA9PT0gJ3dhaXRpbmcnKSB7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonb3BlbicsIHN0YWdlOidsb2FkaW5nJywgcGFnZVVybDpwYWdlVXJsLCBkZXRhaWw6U3RyaW5nKG91dGVyLmVycm9yIHx8ICcnKSwgZW5naW5lOidXS1dlYlZpZXcnfSk7CiAgICAgIHJldHVybjsKICAgIH0KICAgIGlmIChwaGFzZSA9PT0gJ3JlYWR5JyAmJiBvdXRlci5kYXRhKSB7CiAgICAgIGxldCBwYXlsb2FkID0gbnVsbDsKICAgICAgdHJ5IHsKICAgICAgICBwYXlsb2FkID0gdHlwZW9mIG91dGVyLmRhdGEgPT09ICdzdHJpbmcnID8gSlNPTi5wYXJzZShvdXRlci5kYXRhKSA6IG91dGVyLmRhdGE7CiAgICAgIH0gY2F0Y2ggKGUpIHsKICAgICAgICBmaW5pc2hXaXRoRXJyb3IoJ1RoZSBlLUJpY2hlbGNoZW4gZGF0YSBjb3VsZCBub3QgYmUgZGVjb2RlZC4nLCBTdHJpbmcoZSkpOwogICAgICAgIHJldHVybjsKICAgICAgfQogICAgICBmaW5hbGl6ZVBheWxvYWQocGF5bG9hZCwgcGFnZVVybCk7CiAgICB9CiAgfSk7Cn0KCmZ1bmN0aW9uIHJ1bihhcmd2KSB7CiAgdHJ5IHsKICAgIGlmICghYXJndiB8fCBhcmd2Lmxlbmd0aCA8IDMpIHRocm93IG5ldyBFcnJvcignTWlzc2luZyBuYXRpdmUgbG9naW4gYXJndW1lbnRzLicpOwogICAgRUNfU1RBVEVfUEFUSCA9IFN0cmluZyhhcmd2WzBdKTsKICAgIGNvbnN0IGV4cHJlc3Npb25QYXRoID0gU3RyaW5nKGFyZ3ZbMV0pOwogICAgRUNfU1RBUlRfVVJMID0gU3RyaW5nKGFyZ3ZbMl0pOwogICAgY29uc3QgcmVhZEVyciA9IFJlZigpOwogICAgY29uc3QgcmVhZE9iaiA9ICQuTlNTdHJpbmcuc3RyaW5nV2l0aENvbnRlbnRzT2ZGaWxlRW5jb2RpbmdFcnJvcigkKGV4cHJlc3Npb25QYXRoKSwgJC5OU1VURjhTdHJpbmdFbmNvZGluZywgcmVhZEVycik7CiAgICBFQ19SRUFEX0VYUFJFU1NJT04gPSBTdHJpbmcoanNWYWx1ZShyZWFkT2JqKSB8fCAnJyk7CiAgICBpZiAoIUVDX1JFQURfRVhQUkVTU0lPTikgdGhyb3cgbmV3IEVycm9yKCdUaGUgZS1CaWNoZWxjaGVuIHJlYWQgc2NyaXB0IGlzIGVtcHR5LicpOwoKICAgIHdyaXRlU3RhdGUoe3N0YXR1czonc3RhcnRpbmcnLCBlbmdpbmU6J1dLV2ViVmlldycsIHN0YXJ0ZWRBdDpuZXcgRGF0ZShFQ19TVEFSVEVEX0FUKS50b0lTT1N0cmluZygpfSk7CgogICAgRUNfQVBQID0gJC5OU0FwcGxpY2F0aW9uLnNoYXJlZEFwcGxpY2F0aW9uOwogICAgRUNfQVBQLnNldEFjdGl2YXRpb25Qb2xpY3koJC5OU0FwcGxpY2F0aW9uQWN0aXZhdGlvblBvbGljeVJlZ3VsYXIpOwoKICAgIGNvbnN0IHJlY3QgPSAkLk5TTWFrZVJlY3QoMCwgMCwgMTA4MCwgNzYwKTsKICAgIGNvbnN0IHN0eWxlID0gJC5OU1dpbmRvd1N0eWxlTWFza1RpdGxlZCB8ICQuTlNXaW5kb3dTdHlsZU1hc2tDbG9zYWJsZSB8ICQuTlNXaW5kb3dTdHlsZU1hc2tNaW5pYXR1cml6YWJsZSB8ICQuTlNXaW5kb3dTdHlsZU1hc2tSZXNpemFibGU7CiAgICBFQ19XSU5ET1cgPSAkLk5TV2luZG93LmFsbG9jLmluaXRXaXRoQ29udGVudFJlY3RTdHlsZU1hc2tCYWNraW5nRGVmZXIocmVjdCwgc3R5bGUsICQuTlNCYWNraW5nU3RvcmVCdWZmZXJlZCwgZmFsc2UpOwogICAgRUNfV0lORE9XLnNldFRpdGxlKCQoJ2UtQmljaGVsY2hlbiDigJMgRW50cmV0aWVuQ29ubmVjdCcpKTsKICAgIEVDX1dJTkRPVy5zZXRSZWxlYXNlZFdoZW5DbG9zZWQoZmFsc2UpOwogICAgRUNfV0lORE9XLmNlbnRlcjsKCiAgICBjb25zdCBjb25maWcgPSAkLldLV2ViVmlld0NvbmZpZ3VyYXRpb24uYWxsb2MuaW5pdDsKICAgIGNvbmZpZy53ZWJzaXRlRGF0YVN0b3JlID0gJC5XS1dlYnNpdGVEYXRhU3RvcmUuZGVmYXVsdERhdGFTdG9yZTsKICAgIEVDX1dFQlZJRVcgPSAkLldLV2ViVmlldy5hbGxvYy5pbml0V2l0aEZyYW1lQ29uZmlndXJhdGlvbihyZWN0LCBjb25maWcpOwogICAgRUNfV0VCVklFVy5zZXRBbGxvd3NCYWNrRm9yd2FyZE5hdmlnYXRpb25HZXN0dXJlcyh0cnVlKTsKICAgIEVDX1dJTkRPVy5zZXRDb250ZW50VmlldyhFQ19XRUJWSUVXKTsKICAgIEVDX1dJTkRPVy5tYWtlS2V5QW5kT3JkZXJGcm9udChudWxsKTsKICAgIEVDX0FQUC5hY3RpdmF0ZUlnbm9yaW5nT3RoZXJBcHBzKHRydWUpOwoKICAgIGNvbnN0IHVybCA9ICQuTlNVUkwuVVJMV2l0aFN0cmluZygkKEVDX1NUQVJUX1VSTCkpOwogICAgaWYgKCF1cmwpIHRocm93IG5ldyBFcnJvcignSW52YWxpZCBlLUJpY2hlbGNoZW4gVVJMLicpOwogICAgY29uc3QgcmVxdWVzdCA9ICQuTlNVUkxSZXF1ZXN0LnJlcXVlc3RXaXRoVVJMKHVybCk7CiAgICBFQ19XRUJWSUVXLmxvYWRSZXF1ZXN0KHJlcXVlc3QpOwoKICAgIEVDX1RJTUVSID0gJC5OU1RpbWVyLnNjaGVkdWxlZFRpbWVyV2l0aFRpbWVJbnRlcnZhbFJlcGVhdHNCbG9jaygwLjgsIHRydWUsIGZ1bmN0aW9uKF8pIHsgcG9sbFdlYlZpZXcoKTsgfSk7CiAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J29wZW4nLCBzdGFnZTonbG9naW4nLCBlbmdpbmU6J1dLV2ViVmlldycsIHBhZ2VVcmw6RUNfU1RBUlRfVVJMfSk7CiAgICBFQ19BUFAucnVuOwogIH0gY2F0Y2ggKGUpIHsKICAgIGZpbmlzaFdpdGhFcnJvcignVGhlIG1hY09TIGxvZ2luIHdpbmRvdyBjb3VsZCBub3QgYmUgc3RhcnRlZC4nLCBTdHJpbmcoZSAmJiAoZS5tZXNzYWdlIHx8IGUpIHx8IGUpKTsKICB9Cn0K"
 MAC_WK_PROCESS: subprocess.Popen | None = None
 MAC_WK_LOCK = threading.RLock()
 
 
 def _mac_wk_script_candidates() -> list[pathlib.Path]:
-    """Diagnostic candidates only; v310 runs the checksum-verified embedded copy."""
+    """Diagnostic candidates only; v311 runs the checksum-verified embedded copy."""
     candidates: list[pathlib.Path] = []
     env_path = str(os.environ.get("ENTRETIENCONNECT_WKWEBVIEW_MODULE") or "").strip()
     if env_path:
@@ -3804,19 +3976,19 @@ def _mac_wk_script_candidates() -> list[pathlib.Path]:
 
 
 def _mac_wk_resolve_script() -> pathlib.Path:
-    """Create the WKWebView module from the embedded v310 source every time.
+    """Create the WKWebView module from the embedded v311 source every time.
 
     This deliberately does not depend on the bundle path, App Translocation, a
     previous updater cache, or an external helper file.  Atomic replacement also
     prevents an old v307 file from being reused after a partial update.
     """
-    target_dir = DATA_ROOT / "native-runtime" / "v310"
+    target_dir = DATA_ROOT / "native-runtime" / "v311"
     target = target_dir / MAC_WK_SCRIPT_NAME
     try:
         target_dir.mkdir(parents=True, exist_ok=True)
         data = base64.b64decode(MAC_WK_SCRIPT_B64.encode("ascii"), validate=True)
-        if len(data) < 1000 or b"EntretienConnect v310" not in data:
-            raise RuntimeError("embedded v310 module is incomplete")
+        if len(data) < 1000 or b"EntretienConnect v311" not in data:
+            raise RuntimeError("embedded v311 module is incomplete")
         expected = hashlib.sha256(data).hexdigest()
         current_ok = False
         try:
@@ -3839,7 +4011,7 @@ def _mac_wk_resolve_script() -> pathlib.Path:
         return target
     except Exception as exc:
         raise RuntimeError(
-            "WKWebView v310 konnte nicht vorbereitet werden (" + str(target) + "): " + str(exc)
+            "WKWebView v311 konnte nicht vorbereitet werden (" + str(target) + "): " + str(exc)
         ) from exc
 
 def _mac_wk_read_state() -> dict:
@@ -3855,10 +4027,22 @@ def _mac_wk_read_state() -> dict:
 
 def _mac_wk_write_state(data: dict) -> None:
     try:
-        MAC_WK_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        tmp = MAC_WK_STATE_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(data or {}, ensure_ascii=False), encoding="utf-8")
-        os.replace(str(tmp), str(MAC_WK_STATE_FILE))
+        # v311: 0600 statt Standardmaske – die Datei kann eine gültige Sitzung enthalten.
+        _write_private_text(MAC_WK_STATE_FILE, json.dumps(data or {}, ensure_ascii=False))
+    except Exception:
+        pass
+
+
+def _mac_wk_purge_stale_state() -> None:
+    """Entfernt eine Übergabedatei aus einem früheren, abgebrochenen Lauf.
+
+    v311: Bisher wurde sie nur nach einem erfolgreichen Lesen gelöscht. Nach einem
+    Absturz oder « Sofort beenden » blieb ein gültiger Sitzungs-Cookie unbegrenzt
+    im App-Speicher liegen – und damit auch in jedem Time-Machine-Backup.
+    Beim Start ist ohnehin keine Sitzung im Speicher, die Datei ist also wertlos.
+    """
+    try:
+        MAC_WK_STATE_FILE.unlink(missing_ok=True)
     except Exception:
         pass
 
@@ -3981,6 +4165,12 @@ def _mac_wk_read_payload(selected_group_id: int | None = None) -> dict:
         with LOCK:
             LATEST_SESSION = session
             LATEST_SESSION_AT = session.get("capturedAt") or time.strftime("%Y-%m-%d %H:%M:%S")
+        # v311: Sobald die Sitzung im Arbeitsspeicher liegt, wird die Übergabedatei
+        # sofort gelöscht – nicht erst beim späteren Schließen des Loginfensters.
+        payload_from_disk = state.get("data")
+        _mac_wk_purge_stale_state()
+        if isinstance(payload_from_disk, dict):
+            state = {"status": "ready", "data": payload_from_disk}
 
     if selected_group_id is not None:
         payload = _read_direct_with_session(session, int(selected_group_id))
@@ -3991,7 +4181,7 @@ def _mac_wk_read_payload(selected_group_id: int | None = None) -> dict:
             "selectionAuthority": "EntretienConnect",
             "requiresInstalledBrowser": False,
         })
-        payload["version"] = "1.10.32"
+        payload["version"] = HELPER_VERSION
         return payload
 
     payload = state.get("data")
@@ -4007,7 +4197,7 @@ def _mac_wk_read_payload(selected_group_id: int | None = None) -> dict:
         "selectionAuthority": "EntretienConnect",
         "requiresInstalledBrowser": False,
     })
-    payload["version"] = "1.10.32"
+    payload["version"] = HELPER_VERSION
     return payload
 
 
@@ -4159,3 +4349,9 @@ def reset_login_session(profile: str = "default", preserve_profile: bool = False
             "engine": "WKWebView",
         }
     return _reset_login_session_v306(profile, preserve_profile)
+
+
+# v311: Beim Laden des Moduls liegt garantiert keine Sitzung im Speicher. Eine noch
+# vorhandene Übergabedatei stammt also aus einem abgebrochenen Lauf und wird verworfen.
+if platform.system().lower() == "darwin":
+    _mac_wk_purge_stale_state()
