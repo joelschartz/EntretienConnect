@@ -1,14 +1,16 @@
-# EntretienConnect v316
+# EntretienConnect v317
 
-Annule la modification de v315 sur macOS. Elle empêchait la connexion : juste après l’identification, l’application affichait « La session e-Bichelchen a expiré ».
+Plus aucune requête vers e-Bichelchen tant que l’identification n’est pas terminée.
 
-v315 ne laissait plus à la fenêtre native qu’une petite sonde de connexion et lisait ensuite les classes en Python, par HTTP, avec les cookies récupérés. En pratique cette requête aboutissait sur la page d’identification IAM — alors que la même requête venait de réussir quelques secondes plus tôt *dans* la fenêtre. Dans la page, le navigateur envoie la session complète, cookies `HttpOnly` compris ; `WKHTTPCookieStore.getAllCookies` ne les restitue apparemment pas tous, si bien que les cookies exportés ne suffisent pas pour un appel HTTP autonome.
+La fenêtre de connexion s’ouvre sur `…/ebichelchen/app/login`, et cette adresse satisfaisait déjà la condition « contient /ebichelchen/app/ ». Le script de lecture démarrait donc dès la première seconde et lançait des requêtes non authentifiées vers l’API, renouvelées toutes les deux secondes pendant toute la durée de l’identification. e-Bichelchen affichait alors sa propre alerte « Es konnte keine Verbindung zum Server erstellt werden ».
 
-- La lecture de la première classe repasse par la fenêtre de connexion, exactement comme en v314.
-- La sonde reste dans le code, désactivée et documentée : quiconque voudra réunifier la lecture devra d’abord résoudre ce problème de cookies.
+Mesuré sur banc d’essai, fenêtre restée sur la page d’identification pendant 12 secondes :
 
-Le chemin macOS a été comparé fonction par fonction avec v314 : `_mac_wk_read_payload`, `check_login_ready`, `debug_browser_running` et `_mac_wk_launch` sont identiques, seuls des commentaires diffèrent.
+- avant : 5 requêtes API (soit une cinquantaine pour une identification de deux minutes avec MFA)
+- après : aucune
 
-À noter : la même limite concerne probablement l’écriture des messages (`direct_ebichelchen_request` utilise les mêmes cookies) et le changement de classe sans nouvelle identification. Ces deux points restent à vérifier sur un compte réel.
+Après l’identification, la lecture fonctionne comme avant — classes, élèves et catégorie « Message » sont lus normalement. Une sécurité est prévue : si e-Bichelchen restait malgré tout sur une adresse `/login` après connexion, la lecture démarre quand même au bout de 90 secondes, exactement comme avant.
 
-Conservé de v314 : suppression d’environ 900 lignes de code inaccessible. De v313 : la fenêtre native fonctionne enfin. De v311/v312 : détection de session expirée, vérification avant publication multiple, blocage des publications simultanées, accès local uniquement.
+Rappel : v316 a annulé la modification de v315 (les cookies exportés depuis la fenêtre native ne suffisent pas pour un appel HTTP autonome — il manque les cookies `HttpOnly`). v314 a retiré ~900 lignes de code inaccessible, v313 a réparé la fenêtre native.
+
+Reste à vérifier sur un compte réel : la publication des messages (`direct_ebichelchen_request` utilise les mêmes cookies exportés) et le changement de classe sans nouvelle identification.

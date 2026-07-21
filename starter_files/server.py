@@ -734,7 +734,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path.split("?", 1)[0] == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 316, "nativeLoginEngine": ("WKWebView-v316" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 317, "nativeLoginEngine": ("WKWebView-v317" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
