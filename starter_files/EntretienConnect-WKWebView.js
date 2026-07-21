@@ -3,7 +3,7 @@ ObjC.import('WebKit');
 ObjC.import('Foundation');
 
 /*
- * EntretienConnect v318 – native macOS e-Bichelchen login window.
+ * EntretienConnect v320 – native macOS e-Bichelchen login window.
  * Runs through /usr/bin/osascript -l JavaScript and uses WKWebView (Safari/WebKit),
  * so no Chrome, Edge or remotely controlled Firefox is required.
  */
@@ -18,6 +18,8 @@ let EC_STATE_PATH = '';
 let EC_READ_EXPRESSION = '';
 let EC_START_URL = '';
 let EC_STARTED_AT = Date.now();
+// v320: Safari-Kennung für den User-Agent des Loginfensters.
+const EC_APP_NAME_FOR_UA = 'Version/17.4 Safari/605.1.15';
 
 function jsValue(value) {
   try {
@@ -65,27 +67,6 @@ function finishWithError(message, detail) {
     status: 'error',
     error: String(message || 'WKWebView error'),
     detail: String(detail || ''),
-    startedAt: new Date(EC_STARTED_AT).toISOString()
-  });
-  try { if (EC_TIMER) EC_TIMER.invalidate; } catch (_) {}
-  try { if (EC_WINDOW) EC_WINDOW.orderOut(null); } catch (_) {}
-  $.NSThread.sleepForTimeInterval(0.12);
-  try { EC_APP.terminate(null); } catch (_) {}
-}
-
-// v318: Some e-Bichelchen deployments reject the embedded WebKit session and
-// display their own « no server connection » dialog.  That is not a useful
-// terminal error: close the native window and let Python reopen the proven
-// isolated Chrome/Edge login automatically.
-function finishWithBrowserFallback(message, detail, pageUrl) {
-  if (EC_FINISHED) return;
-  EC_FINISHED = true;
-  writeState({
-    status: 'fallback',
-    message: String(message || 'Open e-Bichelchen in a supported browser.'),
-    detail: String(detail || ''),
-    pageUrl: String(pageUrl || ''),
-    engine: 'WKWebView-v318',
     startedAt: new Date(EC_STARTED_AT).toISOString()
   });
   try { if (EC_TIMER) EC_TIMER.invalidate; } catch (_) {}
@@ -166,9 +147,9 @@ function finalizePayload(payload, pageUrl) {
           userAgent: ua,
           capturedAt: new Date().toISOString(),
           targetUrl: String(pageUrl || ''),
-          browser: 'macOS WKWebView v318'
+          browser: 'macOS WKWebView v320'
         },
-        engine: 'WKWebView-v318',
+        engine: 'WKWebView-v320',
         startedAt: new Date(EC_STARTED_AT).toISOString()
       });
       try { EC_WINDOW.orderOut(null); } catch (_) {}
@@ -185,53 +166,10 @@ function buildControllerScript() {
   return `(() => {
     const href = String(location.href || '');
     const onEb = href.indexOf('/ebichelchen/app/') >= 0;
-    const bodyText = String((document.body && document.body.innerText) || '').toLowerCase();
-
-    // v318: Detect the exact e-Bichelchen error shown when its embedded WebKit
-    // session cannot reach the backend.  Python will transparently fall back to
-    // the controlled Chrome/Edge window instead of leaving this dead dialog up.
-    const serverConnectionError =
-      bodyText.indexOf('es konnte keine verbindung zum server erstellt werden') >= 0 ||
-      bodyText.indexOf('keine verbindung zum server') >= 0 ||
-      bodyText.indexOf('impossible de se connecter au serveur') >= 0 ||
-      bodyText.indexOf('could not connect to the server') >= 0;
-    if (serverConnectionError) {
-      return JSON.stringify({phase:'browser-fallback',url:href,error:'e-Bichelchen rejected the embedded WebKit connection.'});
-    }
-
     if (!onEb) return JSON.stringify({phase:'login',url:href});
-
-    // Do not even start the reader on the public landing/login screen.  v317
-    // checked only the literal /login URL; the SPA can also show the same screen
-    // on /app/ and then unauthenticated API calls trigger the server dialog.
-    let groupStoreReady = false;
-    try {
-      const raw = sessionStorage.getItem('groupStore');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        groupStoreReady = Boolean(parsed && typeof parsed === 'object' && Object.keys(parsed).length);
-      }
-    } catch (_) {}
-    let groupResourceSeen = false;
-    try {
-      groupResourceSeen = performance.getEntriesByType('resource').some(e => /get-groups-from-teacher/i.test(String(e && e.name || '')));
-    } catch (_) {}
-    const landingVisible =
-      bodyText.indexOf('e-bichelchen') >= 0 &&
-      (bodyText.indexOf('tutorial') >= 0 || bodyText.indexOf('anmelden') >= 0 ||
-       bodyText.indexOf('connexion') >= 0 || bodyText.indexOf('se connecter') >= 0 ||
-       bodyText.indexOf('sign in') >= 0 || bodyText.indexOf('log in') >= 0);
-    const loginRoute = /\\/ebichelchen\\/app\\/login(?:\\/|\\?|#|$)/i.test(href);
-    const authenticatedRoute = /\\/ebichelchen\\/app\\/(?!login(?:\\/|\\?|#|$))[^/?#]+/i.test(href);
-    const strongAuthEvidence = groupStoreReady || groupResourceSeen;
-    const authEvidence = strongAuthEvidence || (authenticatedRoute && !landingVisible);
-    if (loginRoute || (landingVisible && !strongAuthEvidence) || !authEvidence) {
-      return JSON.stringify({phase:'login',url:href});
-    }
-
-    if (!window.__entretienConnectNative318) {
-      window.__entretienConnectNative318 = {phase:'starting',url:href,error:'',data:null,startedAt:Date.now()};
-      const s = window.__entretienConnectNative318;
+    if (!window.__entretienConnectNative320) {
+      window.__entretienConnectNative320 = {phase:'starting',url:href,error:'',data:null,startedAt:Date.now()};
+      const s = window.__entretienConnectNative320;
       s.phase = 'reading';
       Promise.resolve(${EC_READ_EXPRESSION})
         .then(v => { s.data = v; s.phase = 'ready'; s.url = String(location.href || href); })
@@ -239,10 +177,10 @@ function buildControllerScript() {
           s.error = String(e && (e.message || e) || 'unknown error');
           s.phase = 'waiting';
           s.url = String(location.href || href);
-          setTimeout(() => { try { delete window.__entretienConnectNative318; } catch (_) {} }, 1200);
+          setTimeout(() => { try { delete window.__entretienConnectNative320; } catch (_) {} }, 1200);
         });
     }
-    const s = window.__entretienConnectNative318;
+    const s = window.__entretienConnectNative320;
     return JSON.stringify({phase:s.phase,url:String(s.url||href),error:String(s.error||''),data:s.data||null,age:Date.now()-Number(s.startedAt||Date.now())});
   })()`;
 }
@@ -277,14 +215,6 @@ function pollWebView() {
     }
     const phase = String(outer.phase || 'waiting');
     const pageUrl = String(outer.url || '');
-    if (phase === 'browser-fallback') {
-      finishWithBrowserFallback(
-        'e-Bichelchen wird in Chrome oder Edge geöffnet.',
-        String(outer.error || ''),
-        pageUrl
-      );
-      return;
-    }
     if (phase === 'login') {
       writeState({status:'open', stage:'login', pageUrl:pageUrl, engine:'WKWebView'});
       return;
@@ -335,7 +265,24 @@ function run(argv) {
 
     const config = $.WKWebViewConfiguration.alloc.init;
     config.websiteDataStore = $.WKWebsiteDataStore.defaultDataStore;
+    // v320: Ohne diese Zeile meldet sich das Fenster als
+    //   "Mozilla/5.0 (Macintosh; …) AppleWebKit/605.1.15 (KHTML, like Gecko)"
+    // – ohne "Version/… Safari/…". Für e-Bichelchen (bzw. eine vorgelagerte
+    // Schutzschicht) ist das kein erkennbarer Browser; die Seite meldete
+    // daraufhin "Es konnte keine Verbindung zum Server erstellt werden".
+    // applicationNameForUserAgent wird von WebKit an die echte Engine-Kennung
+    // angehängt, das Ergebnis ist ein vollwertiger Safari-User-Agent.
+    try {
+      config.applicationNameForUserAgent = $(EC_APP_NAME_FOR_UA);
+    } catch (_) {}
     EC_WEBVIEW = $.WKWebView.alloc.initWithFrameConfiguration(rect, config);
+    // Zweiter Weg, falls applicationNameForUserAgent nicht greift.
+    try {
+      const ua = String(jsValue(EC_WEBVIEW.valueForKey($('userAgent'))) || '');
+      if (ua && ua.indexOf('Safari/') < 0) {
+        EC_WEBVIEW.setCustomUserAgent($(ua.trim() + ' ' + EC_APP_NAME_FOR_UA));
+      }
+    } catch (_) {}
     EC_WEBVIEW.setAllowsBackForwardNavigationGestures(true);
     EC_WINDOW.setContentView(EC_WEBVIEW);
     EC_WINDOW.makeKeyAndOrderFront(null);

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.13.2 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.14.0 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -14,7 +14,6 @@ import mimetypes
 import os
 import pathlib
 import platform
-import re
 import secrets
 import shutil
 import sqlite3
@@ -95,7 +94,7 @@ try:
 except Exception:
     SSL_CONTEXT = None
 
-HELPER_VERSION = "1.13.2"
+HELPER_VERSION = "1.14.0"
 
 LATEST_DATA = None
 LATEST_AT = None
@@ -267,64 +266,20 @@ def debug_browser_running() -> bool:
         return False
 
 
-def _find_macos_helper_pid(profile_dir: pathlib.Path | str) -> int | None:
-    """Find the exact isolated Chromium process by its unique CDP/profile flags."""
-    if platform.system().lower() != "darwin":
-        return None
-    profile_text = str(profile_dir)
-    port_flag = f"--remote-debugging-port={CDP_PORT}"
-    profile_flag = f"--user-data-dir={profile_text}"
-    try:
-        out = subprocess.check_output(
-            ["/bin/ps", "-axo", "pid=,command="],
-            text=True,
-            stderr=subprocess.DEVNULL,
-            timeout=2,
-        )
-        for line in out.splitlines():
-            if port_flag not in line or profile_flag not in line:
-                continue
-            m = re.match(r"\s*(\d+)\s+", line)
-            if m:
-                return int(m.group(1))
-    except Exception:
-        pass
-    return None
+def _activate_browser_app(browser_name: str) -> bool:
+    """Best-effort OS activation without changing the e-Bichelchen route.
 
-
-def _activate_macos_process(process_id: int | None) -> bool:
-    """Bring one precise Chrome/Edge instance forward without browser automation.
-
-    NSRunningApplication addresses the process by PID, so the user's normal Chrome
-    window is not activated accidentally. This does not require controlling tabs or
-    reading browser data through AppleScript.
+    v300 (macOS): do *not* call ``open -a Google Chrome`` here. EntretienConnect
+    usually runs in the user's normal Chrome instance while e-Bichelchen runs in a
+    second isolated Chrome process. ``open -a`` activates the bundle, not that exact
+    process, and therefore often brings the EntretienConnect window back to the
+    foreground immediately after the white helper window appears. The isolated
+    window is focused through its concrete CDP target instead.
     """
-    if platform.system().lower() != "darwin" or not process_id:
-        return False
-    script = f"""
-ObjC.import('AppKit');
-const app = $.NSRunningApplication.runningApplicationWithProcessIdentifier({int(process_id)});
-app ? (app.activateWithOptions(3) ? 'ok' : 'failed') : 'missing';
-"""
-    try:
-        cp = subprocess.run(
-            ["/usr/bin/osascript", "-l", "JavaScript", "-e", script],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=3,
-        )
-        return cp.returncode == 0 and "ok" in (cp.stdout or "").lower()
-    except Exception:
-        return False
-
-
-def _activate_browser_app(browser_name: str, process_id: int | None = None) -> bool:
-    """Best-effort activation of the exact isolated helper browser."""
     system = platform.system().lower()
     try:
         if system == "darwin":
-            return _activate_macos_process(process_id)
+            return False
         if system == "windows":
             # Beim Python-Starter reicht normalerweise der neue Browserprozess; der
             # Windows-PowerShell-Starter besitzt zusätzlich eine stärkere user32-Fokussierung.
@@ -334,7 +289,7 @@ def _activate_browser_app(browser_name: str, process_id: int | None = None) -> b
     return False
 
 
-def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0, process_id: int | None = None) -> dict:
+def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0) -> dict:
     """Activate the exact isolated e-Bichelchen tab/window via DevTools.
 
     This is deliberately target-specific. It never opens or activates the user's
@@ -349,7 +304,7 @@ def _bring_ebichelchen_target_forward(browser_name: str, wait_s: float = 3.0, pr
             cdp_call(target.get("webSocketDebuggerUrl"), "Page.bringToFront", {}, msg_id=912, timeout=2)
             # On Windows this remains a harmless best-effort activation. On macOS
             # Page.bringToFront is intentionally the only activation mechanism.
-            os_active = _activate_browser_app(browser_name, process_id)
+            os_active = _activate_browser_app(browser_name)
             return {"focused": True, "method": "cdp", "targetId": target.get("id"), "url": target.get("url"), "osActive": os_active}
         except Exception as exc:
             last_error = str(exc)
@@ -404,14 +359,8 @@ def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: st
         except Exception:
             existing = None
         if existing:
-            helper_pid = None
-            warm = BROWSER_PROCESSES.get(profile)
-            if warm is not None and warm.poll() is None:
-                helper_pid = warm.pid
-            if not helper_pid:
-                helper_pid = _find_macos_helper_pid(profile_dir)
-            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=1.5, process_id=helper_pid)
-            return {"alreadyRunning": True, "reusedWindow": True, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "processId": helper_pid, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=1.5)
+            return {"alreadyRunning": True, "reusedWindow": True, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
 
         # Kein verwendbares Loginfenster: den isolierten Helferbrowser schließen.
         ws = version.get("webSocketDebuggerUrl") if isinstance(version, dict) else None
@@ -459,17 +408,8 @@ def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: st
     for _ in range(48):
         try:
             version = read_url_json(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=0.5)
-            helper_pid = proc.pid if proc and proc.poll() is None else _find_macos_helper_pid(profile_dir)
-            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=3.0, process_id=helper_pid)
-            # Chrome can finish creating its native window a fraction after the CDP
-            # target exists. A second exact-PID activation prevents the login window
-            # from remaining behind the normal EntretienConnect browser window.
-            if platform.system().lower() == "darwin" and helper_pid:
-                def _refocus_exact_helper():
-                    time.sleep(0.55)
-                    _activate_macos_process(helper_pid)
-                threading.Thread(target=_refocus_exact_helper, daemon=True).start()
-            return {"alreadyRunning": False, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "processId": helper_pid, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
+            focus_info = _bring_ebichelchen_target_forward(browser_name, wait_s=3.0)
+            return {"alreadyRunning": False, "active": bool(focus_info.get("focused")), "focus": focus_info, "profile": profile, "profileDir": str(profile_dir), "url": EB_URL, "port": CDP_PORT, "browser": browser_name, "browserId": browser_id, "browserPath": browser_path, "appWindow": True, "devtoolsBrowser": version.get("Browser") if isinstance(version, dict) else None}
         except Exception:
             if proc.poll() is not None:
                 raise RuntimeError(f"{browser_name} s’est fermé avant l’ouverture de la fenêtre e-Bichelchen.")
@@ -666,40 +606,26 @@ def build_read_expression(selected_group_id: int | None = None) -> str:
   const perfStart = performance.now();
   const timing = {};
 
-  // v318: Vor der Anmeldung unter KEINER Variante der Startseite API-Aufrufe.
+  // v317: Auf der Anmeldeseite KEINE API-Aufrufe.
   //
-  // v317 sperrte nur die wörtliche Route /app/login. Die e-Bichelchen-SPA kann den
-  // gleichen öffentlichen Startbildschirm jedoch auch unter /app/ anzeigen. Dann
-  // startete der Leser trotzdem und e-Bichelchen blendete seinen eigenen Fehler
-  // « Es konnte keine Verbindung zum Server erstellt werden » ein.
+  // Das native Loginfenster startet auf .../ebichelchen/app/login, und diese URL
+  // erfüllt die Bedingung « enthält /ebichelchen/app/ » bereits. Dadurch lief dieser
+  // Leser ab der ersten Sekunde los und feuerte – alle rund zwei Sekunden erneut –
+  // unauthentifizierte Abfragen gegen e-Bichelchen, die ganze Anmeldung hindurch.
+  // e-Bichelchen meldete daraufhin selbst « Es konnte keine Verbindung zum Server
+  // erstellt werden ».
   //
-  // Jetzt braucht der Leser ein echtes Anmelde-Indiz: einen gefüllten groupStore,
-  // eine bereits von e-Bichelchen selbst geladene Klassen-Ressource oder eine klare
-  // Unterroute der angemeldeten App ohne sichtbaren Login-/Tutorial-Bildschirm.
-  const href = String(location.href || "");
-  const bodyText = String((document.body && document.body.innerText) || "").toLowerCase();
-  const onLoginRoute = /\/ebichelchen\/app\/login(?:\/|\?|#|$)/i.test(href);
-  let groupStoreReady = false;
-  try {
-    const rawGroupStore = sessionStorage.getItem("groupStore");
-    if (rawGroupStore) {
-      const parsedGroupStore = JSON.parse(rawGroupStore);
-      groupStoreReady = !!(parsedGroupStore && typeof parsedGroupStore === "object" && Object.keys(parsedGroupStore).length);
+  // Nach 90 Sekunden wird es trotzdem versucht: Sollte e-Bichelchen wider Erwarten
+  // auch nach der Anmeldung auf einer /login-URL bleiben, verhält sich die App dann
+  // wieder wie vorher, statt endlos zu warten.
+  const onLoginRoute = /\/ebichelchen\/app\/login(\/|\?|#|$)/i.test(String(location.href || ""));
+  if (onLoginRoute) {
+    if (!window.__ecLoginRouteSince) window.__ecLoginRouteSince = Date.now();
+    if (Date.now() - window.__ecLoginRouteSince < 90000) {
+      throw new Error("Anmeldung noch nicht abgeschlossen");
     }
-  } catch (_) {}
-  let groupResourceSeen = false;
-  try {
-    groupResourceSeen = performance.getEntriesByType("resource")
-      .some(e => /get-groups-from-teacher/i.test(String(e && e.name || "")));
-  } catch (_) {}
-  const landingVisible = bodyText.includes("e-bichelchen") &&
-    (bodyText.includes("tutorial") || bodyText.includes("anmelden") ||
-     bodyText.includes("connexion") || bodyText.includes("se connecter") ||
-     bodyText.includes("sign in") || bodyText.includes("log in"));
-  const authenticatedRoute = /\/ebichelchen\/app\/(?!login(?:\/|\?|#|$))[^/?#]+/i.test(href);
-  const strongAuthEvidence = groupStoreReady || groupResourceSeen;
-  if (onLoginRoute || (landingVisible && !strongAuthEvidence) || !(strongAuthEvidence || authenticatedRoute)) {
-    throw new Error("Anmeldung noch nicht abgeschlossen");
+  } else {
+    window.__ecLoginRouteSince = 0;
   }
 
   async function getJson(url, options) {
@@ -1879,34 +1805,6 @@ def check_login_ready() -> dict:
 (async () => {
   const out = { ready:false, pageUrl:String(location.href || ""), groupCount:0, via:"" };
   if (!out.pageUrl.includes('/ebichelchen/app/')) return JSON.stringify(out);
-
-  // v318: Auch der Chromium-Fallback darf die API nicht auf der öffentlichen
-  // Login-/Tutorial-Seite abfragen. Das verhindert denselben Serverdialog dort.
-  const bodyText = String((document.body && document.body.innerText) || "").toLowerCase();
-  const loginRoute = /\/ebichelchen\/app\/login(?:\/|\?|#|$)/i.test(out.pageUrl);
-  const landingVisible = bodyText.includes("e-bichelchen") &&
-    (bodyText.includes("tutorial") || bodyText.includes("anmelden") ||
-     bodyText.includes("connexion") || bodyText.includes("se connecter") ||
-     bodyText.includes("sign in") || bodyText.includes("log in"));
-  let groupStoreReady = false;
-  try {
-    const raw = sessionStorage.getItem("groupStore");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      groupStoreReady = !!(parsed && typeof parsed === "object" && Object.keys(parsed).length);
-    }
-  } catch (_) {}
-  let groupResourceSeen = false;
-  try {
-    groupResourceSeen = performance.getEntriesByType("resource")
-      .some(e => /get-groups-from-teacher/i.test(String(e && e.name || "")));
-  } catch (_) {}
-  const authenticatedRoute = /\/ebichelchen\/app\/(?!login(?:\/|\?|#|$))[^/?#]+/i.test(out.pageUrl);
-  const strongAuthEvidence = groupStoreReady || groupResourceSeen;
-  if (loginRoute || (landingVisible && !strongAuthEvidence) || !(strongAuthEvidence || authenticatedRoute)) {
-    out.via = 'login-gate';
-    return JSON.stringify(out);
-  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 1200);
@@ -3249,7 +3147,7 @@ def _read_direct_with_session(session: dict, selected_group_id: int | None = Non
 
 
 # ===================================================================
-# v318 legacy native macOS login window (disabled by v319)
+# v320 – native macOS login window (WKWebView / Safari WebKit)
 # -------------------------------------------------------------------
 # The main EntretienConnect UI remains in the user's default browser.
 # On macOS, e-Bichelchen is opened in a small native WKWebView window,
@@ -3275,27 +3173,25 @@ MAC_WK_SCRIPT_NAME = "EntretienConnect-WKWebView.js"
 # v308: The module remains a normal packaged file, but is also embedded here.
 # This makes the native login independent of App Translocation, updater caches,
 # and the directory from which server.py was started.
-MAC_WK_SCRIPT_B64 = "T2JqQy5pbXBvcnQoJ0NvY29hJyk7Ck9iakMuaW1wb3J0KCdXZWJLaXQnKTsKT2JqQy5pbXBvcnQoJ0ZvdW5kYXRpb24nKTsKCi8qCiAqIEVudHJldGllbkNvbm5lY3QgdjMxOCDigJMgbmF0aXZlIG1hY09TIGUtQmljaGVsY2hlbiBsb2dpbiB3aW5kb3cuCiAqIFJ1bnMgdGhyb3VnaCAvdXNyL2Jpbi9vc2FzY3JpcHQgLWwgSmF2YVNjcmlwdCBhbmQgdXNlcyBXS1dlYlZpZXcgKFNhZmFyaS9XZWJLaXQpLAogKiBzbyBubyBDaHJvbWUsIEVkZ2Ugb3IgcmVtb3RlbHkgY29udHJvbGxlZCBGaXJlZm94IGlzIHJlcXVpcmVkLgogKi8KCmxldCBFQ19BUFAgPSBudWxsOwpsZXQgRUNfV0lORE9XID0gbnVsbDsKbGV0IEVDX1dFQlZJRVcgPSBudWxsOwpsZXQgRUNfVElNRVIgPSBudWxsOwpsZXQgRUNfQlVTWSA9IGZhbHNlOwpsZXQgRUNfRklOSVNIRUQgPSBmYWxzZTsKbGV0IEVDX1NUQVRFX1BBVEggPSAnJzsKbGV0IEVDX1JFQURfRVhQUkVTU0lPTiA9ICcnOwpsZXQgRUNfU1RBUlRfVVJMID0gJyc7CmxldCBFQ19TVEFSVEVEX0FUID0gRGF0ZS5ub3coKTsKCmZ1bmN0aW9uIGpzVmFsdWUodmFsdWUpIHsKICB0cnkgewogICAgaWYgKHZhbHVlID09PSB1bmRlZmluZWQgfHwgdmFsdWUgPT09IG51bGwpIHJldHVybiBudWxsOwogICAgaWYgKHZhbHVlLmpzICE9PSB1bmRlZmluZWQpIHJldHVybiB2YWx1ZS5qczsKICB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLmRlZXBVbndyYXAodmFsdWUpOyB9IGNhdGNoIChfKSB7fQogIHRyeSB7IHJldHVybiBPYmpDLnVud3JhcCh2YWx1ZSk7IH0gY2F0Y2ggKF8pIHt9CiAgcmV0dXJuIFN0cmluZyh2YWx1ZSk7Cn0KCi8vIHYzMTM6IFJldHVybnMgYSB1c2FibGUgbWVzc2FnZSBmb3IgYSBSRUFMIGVycm9yLCBhbmQgJycgZm9yIGFuIE9iakMgbmlsIHRoYXQKLy8gSlhBIGhhbmRzIG92ZXIgYXMgYSB0cnV0aHkgd3JhcHBlciAoaXRzIFN0cmluZygpIGZvcm0gaXMgIltpZCBuaWxdIikuCmZ1bmN0aW9uIGVycm9yVGV4dChlcnIpIHsKICBpZiAoIWVycikgcmV0dXJuICcnOwogIGxldCBkZXNjID0gbnVsbDsKICB0cnkgeyBkZXNjID0ganNWYWx1ZShlcnIubG9jYWxpemVkRGVzY3JpcHRpb24pOyB9IGNhdGNoIChfKSB7IGRlc2MgPSBudWxsOyB9CiAgaWYgKGRlc2MgIT09IG51bGwgJiYgZGVzYyAhPT0gdW5kZWZpbmVkKSB7CiAgICBjb25zdCB0ZXh0ID0gU3RyaW5nKGRlc2MpLnRyaW0oKTsKICAgIHJldHVybiAoIXRleHQgfHwgdGV4dCA9PT0gJ251bGwnIHx8IHRleHQgPT09ICd1bmRlZmluZWQnKSA/ICcnIDogdGV4dDsKICB9CiAgbGV0IHJhdyA9ICcnOwogIHRyeSB7IHJhdyA9IFN0cmluZyhlcnIpLnRyaW0oKTsgfSBjYXRjaCAoXykgeyByYXcgPSAnJzsgfQogIGlmICghcmF3IHx8IHJhdyA9PT0gJ1tpZCBuaWxdJyB8fCByYXcgPT09ICdudWxsJyB8fCByYXcgPT09ICd1bmRlZmluZWQnKSByZXR1cm4gJyc7CiAgcmV0dXJuIHJhdzsKfQoKZnVuY3Rpb24gd3JpdGVTdGF0ZShvYmopIHsKICB0cnkgewogICAgb2JqID0gb2JqIHx8IHt9OwogICAgaWYgKCFvYmoudXBkYXRlZEF0KSBvYmoudXBkYXRlZEF0ID0gbmV3IERhdGUoKS50b0lTT1N0cmluZygpOwogICAgY29uc3QgdGV4dCA9ICQoSlNPTi5zdHJpbmdpZnkob2JqKSk7CiAgICBjb25zdCBlcnIgPSBSZWYoKTsKICAgIGNvbnN0IG9rID0gdGV4dC53cml0ZVRvRmlsZUF0b21pY2FsbHlFbmNvZGluZ0Vycm9yKCQoRUNfU1RBVEVfUEFUSCksIHRydWUsICQuTlNVVEY4U3RyaW5nRW5jb2RpbmcsIGVycik7CiAgICByZXR1cm4gQm9vbGVhbihvayk7CiAgfSBjYXRjaCAoXykgewogICAgcmV0dXJuIGZhbHNlOwogIH0KfQoKZnVuY3Rpb24gZmluaXNoV2l0aEVycm9yKG1lc3NhZ2UsIGRldGFpbCkgewogIGlmIChFQ19GSU5JU0hFRCkgcmV0dXJuOwogIEVDX0ZJTklTSEVEID0gdHJ1ZTsKICB3cml0ZVN0YXRlKHsKICAgIHN0YXR1czogJ2Vycm9yJywKICAgIGVycm9yOiBTdHJpbmcobWVzc2FnZSB8fCAnV0tXZWJWaWV3IGVycm9yJyksCiAgICBkZXRhaWw6IFN0cmluZyhkZXRhaWwgfHwgJycpLAogICAgc3RhcnRlZEF0OiBuZXcgRGF0ZShFQ19TVEFSVEVEX0FUKS50b0lTT1N0cmluZygpCiAgfSk7CiAgdHJ5IHsgaWYgKEVDX1RJTUVSKSBFQ19USU1FUi5pbnZhbGlkYXRlOyB9IGNhdGNoIChfKSB7fQogIHRyeSB7IGlmIChFQ19XSU5ET1cpIEVDX1dJTkRPVy5vcmRlck91dChudWxsKTsgfSBjYXRjaCAoXykge30KICAkLk5TVGhyZWFkLnNsZWVwRm9yVGltZUludGVydmFsKDAuMTIpOwogIHRyeSB7IEVDX0FQUC50ZXJtaW5hdGUobnVsbCk7IH0gY2F0Y2ggKF8pIHt9Cn0KCi8vIHYzMTg6IFNvbWUgZS1CaWNoZWxjaGVuIGRlcGxveW1lbnRzIHJlamVjdCB0aGUgZW1iZWRkZWQgV2ViS2l0IHNlc3Npb24gYW5kCi8vIGRpc3BsYXkgdGhlaXIgb3duIMKrIG5vIHNlcnZlciBjb25uZWN0aW9uIMK7IGRpYWxvZy4gIFRoYXQgaXMgbm90IGEgdXNlZnVsCi8vIHRlcm1pbmFsIGVycm9yOiBjbG9zZSB0aGUgbmF0aXZlIHdpbmRvdyBhbmQgbGV0IFB5dGhvbiByZW9wZW4gdGhlIHByb3ZlbgovLyBpc29sYXRlZCBDaHJvbWUvRWRnZSBsb2dpbiBhdXRvbWF0aWNhbGx5LgpmdW5jdGlvbiBmaW5pc2hXaXRoQnJvd3NlckZhbGxiYWNrKG1lc3NhZ2UsIGRldGFpbCwgcGFnZVVybCkgewogIGlmIChFQ19GSU5JU0hFRCkgcmV0dXJuOwogIEVDX0ZJTklTSEVEID0gdHJ1ZTsKICB3cml0ZVN0YXRlKHsKICAgIHN0YXR1czogJ2ZhbGxiYWNrJywKICAgIG1lc3NhZ2U6IFN0cmluZyhtZXNzYWdlIHx8ICdPcGVuIGUtQmljaGVsY2hlbiBpbiBhIHN1cHBvcnRlZCBicm93c2VyLicpLAogICAgZGV0YWlsOiBTdHJpbmcoZGV0YWlsIHx8ICcnKSwKICAgIHBhZ2VVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKSwKICAgIGVuZ2luZTogJ1dLV2ViVmlldy12MzE4JywKICAgIHN0YXJ0ZWRBdDogbmV3IERhdGUoRUNfU1RBUlRFRF9BVCkudG9JU09TdHJpbmcoKQogIH0pOwogIHRyeSB7IGlmIChFQ19USU1FUikgRUNfVElNRVIuaW52YWxpZGF0ZTsgfSBjYXRjaCAoXykge30KICB0cnkgeyBpZiAoRUNfV0lORE9XKSBFQ19XSU5ET1cub3JkZXJPdXQobnVsbCk7IH0gY2F0Y2ggKF8pIHt9CiAgJC5OU1RocmVhZC5zbGVlcEZvclRpbWVJbnRlcnZhbCgwLjEyKTsKICB0cnkgeyBFQ19BUFAudGVybWluYXRlKG51bGwpOyB9IGNhdGNoIChfKSB7fQp9CgpmdW5jdGlvbiBlZHVjYXRpb25Db29raWVzKGNvb2tpZXMpIHsKICBjb25zdCBvdXQgPSBbXTsKICB0cnkgewogICAgY29uc3QgY291bnQgPSBOdW1iZXIoY29va2llcy5jb3VudCB8fCAwKTsKICAgIGZvciAobGV0IGkgPSAwOyBpIDwgY291bnQ7IGkrKykgewogICAgICBjb25zdCBjID0gY29va2llcy5vYmplY3RBdEluZGV4KGkpOwogICAgICBjb25zdCBkb21haW4gPSBTdHJpbmcoanNWYWx1ZShjLmRvbWFpbikgfHwgJycpOwogICAgICBjb25zdCBuYW1lID0gU3RyaW5nKGpzVmFsdWUoYy5uYW1lKSB8fCAnJyk7CiAgICAgIGlmICghbmFtZSB8fCBkb21haW4udG9Mb3dlckNhc2UoKS5pbmRleE9mKCdlZHVjYXRpb24ubHUnKSA8IDApIGNvbnRpbnVlOwogICAgICBvdXQucHVzaCh7CiAgICAgICAgbmFtZTogbmFtZSwKICAgICAgICB2YWx1ZTogU3RyaW5nKGpzVmFsdWUoYy52YWx1ZSkgfHwgJycpLAogICAgICAgIGRvbWFpbjogZG9tYWluLAogICAgICAgIHBhdGg6IFN0cmluZyhqc1ZhbHVlKGMucGF0aCkgfHwgJy8nKSwKICAgICAgICBzZWN1cmU6IEJvb2xlYW4oanNWYWx1ZShjLnNlY3VyZSkpLAogICAgICAgIGh0dHBPbmx5OiBCb29sZWFuKGpzVmFsdWUoYy5IVFRQT25seSkpCiAgICAgIH0pOwogICAgfQogIH0gY2F0Y2ggKF8pIHt9CiAgcmV0dXJuIG91dDsKfQoKZnVuY3Rpb24gZmluYWxpemVQYXlsb2FkKHBheWxvYWQsIHBhZ2VVcmwpIHsKICBpZiAoRUNfRklOSVNIRUQpIHJldHVybjsKICBFQ19GSU5JU0hFRCA9IHRydWU7CgogIC8vIHYzMTM6IFRoZSBXS0hUVFBDb29raWVTdG9yZSBzZWxlY3RvciBpcyBgZ2V0QWxsQ29va2llczpgLCBzbyB0aGUgSlhBIG5hbWUgaXMKICAvLyBgZ2V0QWxsQ29va2llc2AuIFRoZSBwcmV2aW91cyBgZ2V0QWxsQ29va2llc1dpdGhDb21wbGV0aW9uSGFuZGxlcmAgZGlkIG5vdAogIC8vIGV4aXN0IGFuZCByYWlzZWQgYW4gdW5jYXVnaHQgTlNFeGNlcHRpb24gdGhhdCBraWxsZWQgdGhlIHdob2xlIGxvZ2luIHdpbmRvdy4KICAvLyBJdCBuZXZlciBzdXJmYWNlZCBiZWNhdXNlIHRoZSBuaWwtZXJyb3IgYnVnIGFib3ZlIG1lYW50IHRoaXMgbGluZSB3YXMgbmV2ZXIKICAvLyByZWFjaGVkLiBLZXB0IGJlaGluZCBhIHRyeS9jYXRjaCBzbyBhIGZ1dHVyZSBBUEkgY2hhbmdlIGRlZ3JhZGVzIGludG8gYQogIC8vIHJlYWRhYmxlIGVycm9yIHN0YXRlIGluc3RlYWQgb2YgYSBzaWxlbnQgY3Jhc2guCiAgbGV0IHN0b3JlID0gbnVsbDsKICB0cnkgewogICAgc3RvcmUgPSBFQ19XRUJWSUVXLmNvbmZpZ3VyYXRpb24ud2Vic2l0ZURhdGFTdG9yZS5odHRwQ29va2llU3RvcmU7CiAgfSBjYXRjaCAoZSkgewogICAgZmluaXNoV2l0aEVycm9yKCdUaGUgZS1CaWNoZWxjaGVuIHNlc3Npb24gY291bGQgbm90IGJlIHJlYWQuJywgU3RyaW5nKGUpKTsKICAgIHJldHVybjsKICB9CiAgaWYgKCFzdG9yZSB8fCB0eXBlb2Ygc3RvcmUuZ2V0QWxsQ29va2llcyAhPT0gJ2Z1bmN0aW9uJykgewogICAgZmluaXNoV2l0aEVycm9yKCdUaGUgZS1CaWNoZWxjaGVuIHNlc3Npb24gY291bGQgbm90IGJlIHJlYWQuJywgJ1dLSFRUUENvb2tpZVN0b3JlLmdldEFsbENvb2tpZXMgdW5hdmFpbGFibGUnKTsKICAgIHJldHVybjsKICB9CiAgc3RvcmUuZ2V0QWxsQ29va2llcyhmdW5jdGlvbihjb29raWVzKSB7CiAgICBsZXQgY29va2llUm93cyA9IGVkdWNhdGlvbkNvb2tpZXMoY29va2llcyk7CiAgICBFQ19XRUJWSUVXLmV2YWx1YXRlSmF2YVNjcmlwdENvbXBsZXRpb25IYW5kbGVyKCQoJ25hdmlnYXRvci51c2VyQWdlbnQgfHwgIk1vemlsbGEvNS4wIicpLCBmdW5jdGlvbih1YVZhbHVlLCB1YUVycm9yKSB7CiAgICAgIGNvbnN0IHVhID0gU3RyaW5nKGpzVmFsdWUodWFWYWx1ZSkgfHwgJ01vemlsbGEvNS4wIChNYWNpbnRvc2gpIEFwcGxlV2ViS2l0Jyk7CiAgICAgIGNvbnN0IG1lcmdlZCA9IHt9OwogICAgICBjb29raWVSb3dzLmZvckVhY2goZnVuY3Rpb24oYykgeyBtZXJnZWRbYy5uYW1lXSA9IGMudmFsdWU7IH0pOwogICAgICBjb25zdCBjb29raWVIZWFkZXIgPSBPYmplY3Qua2V5cyhtZXJnZWQpLm1hcChmdW5jdGlvbihrKSB7IHJldHVybiBrICsgJz0nICsgbWVyZ2VkW2tdOyB9KS5qb2luKCc7ICcpOwogICAgICBpZiAoIWNvb2tpZUhlYWRlcikgewogICAgICAgIEVDX0ZJTklTSEVEID0gZmFsc2U7CiAgICAgICAgd3JpdGVTdGF0ZSh7CiAgICAgICAgICBzdGF0dXM6ICd3YWl0aW5nJywKICAgICAgICAgIHN0YWdlOiAnc2Vzc2lvbicsCiAgICAgICAgICBtZXNzYWdlOiAnZS1CaWNoZWxjaGVuIGlzIG9wZW4sIGJ1dCB0aGUgYXV0aGVudGljYXRlZCBzZXNzaW9uIGlzIG5vdCBhdmFpbGFibGUgeWV0LicsCiAgICAgICAgICBwYWdlVXJsOiBTdHJpbmcocGFnZVVybCB8fCAnJykKICAgICAgICB9KTsKICAgICAgICByZXR1cm47CiAgICAgIH0KICAgICAgdHJ5IHsgaWYgKEVDX1RJTUVSKSBFQ19USU1FUi5pbnZhbGlkYXRlOyB9IGNhdGNoIChfKSB7fQogICAgICB3cml0ZVN0YXRlKHsKICAgICAgICBzdGF0dXM6ICdyZWFkeScsCiAgICAgICAgcGFnZVVybDogU3RyaW5nKHBhZ2VVcmwgfHwgJycpLAogICAgICAgIGRhdGE6IHBheWxvYWQsCiAgICAgICAgc2Vzc2lvbjogewogICAgICAgICAgY29va2llSGVhZGVyOiBjb29raWVIZWFkZXIsCiAgICAgICAgICBjb29raWVOYW1lczogT2JqZWN0LmtleXMobWVyZ2VkKS5zb3J0KCksCiAgICAgICAgICBjb29raWVzOiBjb29raWVSb3dzLAogICAgICAgICAgdXNlckFnZW50OiB1YSwKICAgICAgICAgIGNhcHR1cmVkQXQ6IG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKSwKICAgICAgICAgIHRhcmdldFVybDogU3RyaW5nKHBhZ2VVcmwgfHwgJycpLAogICAgICAgICAgYnJvd3NlcjogJ21hY09TIFdLV2ViVmlldyB2MzE4JwogICAgICAgIH0sCiAgICAgICAgZW5naW5lOiAnV0tXZWJWaWV3LXYzMTgnLAogICAgICAgIHN0YXJ0ZWRBdDogbmV3IERhdGUoRUNfU1RBUlRFRF9BVCkudG9JU09TdHJpbmcoKQogICAgICB9KTsKICAgICAgdHJ5IHsgRUNfV0lORE9XLm9yZGVyT3V0KG51bGwpOyB9IGNhdGNoIChfKSB7fQogICAgICAkLk5TVGhyZWFkLnNsZWVwRm9yVGltZUludGVydmFsKDAuMTgpOwogICAgICB0cnkgeyBFQ19BUFAudGVybWluYXRlKG51bGwpOyB9IGNhdGNoIChfKSB7fQogICAgfSk7CiAgfSk7Cn0KCmZ1bmN0aW9uIGJ1aWxkQ29udHJvbGxlclNjcmlwdCgpIHsKICAvLyBUaGUgcmVhZCBleHByZXNzaW9uIGlzIGFuIGFzeW5jIElJRkUuIFdlIGxhdW5jaCBpdCBvbmNlIGFuZCBzdG9yZSBpdHMgcmVzdWx0CiAgLy8gaW4gYSBwYWdlLWdsb2JhbCBvYmplY3QuIGV2YWx1YXRlSmF2YVNjcmlwdCBpdHNlbGYgb25seSByZXR1cm5zIGEgc3luY2hyb25vdXMKICAvLyBzdGF0dXMgc25hcHNob3QsIHdoaWNoIHdvcmtzIG9uIG9sZGVyIFdLV2ViVmlldyB2ZXJzaW9ucyBhcyB3ZWxsLgogIHJldHVybiBgKCgpID0+IHsKICAgIGNvbnN0IGhyZWYgPSBTdHJpbmcobG9jYXRpb24uaHJlZiB8fCAnJyk7CiAgICBjb25zdCBvbkViID0gaHJlZi5pbmRleE9mKCcvZWJpY2hlbGNoZW4vYXBwLycpID49IDA7CiAgICBjb25zdCBib2R5VGV4dCA9IFN0cmluZygoZG9jdW1lbnQuYm9keSAmJiBkb2N1bWVudC5ib2R5LmlubmVyVGV4dCkgfHwgJycpLnRvTG93ZXJDYXNlKCk7CgogICAgLy8gdjMxODogRGV0ZWN0IHRoZSBleGFjdCBlLUJpY2hlbGNoZW4gZXJyb3Igc2hvd24gd2hlbiBpdHMgZW1iZWRkZWQgV2ViS2l0CiAgICAvLyBzZXNzaW9uIGNhbm5vdCByZWFjaCB0aGUgYmFja2VuZC4gIFB5dGhvbiB3aWxsIHRyYW5zcGFyZW50bHkgZmFsbCBiYWNrIHRvCiAgICAvLyB0aGUgY29udHJvbGxlZCBDaHJvbWUvRWRnZSB3aW5kb3cgaW5zdGVhZCBvZiBsZWF2aW5nIHRoaXMgZGVhZCBkaWFsb2cgdXAuCiAgICBjb25zdCBzZXJ2ZXJDb25uZWN0aW9uRXJyb3IgPQogICAgICBib2R5VGV4dC5pbmRleE9mKCdlcyBrb25udGUga2VpbmUgdmVyYmluZHVuZyB6dW0gc2VydmVyIGVyc3RlbGx0IHdlcmRlbicpID49IDAgfHwKICAgICAgYm9keVRleHQuaW5kZXhPZigna2VpbmUgdmVyYmluZHVuZyB6dW0gc2VydmVyJykgPj0gMCB8fAogICAgICBib2R5VGV4dC5pbmRleE9mKCdpbXBvc3NpYmxlIGRlIHNlIGNvbm5lY3RlciBhdSBzZXJ2ZXVyJykgPj0gMCB8fAogICAgICBib2R5VGV4dC5pbmRleE9mKCdjb3VsZCBub3QgY29ubmVjdCB0byB0aGUgc2VydmVyJykgPj0gMDsKICAgIGlmIChzZXJ2ZXJDb25uZWN0aW9uRXJyb3IpIHsKICAgICAgcmV0dXJuIEpTT04uc3RyaW5naWZ5KHtwaGFzZTonYnJvd3Nlci1mYWxsYmFjaycsdXJsOmhyZWYsZXJyb3I6J2UtQmljaGVsY2hlbiByZWplY3RlZCB0aGUgZW1iZWRkZWQgV2ViS2l0IGNvbm5lY3Rpb24uJ30pOwogICAgfQoKICAgIGlmICghb25FYikgcmV0dXJuIEpTT04uc3RyaW5naWZ5KHtwaGFzZTonbG9naW4nLHVybDpocmVmfSk7CgogICAgLy8gRG8gbm90IGV2ZW4gc3RhcnQgdGhlIHJlYWRlciBvbiB0aGUgcHVibGljIGxhbmRpbmcvbG9naW4gc2NyZWVuLiAgdjMxNwogICAgLy8gY2hlY2tlZCBvbmx5IHRoZSBsaXRlcmFsIC9sb2dpbiBVUkw7IHRoZSBTUEEgY2FuIGFsc28gc2hvdyB0aGUgc2FtZSBzY3JlZW4KICAgIC8vIG9uIC9hcHAvIGFuZCB0aGVuIHVuYXV0aGVudGljYXRlZCBBUEkgY2FsbHMgdHJpZ2dlciB0aGUgc2VydmVyIGRpYWxvZy4KICAgIGxldCBncm91cFN0b3JlUmVhZHkgPSBmYWxzZTsKICAgIHRyeSB7CiAgICAgIGNvbnN0IHJhdyA9IHNlc3Npb25TdG9yYWdlLmdldEl0ZW0oJ2dyb3VwU3RvcmUnKTsKICAgICAgaWYgKHJhdykgewogICAgICAgIGNvbnN0IHBhcnNlZCA9IEpTT04ucGFyc2UocmF3KTsKICAgICAgICBncm91cFN0b3JlUmVhZHkgPSBCb29sZWFuKHBhcnNlZCAmJiB0eXBlb2YgcGFyc2VkID09PSAnb2JqZWN0JyAmJiBPYmplY3Qua2V5cyhwYXJzZWQpLmxlbmd0aCk7CiAgICAgIH0KICAgIH0gY2F0Y2ggKF8pIHt9CiAgICBsZXQgZ3JvdXBSZXNvdXJjZVNlZW4gPSBmYWxzZTsKICAgIHRyeSB7CiAgICAgIGdyb3VwUmVzb3VyY2VTZWVuID0gcGVyZm9ybWFuY2UuZ2V0RW50cmllc0J5VHlwZSgncmVzb3VyY2UnKS5zb21lKGUgPT4gL2dldC1ncm91cHMtZnJvbS10ZWFjaGVyL2kudGVzdChTdHJpbmcoZSAmJiBlLm5hbWUgfHwgJycpKSk7CiAgICB9IGNhdGNoIChfKSB7fQogICAgY29uc3QgbGFuZGluZ1Zpc2libGUgPQogICAgICBib2R5VGV4dC5pbmRleE9mKCdlLWJpY2hlbGNoZW4nKSA+PSAwICYmCiAgICAgIChib2R5VGV4dC5pbmRleE9mKCd0dXRvcmlhbCcpID49IDAgfHwgYm9keVRleHQuaW5kZXhPZignYW5tZWxkZW4nKSA+PSAwIHx8CiAgICAgICBib2R5VGV4dC5pbmRleE9mKCdjb25uZXhpb24nKSA+PSAwIHx8IGJvZHlUZXh0LmluZGV4T2YoJ3NlIGNvbm5lY3RlcicpID49IDAgfHwKICAgICAgIGJvZHlUZXh0LmluZGV4T2YoJ3NpZ24gaW4nKSA+PSAwIHx8IGJvZHlUZXh0LmluZGV4T2YoJ2xvZyBpbicpID49IDApOwogICAgY29uc3QgbG9naW5Sb3V0ZSA9IC9cXC9lYmljaGVsY2hlblxcL2FwcFxcL2xvZ2luKD86XFwvfFxcP3wjfCQpL2kudGVzdChocmVmKTsKICAgIGNvbnN0IGF1dGhlbnRpY2F0ZWRSb3V0ZSA9IC9cXC9lYmljaGVsY2hlblxcL2FwcFxcLyg/IWxvZ2luKD86XFwvfFxcP3wjfCQpKVteLz8jXSsvaS50ZXN0KGhyZWYpOwogICAgY29uc3Qgc3Ryb25nQXV0aEV2aWRlbmNlID0gZ3JvdXBTdG9yZVJlYWR5IHx8IGdyb3VwUmVzb3VyY2VTZWVuOwogICAgY29uc3QgYXV0aEV2aWRlbmNlID0gc3Ryb25nQXV0aEV2aWRlbmNlIHx8IChhdXRoZW50aWNhdGVkUm91dGUgJiYgIWxhbmRpbmdWaXNpYmxlKTsKICAgIGlmIChsb2dpblJvdXRlIHx8IChsYW5kaW5nVmlzaWJsZSAmJiAhc3Ryb25nQXV0aEV2aWRlbmNlKSB8fCAhYXV0aEV2aWRlbmNlKSB7CiAgICAgIHJldHVybiBKU09OLnN0cmluZ2lmeSh7cGhhc2U6J2xvZ2luJyx1cmw6aHJlZn0pOwogICAgfQoKICAgIGlmICghd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMxOCkgewogICAgICB3aW5kb3cuX19lbnRyZXRpZW5Db25uZWN0TmF0aXZlMzE4ID0ge3BoYXNlOidzdGFydGluZycsdXJsOmhyZWYsZXJyb3I6JycsZGF0YTpudWxsLHN0YXJ0ZWRBdDpEYXRlLm5vdygpfTsKICAgICAgY29uc3QgcyA9IHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMTg7CiAgICAgIHMucGhhc2UgPSAncmVhZGluZyc7CiAgICAgIFByb21pc2UucmVzb2x2ZSgke0VDX1JFQURfRVhQUkVTU0lPTn0pCiAgICAgICAgLnRoZW4odiA9PiB7IHMuZGF0YSA9IHY7IHMucGhhc2UgPSAncmVhZHknOyBzLnVybCA9IFN0cmluZyhsb2NhdGlvbi5ocmVmIHx8IGhyZWYpOyB9KQogICAgICAgIC5jYXRjaChlID0+IHsKICAgICAgICAgIHMuZXJyb3IgPSBTdHJpbmcoZSAmJiAoZS5tZXNzYWdlIHx8IGUpIHx8ICd1bmtub3duIGVycm9yJyk7CiAgICAgICAgICBzLnBoYXNlID0gJ3dhaXRpbmcnOwogICAgICAgICAgcy51cmwgPSBTdHJpbmcobG9jYXRpb24uaHJlZiB8fCBocmVmKTsKICAgICAgICAgIHNldFRpbWVvdXQoKCkgPT4geyB0cnkgeyBkZWxldGUgd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMxODsgfSBjYXRjaCAoXykge30gfSwgMTIwMCk7CiAgICAgICAgfSk7CiAgICB9CiAgICBjb25zdCBzID0gd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMxODsKICAgIHJldHVybiBKU09OLnN0cmluZ2lmeSh7cGhhc2U6cy5waGFzZSx1cmw6U3RyaW5nKHMudXJsfHxocmVmKSxlcnJvcjpTdHJpbmcocy5lcnJvcnx8JycpLGRhdGE6cy5kYXRhfHxudWxsLGFnZTpEYXRlLm5vdygpLU51bWJlcihzLnN0YXJ0ZWRBdHx8RGF0ZS5ub3coKSl9KTsKICB9KSgpYDsKfQoKZnVuY3Rpb24gcG9sbFdlYlZpZXcoKSB7CiAgaWYgKEVDX0ZJTklTSEVEIHx8IEVDX0JVU1kgfHwgIUVDX1dFQlZJRVcpIHJldHVybjsKICB0cnkgewogICAgaWYgKEVDX1dJTkRPVyAmJiAhQm9vbGVhbihFQ19XSU5ET1cuaXNWaXNpYmxlKSkgewogICAgICBFQ19GSU5JU0hFRCA9IHRydWU7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonY2xvc2VkJywgbWVzc2FnZTonTG9naW4gd2luZG93IGNsb3NlZCBieSB1c2VyLid9KTsKICAgICAgdHJ5IHsgRUNfQVBQLnRlcm1pbmF0ZShudWxsKTsgfSBjYXRjaCAoXykge30KICAgICAgcmV0dXJuOwogICAgfQogIH0gY2F0Y2ggKF8pIHt9CgogIEVDX0JVU1kgPSB0cnVlOwogIGNvbnN0IHNjcmlwdCA9IGJ1aWxkQ29udHJvbGxlclNjcmlwdCgpOwogIEVDX1dFQlZJRVcuZXZhbHVhdGVKYXZhU2NyaXB0Q29tcGxldGlvbkhhbmRsZXIoJChzY3JpcHQpLCBmdW5jdGlvbihyZXN1bHQsIGVycm9yKSB7CiAgICBFQ19CVVNZID0gZmFsc2U7CiAgICBpZiAoRUNfRklOSVNIRUQpIHJldHVybjsKICAgIC8vIHYzMTM6IEEgbmlsIE5TRXJyb3IgYXJyaXZlcyBpbiBKWEEgYXMgYSBUUlVUSFkgd3JhcHBlciBvYmplY3QsIHNvIHRoZSBvbGQKICAgIC8vIGBpZiAoZXJyb3IpYCB0b29rIHRoZSBmYWlsdXJlIGJyYW5jaCBvbiBldmVyeSBzaW5nbGUgc3VjY2Vzc2Z1bCBjYWxsIGFuZAogICAgLy8gdGhlIHJlc3VsdCB3YXMgbmV2ZXIgcGFyc2VkIOKAlCB0aGUgbG9naW4gd2luZG93IHN0YXllZCBvcGVuIGZvcmV2ZXIgYW5kIHRoZQogICAgLy8gc3RhdGUgZmlsZSB3YXMgc3R1Y2sgb24gc3RhZ2UgIm5hdmlnYXRpb24iIC8gZGV0YWlsICJbaWQgbmlsXSIuCiAgICAvLyBUaGUgcmVzdWx0IG5vdyBkZWNpZGVzOyB0aGUgZXJyb3Igb2JqZWN0IGlzIG9ubHkgdXNlZCBmb3IgaXRzIG1lc3NhZ2UuCiAgICBsZXQgb3V0ZXIgPSBudWxsOwogICAgdHJ5IHsgb3V0ZXIgPSBKU09OLnBhcnNlKFN0cmluZyhqc1ZhbHVlKHJlc3VsdCkgfHwgJ3t9JykpOyB9IGNhdGNoIChfKSB7IG91dGVyID0gbnVsbDsgfQogICAgaWYgKCFvdXRlciB8fCAhb3V0ZXIucGhhc2UpIHsKICAgICAgY29uc3QgZGV0YWlsID0gZXJyb3JUZXh0KGVycm9yKTsKICAgICAgaWYgKGRldGFpbCkgd3JpdGVTdGF0ZSh7c3RhdHVzOid3YWl0aW5nJywgc3RhZ2U6J25hdmlnYXRpb24nLCBkZXRhaWw6ZGV0YWlsLCBwYWdlVXJsOicnfSk7CiAgICAgIHJldHVybjsKICAgIH0KICAgIGNvbnN0IHBoYXNlID0gU3RyaW5nKG91dGVyLnBoYXNlIHx8ICd3YWl0aW5nJyk7CiAgICBjb25zdCBwYWdlVXJsID0gU3RyaW5nKG91dGVyLnVybCB8fCAnJyk7CiAgICBpZiAocGhhc2UgPT09ICdicm93c2VyLWZhbGxiYWNrJykgewogICAgICBmaW5pc2hXaXRoQnJvd3NlckZhbGxiYWNrKAogICAgICAgICdlLUJpY2hlbGNoZW4gd2lyZCBpbiBDaHJvbWUgb2RlciBFZGdlIGdlw7ZmZm5ldC4nLAogICAgICAgIFN0cmluZyhvdXRlci5lcnJvciB8fCAnJyksCiAgICAgICAgcGFnZVVybAogICAgICApOwogICAgICByZXR1cm47CiAgICB9CiAgICBpZiAocGhhc2UgPT09ICdsb2dpbicpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J2xvZ2luJywgcGFnZVVybDpwYWdlVXJsLCBlbmdpbmU6J1dLV2ViVmlldyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKHBoYXNlID09PSAncmVhZGluZycgfHwgcGhhc2UgPT09ICdzdGFydGluZycpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J3JlYWRpbmcnLCBwYWdlVXJsOnBhZ2VVcmwsIGVuZ2luZTonV0tXZWJWaWV3J30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBpZiAocGhhc2UgPT09ICd3YWl0aW5nJykgewogICAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J29wZW4nLCBzdGFnZTonbG9hZGluZycsIHBhZ2VVcmw6cGFnZVVybCwgZGV0YWlsOlN0cmluZyhvdXRlci5lcnJvciB8fCAnJyksIGVuZ2luZTonV0tXZWJWaWV3J30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBpZiAocGhhc2UgPT09ICdyZWFkeScgJiYgb3V0ZXIuZGF0YSkgewogICAgICBsZXQgcGF5bG9hZCA9IG51bGw7CiAgICAgIHRyeSB7CiAgICAgICAgcGF5bG9hZCA9IHR5cGVvZiBvdXRlci5kYXRhID09PSAnc3RyaW5nJyA/IEpTT04ucGFyc2Uob3V0ZXIuZGF0YSkgOiBvdXRlci5kYXRhOwogICAgICB9IGNhdGNoIChlKSB7CiAgICAgICAgZmluaXNoV2l0aEVycm9yKCdUaGUgZS1CaWNoZWxjaGVuIGRhdGEgY291bGQgbm90IGJlIGRlY29kZWQuJywgU3RyaW5nKGUpKTsKICAgICAgICByZXR1cm47CiAgICAgIH0KICAgICAgZmluYWxpemVQYXlsb2FkKHBheWxvYWQsIHBhZ2VVcmwpOwogICAgfQogIH0pOwp9CgpmdW5jdGlvbiBydW4oYXJndikgewogIHRyeSB7CiAgICBpZiAoIWFyZ3YgfHwgYXJndi5sZW5ndGggPCAzKSB0aHJvdyBuZXcgRXJyb3IoJ01pc3NpbmcgbmF0aXZlIGxvZ2luIGFyZ3VtZW50cy4nKTsKICAgIEVDX1NUQVRFX1BBVEggPSBTdHJpbmcoYXJndlswXSk7CiAgICBjb25zdCBleHByZXNzaW9uUGF0aCA9IFN0cmluZyhhcmd2WzFdKTsKICAgIEVDX1NUQVJUX1VSTCA9IFN0cmluZyhhcmd2WzJdKTsKICAgIGNvbnN0IHJlYWRFcnIgPSBSZWYoKTsKICAgIGNvbnN0IHJlYWRPYmogPSAkLk5TU3RyaW5nLnN0cmluZ1dpdGhDb250ZW50c09mRmlsZUVuY29kaW5nRXJyb3IoJChleHByZXNzaW9uUGF0aCksICQuTlNVVEY4U3RyaW5nRW5jb2RpbmcsIHJlYWRFcnIpOwogICAgRUNfUkVBRF9FWFBSRVNTSU9OID0gU3RyaW5nKGpzVmFsdWUocmVhZE9iaikgfHwgJycpOwogICAgaWYgKCFFQ19SRUFEX0VYUFJFU1NJT04pIHRocm93IG5ldyBFcnJvcignVGhlIGUtQmljaGVsY2hlbiByZWFkIHNjcmlwdCBpcyBlbXB0eS4nKTsKCiAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J3N0YXJ0aW5nJywgZW5naW5lOidXS1dlYlZpZXcnLCBzdGFydGVkQXQ6bmV3IERhdGUoRUNfU1RBUlRFRF9BVCkudG9JU09TdHJpbmcoKX0pOwoKICAgIEVDX0FQUCA9ICQuTlNBcHBsaWNhdGlvbi5zaGFyZWRBcHBsaWNhdGlvbjsKICAgIEVDX0FQUC5zZXRBY3RpdmF0aW9uUG9saWN5KCQuTlNBcHBsaWNhdGlvbkFjdGl2YXRpb25Qb2xpY3lSZWd1bGFyKTsKCiAgICBjb25zdCByZWN0ID0gJC5OU01ha2VSZWN0KDAsIDAsIDEwODAsIDc2MCk7CiAgICBjb25zdCBzdHlsZSA9ICQuTlNXaW5kb3dTdHlsZU1hc2tUaXRsZWQgfCAkLk5TV2luZG93U3R5bGVNYXNrQ2xvc2FibGUgfCAkLk5TV2luZG93U3R5bGVNYXNrTWluaWF0dXJpemFibGUgfCAkLk5TV2luZG93U3R5bGVNYXNrUmVzaXphYmxlOwogICAgRUNfV0lORE9XID0gJC5OU1dpbmRvdy5hbGxvYy5pbml0V2l0aENvbnRlbnRSZWN0U3R5bGVNYXNrQmFja2luZ0RlZmVyKHJlY3QsIHN0eWxlLCAkLk5TQmFja2luZ1N0b3JlQnVmZmVyZWQsIGZhbHNlKTsKICAgIEVDX1dJTkRPVy5zZXRUaXRsZSgkKCdlLUJpY2hlbGNoZW4g4oCTIEVudHJldGllbkNvbm5lY3QnKSk7CiAgICBFQ19XSU5ET1cuc2V0UmVsZWFzZWRXaGVuQ2xvc2VkKGZhbHNlKTsKICAgIEVDX1dJTkRPVy5jZW50ZXI7CgogICAgY29uc3QgY29uZmlnID0gJC5XS1dlYlZpZXdDb25maWd1cmF0aW9uLmFsbG9jLmluaXQ7CiAgICBjb25maWcud2Vic2l0ZURhdGFTdG9yZSA9ICQuV0tXZWJzaXRlRGF0YVN0b3JlLmRlZmF1bHREYXRhU3RvcmU7CiAgICBFQ19XRUJWSUVXID0gJC5XS1dlYlZpZXcuYWxsb2MuaW5pdFdpdGhGcmFtZUNvbmZpZ3VyYXRpb24ocmVjdCwgY29uZmlnKTsKICAgIEVDX1dFQlZJRVcuc2V0QWxsb3dzQmFja0ZvcndhcmROYXZpZ2F0aW9uR2VzdHVyZXModHJ1ZSk7CiAgICBFQ19XSU5ET1cuc2V0Q29udGVudFZpZXcoRUNfV0VCVklFVyk7CiAgICBFQ19XSU5ET1cubWFrZUtleUFuZE9yZGVyRnJvbnQobnVsbCk7CiAgICBFQ19BUFAuYWN0aXZhdGVJZ25vcmluZ090aGVyQXBwcyh0cnVlKTsKCiAgICBjb25zdCB1cmwgPSAkLk5TVVJMLlVSTFdpdGhTdHJpbmcoJChFQ19TVEFSVF9VUkwpKTsKICAgIGlmICghdXJsKSB0aHJvdyBuZXcgRXJyb3IoJ0ludmFsaWQgZS1CaWNoZWxjaGVuIFVSTC4nKTsKICAgIGNvbnN0IHJlcXVlc3QgPSAkLk5TVVJMUmVxdWVzdC5yZXF1ZXN0V2l0aFVSTCh1cmwpOwogICAgRUNfV0VCVklFVy5sb2FkUmVxdWVzdChyZXF1ZXN0KTsKCiAgICBFQ19USU1FUiA9ICQuTlNUaW1lci5zY2hlZHVsZWRUaW1lcldpdGhUaW1lSW50ZXJ2YWxSZXBlYXRzQmxvY2soMC44LCB0cnVlLCBmdW5jdGlvbihfKSB7IHBvbGxXZWJWaWV3KCk7IH0pOwogICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J2xvZ2luJywgZW5naW5lOidXS1dlYlZpZXcnLCBwYWdlVXJsOkVDX1NUQVJUX1VSTH0pOwogICAgRUNfQVBQLnJ1bjsKICB9IGNhdGNoIChlKSB7CiAgICBmaW5pc2hXaXRoRXJyb3IoJ1RoZSBtYWNPUyBsb2dpbiB3aW5kb3cgY291bGQgbm90IGJlIHN0YXJ0ZWQuJywgU3RyaW5nKGUgJiYgKGUubWVzc2FnZSB8fCBlKSB8fCBlKSk7CiAgfQp9Cg=="
+MAC_WK_SCRIPT_B64 = "T2JqQy5pbXBvcnQoJ0NvY29hJyk7Ck9iakMuaW1wb3J0KCdXZWJLaXQnKTsKT2JqQy5pbXBvcnQoJ0ZvdW5kYXRpb24nKTsKCi8qCiAqIEVudHJldGllbkNvbm5lY3QgdjMyMCDigJMgbmF0aXZlIG1hY09TIGUtQmljaGVsY2hlbiBsb2dpbiB3aW5kb3cuCiAqIFJ1bnMgdGhyb3VnaCAvdXNyL2Jpbi9vc2FzY3JpcHQgLWwgSmF2YVNjcmlwdCBhbmQgdXNlcyBXS1dlYlZpZXcgKFNhZmFyaS9XZWJLaXQpLAogKiBzbyBubyBDaHJvbWUsIEVkZ2Ugb3IgcmVtb3RlbHkgY29udHJvbGxlZCBGaXJlZm94IGlzIHJlcXVpcmVkLgogKi8KCmxldCBFQ19BUFAgPSBudWxsOwpsZXQgRUNfV0lORE9XID0gbnVsbDsKbGV0IEVDX1dFQlZJRVcgPSBudWxsOwpsZXQgRUNfVElNRVIgPSBudWxsOwpsZXQgRUNfQlVTWSA9IGZhbHNlOwpsZXQgRUNfRklOSVNIRUQgPSBmYWxzZTsKbGV0IEVDX1NUQVRFX1BBVEggPSAnJzsKbGV0IEVDX1JFQURfRVhQUkVTU0lPTiA9ICcnOwpsZXQgRUNfU1RBUlRfVVJMID0gJyc7CmxldCBFQ19TVEFSVEVEX0FUID0gRGF0ZS5ub3coKTsKLy8gdjMyMDogU2FmYXJpLUtlbm51bmcgZsO8ciBkZW4gVXNlci1BZ2VudCBkZXMgTG9naW5mZW5zdGVycy4KY29uc3QgRUNfQVBQX05BTUVfRk9SX1VBID0gJ1ZlcnNpb24vMTcuNCBTYWZhcmkvNjA1LjEuMTUnOwoKZnVuY3Rpb24ganNWYWx1ZSh2YWx1ZSkgewogIHRyeSB7CiAgICBpZiAodmFsdWUgPT09IHVuZGVmaW5lZCB8fCB2YWx1ZSA9PT0gbnVsbCkgcmV0dXJuIG51bGw7CiAgICBpZiAodmFsdWUuanMgIT09IHVuZGVmaW5lZCkgcmV0dXJuIHZhbHVlLmpzOwogIH0gY2F0Y2ggKF8pIHt9CiAgdHJ5IHsgcmV0dXJuIE9iakMuZGVlcFVud3JhcCh2YWx1ZSk7IH0gY2F0Y2ggKF8pIHt9CiAgdHJ5IHsgcmV0dXJuIE9iakMudW53cmFwKHZhbHVlKTsgfSBjYXRjaCAoXykge30KICByZXR1cm4gU3RyaW5nKHZhbHVlKTsKfQoKLy8gdjMxMzogUmV0dXJucyBhIHVzYWJsZSBtZXNzYWdlIGZvciBhIFJFQUwgZXJyb3IsIGFuZCAnJyBmb3IgYW4gT2JqQyBuaWwgdGhhdAovLyBKWEEgaGFuZHMgb3ZlciBhcyBhIHRydXRoeSB3cmFwcGVyIChpdHMgU3RyaW5nKCkgZm9ybSBpcyAiW2lkIG5pbF0iKS4KZnVuY3Rpb24gZXJyb3JUZXh0KGVycikgewogIGlmICghZXJyKSByZXR1cm4gJyc7CiAgbGV0IGRlc2MgPSBudWxsOwogIHRyeSB7IGRlc2MgPSBqc1ZhbHVlKGVyci5sb2NhbGl6ZWREZXNjcmlwdGlvbik7IH0gY2F0Y2ggKF8pIHsgZGVzYyA9IG51bGw7IH0KICBpZiAoZGVzYyAhPT0gbnVsbCAmJiBkZXNjICE9PSB1bmRlZmluZWQpIHsKICAgIGNvbnN0IHRleHQgPSBTdHJpbmcoZGVzYykudHJpbSgpOwogICAgcmV0dXJuICghdGV4dCB8fCB0ZXh0ID09PSAnbnVsbCcgfHwgdGV4dCA9PT0gJ3VuZGVmaW5lZCcpID8gJycgOiB0ZXh0OwogIH0KICBsZXQgcmF3ID0gJyc7CiAgdHJ5IHsgcmF3ID0gU3RyaW5nKGVycikudHJpbSgpOyB9IGNhdGNoIChfKSB7IHJhdyA9ICcnOyB9CiAgaWYgKCFyYXcgfHwgcmF3ID09PSAnW2lkIG5pbF0nIHx8IHJhdyA9PT0gJ251bGwnIHx8IHJhdyA9PT0gJ3VuZGVmaW5lZCcpIHJldHVybiAnJzsKICByZXR1cm4gcmF3Owp9CgpmdW5jdGlvbiB3cml0ZVN0YXRlKG9iaikgewogIHRyeSB7CiAgICBvYmogPSBvYmogfHwge307CiAgICBpZiAoIW9iai51cGRhdGVkQXQpIG9iai51cGRhdGVkQXQgPSBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCk7CiAgICBjb25zdCB0ZXh0ID0gJChKU09OLnN0cmluZ2lmeShvYmopKTsKICAgIGNvbnN0IGVyciA9IFJlZigpOwogICAgY29uc3Qgb2sgPSB0ZXh0LndyaXRlVG9GaWxlQXRvbWljYWxseUVuY29kaW5nRXJyb3IoJChFQ19TVEFURV9QQVRIKSwgdHJ1ZSwgJC5OU1VURjhTdHJpbmdFbmNvZGluZywgZXJyKTsKICAgIHJldHVybiBCb29sZWFuKG9rKTsKICB9IGNhdGNoIChfKSB7CiAgICByZXR1cm4gZmFsc2U7CiAgfQp9CgpmdW5jdGlvbiBmaW5pc2hXaXRoRXJyb3IobWVzc2FnZSwgZGV0YWlsKSB7CiAgaWYgKEVDX0ZJTklTSEVEKSByZXR1cm47CiAgRUNfRklOSVNIRUQgPSB0cnVlOwogIHdyaXRlU3RhdGUoewogICAgc3RhdHVzOiAnZXJyb3InLAogICAgZXJyb3I6IFN0cmluZyhtZXNzYWdlIHx8ICdXS1dlYlZpZXcgZXJyb3InKSwKICAgIGRldGFpbDogU3RyaW5nKGRldGFpbCB8fCAnJyksCiAgICBzdGFydGVkQXQ6IG5ldyBEYXRlKEVDX1NUQVJURURfQVQpLnRvSVNPU3RyaW5nKCkKICB9KTsKICB0cnkgeyBpZiAoRUNfVElNRVIpIEVDX1RJTUVSLmludmFsaWRhdGU7IH0gY2F0Y2ggKF8pIHt9CiAgdHJ5IHsgaWYgKEVDX1dJTkRPVykgRUNfV0lORE9XLm9yZGVyT3V0KG51bGwpOyB9IGNhdGNoIChfKSB7fQogICQuTlNUaHJlYWQuc2xlZXBGb3JUaW1lSW50ZXJ2YWwoMC4xMik7CiAgdHJ5IHsgRUNfQVBQLnRlcm1pbmF0ZShudWxsKTsgfSBjYXRjaCAoXykge30KfQoKZnVuY3Rpb24gZWR1Y2F0aW9uQ29va2llcyhjb29raWVzKSB7CiAgY29uc3Qgb3V0ID0gW107CiAgdHJ5IHsKICAgIGNvbnN0IGNvdW50ID0gTnVtYmVyKGNvb2tpZXMuY291bnQgfHwgMCk7CiAgICBmb3IgKGxldCBpID0gMDsgaSA8IGNvdW50OyBpKyspIHsKICAgICAgY29uc3QgYyA9IGNvb2tpZXMub2JqZWN0QXRJbmRleChpKTsKICAgICAgY29uc3QgZG9tYWluID0gU3RyaW5nKGpzVmFsdWUoYy5kb21haW4pIHx8ICcnKTsKICAgICAgY29uc3QgbmFtZSA9IFN0cmluZyhqc1ZhbHVlKGMubmFtZSkgfHwgJycpOwogICAgICBpZiAoIW5hbWUgfHwgZG9tYWluLnRvTG93ZXJDYXNlKCkuaW5kZXhPZignZWR1Y2F0aW9uLmx1JykgPCAwKSBjb250aW51ZTsKICAgICAgb3V0LnB1c2goewogICAgICAgIG5hbWU6IG5hbWUsCiAgICAgICAgdmFsdWU6IFN0cmluZyhqc1ZhbHVlKGMudmFsdWUpIHx8ICcnKSwKICAgICAgICBkb21haW46IGRvbWFpbiwKICAgICAgICBwYXRoOiBTdHJpbmcoanNWYWx1ZShjLnBhdGgpIHx8ICcvJyksCiAgICAgICAgc2VjdXJlOiBCb29sZWFuKGpzVmFsdWUoYy5zZWN1cmUpKSwKICAgICAgICBodHRwT25seTogQm9vbGVhbihqc1ZhbHVlKGMuSFRUUE9ubHkpKQogICAgICB9KTsKICAgIH0KICB9IGNhdGNoIChfKSB7fQogIHJldHVybiBvdXQ7Cn0KCmZ1bmN0aW9uIGZpbmFsaXplUGF5bG9hZChwYXlsb2FkLCBwYWdlVXJsKSB7CiAgaWYgKEVDX0ZJTklTSEVEKSByZXR1cm47CiAgRUNfRklOSVNIRUQgPSB0cnVlOwoKICAvLyB2MzEzOiBUaGUgV0tIVFRQQ29va2llU3RvcmUgc2VsZWN0b3IgaXMgYGdldEFsbENvb2tpZXM6YCwgc28gdGhlIEpYQSBuYW1lIGlzCiAgLy8gYGdldEFsbENvb2tpZXNgLiBUaGUgcHJldmlvdXMgYGdldEFsbENvb2tpZXNXaXRoQ29tcGxldGlvbkhhbmRsZXJgIGRpZCBub3QKICAvLyBleGlzdCBhbmQgcmFpc2VkIGFuIHVuY2F1Z2h0IE5TRXhjZXB0aW9uIHRoYXQga2lsbGVkIHRoZSB3aG9sZSBsb2dpbiB3aW5kb3cuCiAgLy8gSXQgbmV2ZXIgc3VyZmFjZWQgYmVjYXVzZSB0aGUgbmlsLWVycm9yIGJ1ZyBhYm92ZSBtZWFudCB0aGlzIGxpbmUgd2FzIG5ldmVyCiAgLy8gcmVhY2hlZC4gS2VwdCBiZWhpbmQgYSB0cnkvY2F0Y2ggc28gYSBmdXR1cmUgQVBJIGNoYW5nZSBkZWdyYWRlcyBpbnRvIGEKICAvLyByZWFkYWJsZSBlcnJvciBzdGF0ZSBpbnN0ZWFkIG9mIGEgc2lsZW50IGNyYXNoLgogIGxldCBzdG9yZSA9IG51bGw7CiAgdHJ5IHsKICAgIHN0b3JlID0gRUNfV0VCVklFVy5jb25maWd1cmF0aW9uLndlYnNpdGVEYXRhU3RvcmUuaHR0cENvb2tpZVN0b3JlOwogIH0gY2F0Y2ggKGUpIHsKICAgIGZpbmlzaFdpdGhFcnJvcignVGhlIGUtQmljaGVsY2hlbiBzZXNzaW9uIGNvdWxkIG5vdCBiZSByZWFkLicsIFN0cmluZyhlKSk7CiAgICByZXR1cm47CiAgfQogIGlmICghc3RvcmUgfHwgdHlwZW9mIHN0b3JlLmdldEFsbENvb2tpZXMgIT09ICdmdW5jdGlvbicpIHsKICAgIGZpbmlzaFdpdGhFcnJvcignVGhlIGUtQmljaGVsY2hlbiBzZXNzaW9uIGNvdWxkIG5vdCBiZSByZWFkLicsICdXS0hUVFBDb29raWVTdG9yZS5nZXRBbGxDb29raWVzIHVuYXZhaWxhYmxlJyk7CiAgICByZXR1cm47CiAgfQogIHN0b3JlLmdldEFsbENvb2tpZXMoZnVuY3Rpb24oY29va2llcykgewogICAgbGV0IGNvb2tpZVJvd3MgPSBlZHVjYXRpb25Db29raWVzKGNvb2tpZXMpOwogICAgRUNfV0VCVklFVy5ldmFsdWF0ZUphdmFTY3JpcHRDb21wbGV0aW9uSGFuZGxlcigkKCduYXZpZ2F0b3IudXNlckFnZW50IHx8ICJNb3ppbGxhLzUuMCInKSwgZnVuY3Rpb24odWFWYWx1ZSwgdWFFcnJvcikgewogICAgICBjb25zdCB1YSA9IFN0cmluZyhqc1ZhbHVlKHVhVmFsdWUpIHx8ICdNb3ppbGxhLzUuMCAoTWFjaW50b3NoKSBBcHBsZVdlYktpdCcpOwogICAgICBjb25zdCBtZXJnZWQgPSB7fTsKICAgICAgY29va2llUm93cy5mb3JFYWNoKGZ1bmN0aW9uKGMpIHsgbWVyZ2VkW2MubmFtZV0gPSBjLnZhbHVlOyB9KTsKICAgICAgY29uc3QgY29va2llSGVhZGVyID0gT2JqZWN0LmtleXMobWVyZ2VkKS5tYXAoZnVuY3Rpb24oaykgeyByZXR1cm4gayArICc9JyArIG1lcmdlZFtrXTsgfSkuam9pbignOyAnKTsKICAgICAgaWYgKCFjb29raWVIZWFkZXIpIHsKICAgICAgICBFQ19GSU5JU0hFRCA9IGZhbHNlOwogICAgICAgIHdyaXRlU3RhdGUoewogICAgICAgICAgc3RhdHVzOiAnd2FpdGluZycsCiAgICAgICAgICBzdGFnZTogJ3Nlc3Npb24nLAogICAgICAgICAgbWVzc2FnZTogJ2UtQmljaGVsY2hlbiBpcyBvcGVuLCBidXQgdGhlIGF1dGhlbnRpY2F0ZWQgc2Vzc2lvbiBpcyBub3QgYXZhaWxhYmxlIHlldC4nLAogICAgICAgICAgcGFnZVVybDogU3RyaW5nKHBhZ2VVcmwgfHwgJycpCiAgICAgICAgfSk7CiAgICAgICAgcmV0dXJuOwogICAgICB9CiAgICAgIHRyeSB7IGlmIChFQ19USU1FUikgRUNfVElNRVIuaW52YWxpZGF0ZTsgfSBjYXRjaCAoXykge30KICAgICAgd3JpdGVTdGF0ZSh7CiAgICAgICAgc3RhdHVzOiAncmVhZHknLAogICAgICAgIHBhZ2VVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKSwKICAgICAgICBkYXRhOiBwYXlsb2FkLAogICAgICAgIHNlc3Npb246IHsKICAgICAgICAgIGNvb2tpZUhlYWRlcjogY29va2llSGVhZGVyLAogICAgICAgICAgY29va2llTmFtZXM6IE9iamVjdC5rZXlzKG1lcmdlZCkuc29ydCgpLAogICAgICAgICAgY29va2llczogY29va2llUm93cywKICAgICAgICAgIHVzZXJBZ2VudDogdWEsCiAgICAgICAgICBjYXB0dXJlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCksCiAgICAgICAgICB0YXJnZXRVcmw6IFN0cmluZyhwYWdlVXJsIHx8ICcnKSwKICAgICAgICAgIGJyb3dzZXI6ICdtYWNPUyBXS1dlYlZpZXcgdjMyMCcKICAgICAgICB9LAogICAgICAgIGVuZ2luZTogJ1dLV2ViVmlldy12MzIwJywKICAgICAgICBzdGFydGVkQXQ6IG5ldyBEYXRlKEVDX1NUQVJURURfQVQpLnRvSVNPU3RyaW5nKCkKICAgICAgfSk7CiAgICAgIHRyeSB7IEVDX1dJTkRPVy5vcmRlck91dChudWxsKTsgfSBjYXRjaCAoXykge30KICAgICAgJC5OU1RocmVhZC5zbGVlcEZvclRpbWVJbnRlcnZhbCgwLjE4KTsKICAgICAgdHJ5IHsgRUNfQVBQLnRlcm1pbmF0ZShudWxsKTsgfSBjYXRjaCAoXykge30KICAgIH0pOwogIH0pOwp9CgpmdW5jdGlvbiBidWlsZENvbnRyb2xsZXJTY3JpcHQoKSB7CiAgLy8gVGhlIHJlYWQgZXhwcmVzc2lvbiBpcyBhbiBhc3luYyBJSUZFLiBXZSBsYXVuY2ggaXQgb25jZSBhbmQgc3RvcmUgaXRzIHJlc3VsdAogIC8vIGluIGEgcGFnZS1nbG9iYWwgb2JqZWN0LiBldmFsdWF0ZUphdmFTY3JpcHQgaXRzZWxmIG9ubHkgcmV0dXJucyBhIHN5bmNocm9ub3VzCiAgLy8gc3RhdHVzIHNuYXBzaG90LCB3aGljaCB3b3JrcyBvbiBvbGRlciBXS1dlYlZpZXcgdmVyc2lvbnMgYXMgd2VsbC4KICByZXR1cm4gYCgoKSA9PiB7CiAgICBjb25zdCBocmVmID0gU3RyaW5nKGxvY2F0aW9uLmhyZWYgfHwgJycpOwogICAgY29uc3Qgb25FYiA9IGhyZWYuaW5kZXhPZignL2ViaWNoZWxjaGVuL2FwcC8nKSA+PSAwOwogICAgaWYgKCFvbkViKSByZXR1cm4gSlNPTi5zdHJpbmdpZnkoe3BoYXNlOidsb2dpbicsdXJsOmhyZWZ9KTsKICAgIGlmICghd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMyMCkgewogICAgICB3aW5kb3cuX19lbnRyZXRpZW5Db25uZWN0TmF0aXZlMzIwID0ge3BoYXNlOidzdGFydGluZycsdXJsOmhyZWYsZXJyb3I6JycsZGF0YTpudWxsLHN0YXJ0ZWRBdDpEYXRlLm5vdygpfTsKICAgICAgY29uc3QgcyA9IHdpbmRvdy5fX2VudHJldGllbkNvbm5lY3ROYXRpdmUzMjA7CiAgICAgIHMucGhhc2UgPSAncmVhZGluZyc7CiAgICAgIFByb21pc2UucmVzb2x2ZSgke0VDX1JFQURfRVhQUkVTU0lPTn0pCiAgICAgICAgLnRoZW4odiA9PiB7IHMuZGF0YSA9IHY7IHMucGhhc2UgPSAncmVhZHknOyBzLnVybCA9IFN0cmluZyhsb2NhdGlvbi5ocmVmIHx8IGhyZWYpOyB9KQogICAgICAgIC5jYXRjaChlID0+IHsKICAgICAgICAgIHMuZXJyb3IgPSBTdHJpbmcoZSAmJiAoZS5tZXNzYWdlIHx8IGUpIHx8ICd1bmtub3duIGVycm9yJyk7CiAgICAgICAgICBzLnBoYXNlID0gJ3dhaXRpbmcnOwogICAgICAgICAgcy51cmwgPSBTdHJpbmcobG9jYXRpb24uaHJlZiB8fCBocmVmKTsKICAgICAgICAgIHNldFRpbWVvdXQoKCkgPT4geyB0cnkgeyBkZWxldGUgd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMyMDsgfSBjYXRjaCAoXykge30gfSwgMTIwMCk7CiAgICAgICAgfSk7CiAgICB9CiAgICBjb25zdCBzID0gd2luZG93Ll9fZW50cmV0aWVuQ29ubmVjdE5hdGl2ZTMyMDsKICAgIHJldHVybiBKU09OLnN0cmluZ2lmeSh7cGhhc2U6cy5waGFzZSx1cmw6U3RyaW5nKHMudXJsfHxocmVmKSxlcnJvcjpTdHJpbmcocy5lcnJvcnx8JycpLGRhdGE6cy5kYXRhfHxudWxsLGFnZTpEYXRlLm5vdygpLU51bWJlcihzLnN0YXJ0ZWRBdHx8RGF0ZS5ub3coKSl9KTsKICB9KSgpYDsKfQoKZnVuY3Rpb24gcG9sbFdlYlZpZXcoKSB7CiAgaWYgKEVDX0ZJTklTSEVEIHx8IEVDX0JVU1kgfHwgIUVDX1dFQlZJRVcpIHJldHVybjsKICB0cnkgewogICAgaWYgKEVDX1dJTkRPVyAmJiAhQm9vbGVhbihFQ19XSU5ET1cuaXNWaXNpYmxlKSkgewogICAgICBFQ19GSU5JU0hFRCA9IHRydWU7CiAgICAgIHdyaXRlU3RhdGUoe3N0YXR1czonY2xvc2VkJywgbWVzc2FnZTonTG9naW4gd2luZG93IGNsb3NlZCBieSB1c2VyLid9KTsKICAgICAgdHJ5IHsgRUNfQVBQLnRlcm1pbmF0ZShudWxsKTsgfSBjYXRjaCAoXykge30KICAgICAgcmV0dXJuOwogICAgfQogIH0gY2F0Y2ggKF8pIHt9CgogIEVDX0JVU1kgPSB0cnVlOwogIGNvbnN0IHNjcmlwdCA9IGJ1aWxkQ29udHJvbGxlclNjcmlwdCgpOwogIEVDX1dFQlZJRVcuZXZhbHVhdGVKYXZhU2NyaXB0Q29tcGxldGlvbkhhbmRsZXIoJChzY3JpcHQpLCBmdW5jdGlvbihyZXN1bHQsIGVycm9yKSB7CiAgICBFQ19CVVNZID0gZmFsc2U7CiAgICBpZiAoRUNfRklOSVNIRUQpIHJldHVybjsKICAgIC8vIHYzMTM6IEEgbmlsIE5TRXJyb3IgYXJyaXZlcyBpbiBKWEEgYXMgYSBUUlVUSFkgd3JhcHBlciBvYmplY3QsIHNvIHRoZSBvbGQKICAgIC8vIGBpZiAoZXJyb3IpYCB0b29rIHRoZSBmYWlsdXJlIGJyYW5jaCBvbiBldmVyeSBzaW5nbGUgc3VjY2Vzc2Z1bCBjYWxsIGFuZAogICAgLy8gdGhlIHJlc3VsdCB3YXMgbmV2ZXIgcGFyc2VkIOKAlCB0aGUgbG9naW4gd2luZG93IHN0YXllZCBvcGVuIGZvcmV2ZXIgYW5kIHRoZQogICAgLy8gc3RhdGUgZmlsZSB3YXMgc3R1Y2sgb24gc3RhZ2UgIm5hdmlnYXRpb24iIC8gZGV0YWlsICJbaWQgbmlsXSIuCiAgICAvLyBUaGUgcmVzdWx0IG5vdyBkZWNpZGVzOyB0aGUgZXJyb3Igb2JqZWN0IGlzIG9ubHkgdXNlZCBmb3IgaXRzIG1lc3NhZ2UuCiAgICBsZXQgb3V0ZXIgPSBudWxsOwogICAgdHJ5IHsgb3V0ZXIgPSBKU09OLnBhcnNlKFN0cmluZyhqc1ZhbHVlKHJlc3VsdCkgfHwgJ3t9JykpOyB9IGNhdGNoIChfKSB7IG91dGVyID0gbnVsbDsgfQogICAgaWYgKCFvdXRlciB8fCAhb3V0ZXIucGhhc2UpIHsKICAgICAgY29uc3QgZGV0YWlsID0gZXJyb3JUZXh0KGVycm9yKTsKICAgICAgaWYgKGRldGFpbCkgd3JpdGVTdGF0ZSh7c3RhdHVzOid3YWl0aW5nJywgc3RhZ2U6J25hdmlnYXRpb24nLCBkZXRhaWw6ZGV0YWlsLCBwYWdlVXJsOicnfSk7CiAgICAgIHJldHVybjsKICAgIH0KICAgIGNvbnN0IHBoYXNlID0gU3RyaW5nKG91dGVyLnBoYXNlIHx8ICd3YWl0aW5nJyk7CiAgICBjb25zdCBwYWdlVXJsID0gU3RyaW5nKG91dGVyLnVybCB8fCAnJyk7CiAgICBpZiAocGhhc2UgPT09ICdsb2dpbicpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J2xvZ2luJywgcGFnZVVybDpwYWdlVXJsLCBlbmdpbmU6J1dLV2ViVmlldyd9KTsKICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKHBoYXNlID09PSAncmVhZGluZycgfHwgcGhhc2UgPT09ICdzdGFydGluZycpIHsKICAgICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J3JlYWRpbmcnLCBwYWdlVXJsOnBhZ2VVcmwsIGVuZ2luZTonV0tXZWJWaWV3J30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBpZiAocGhhc2UgPT09ICd3YWl0aW5nJykgewogICAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J29wZW4nLCBzdGFnZTonbG9hZGluZycsIHBhZ2VVcmw6cGFnZVVybCwgZGV0YWlsOlN0cmluZyhvdXRlci5lcnJvciB8fCAnJyksIGVuZ2luZTonV0tXZWJWaWV3J30pOwogICAgICByZXR1cm47CiAgICB9CiAgICBpZiAocGhhc2UgPT09ICdyZWFkeScgJiYgb3V0ZXIuZGF0YSkgewogICAgICBsZXQgcGF5bG9hZCA9IG51bGw7CiAgICAgIHRyeSB7CiAgICAgICAgcGF5bG9hZCA9IHR5cGVvZiBvdXRlci5kYXRhID09PSAnc3RyaW5nJyA/IEpTT04ucGFyc2Uob3V0ZXIuZGF0YSkgOiBvdXRlci5kYXRhOwogICAgICB9IGNhdGNoIChlKSB7CiAgICAgICAgZmluaXNoV2l0aEVycm9yKCdUaGUgZS1CaWNoZWxjaGVuIGRhdGEgY291bGQgbm90IGJlIGRlY29kZWQuJywgU3RyaW5nKGUpKTsKICAgICAgICByZXR1cm47CiAgICAgIH0KICAgICAgZmluYWxpemVQYXlsb2FkKHBheWxvYWQsIHBhZ2VVcmwpOwogICAgfQogIH0pOwp9CgpmdW5jdGlvbiBydW4oYXJndikgewogIHRyeSB7CiAgICBpZiAoIWFyZ3YgfHwgYXJndi5sZW5ndGggPCAzKSB0aHJvdyBuZXcgRXJyb3IoJ01pc3NpbmcgbmF0aXZlIGxvZ2luIGFyZ3VtZW50cy4nKTsKICAgIEVDX1NUQVRFX1BBVEggPSBTdHJpbmcoYXJndlswXSk7CiAgICBjb25zdCBleHByZXNzaW9uUGF0aCA9IFN0cmluZyhhcmd2WzFdKTsKICAgIEVDX1NUQVJUX1VSTCA9IFN0cmluZyhhcmd2WzJdKTsKICAgIGNvbnN0IHJlYWRFcnIgPSBSZWYoKTsKICAgIGNvbnN0IHJlYWRPYmogPSAkLk5TU3RyaW5nLnN0cmluZ1dpdGhDb250ZW50c09mRmlsZUVuY29kaW5nRXJyb3IoJChleHByZXNzaW9uUGF0aCksICQuTlNVVEY4U3RyaW5nRW5jb2RpbmcsIHJlYWRFcnIpOwogICAgRUNfUkVBRF9FWFBSRVNTSU9OID0gU3RyaW5nKGpzVmFsdWUocmVhZE9iaikgfHwgJycpOwogICAgaWYgKCFFQ19SRUFEX0VYUFJFU1NJT04pIHRocm93IG5ldyBFcnJvcignVGhlIGUtQmljaGVsY2hlbiByZWFkIHNjcmlwdCBpcyBlbXB0eS4nKTsKCiAgICB3cml0ZVN0YXRlKHtzdGF0dXM6J3N0YXJ0aW5nJywgZW5naW5lOidXS1dlYlZpZXcnLCBzdGFydGVkQXQ6bmV3IERhdGUoRUNfU1RBUlRFRF9BVCkudG9JU09TdHJpbmcoKX0pOwoKICAgIEVDX0FQUCA9ICQuTlNBcHBsaWNhdGlvbi5zaGFyZWRBcHBsaWNhdGlvbjsKICAgIEVDX0FQUC5zZXRBY3RpdmF0aW9uUG9saWN5KCQuTlNBcHBsaWNhdGlvbkFjdGl2YXRpb25Qb2xpY3lSZWd1bGFyKTsKCiAgICBjb25zdCByZWN0ID0gJC5OU01ha2VSZWN0KDAsIDAsIDEwODAsIDc2MCk7CiAgICBjb25zdCBzdHlsZSA9ICQuTlNXaW5kb3dTdHlsZU1hc2tUaXRsZWQgfCAkLk5TV2luZG93U3R5bGVNYXNrQ2xvc2FibGUgfCAkLk5TV2luZG93U3R5bGVNYXNrTWluaWF0dXJpemFibGUgfCAkLk5TV2luZG93U3R5bGVNYXNrUmVzaXphYmxlOwogICAgRUNfV0lORE9XID0gJC5OU1dpbmRvdy5hbGxvYy5pbml0V2l0aENvbnRlbnRSZWN0U3R5bGVNYXNrQmFja2luZ0RlZmVyKHJlY3QsIHN0eWxlLCAkLk5TQmFja2luZ1N0b3JlQnVmZmVyZWQsIGZhbHNlKTsKICAgIEVDX1dJTkRPVy5zZXRUaXRsZSgkKCdlLUJpY2hlbGNoZW4g4oCTIEVudHJldGllbkNvbm5lY3QnKSk7CiAgICBFQ19XSU5ET1cuc2V0UmVsZWFzZWRXaGVuQ2xvc2VkKGZhbHNlKTsKICAgIEVDX1dJTkRPVy5jZW50ZXI7CgogICAgY29uc3QgY29uZmlnID0gJC5XS1dlYlZpZXdDb25maWd1cmF0aW9uLmFsbG9jLmluaXQ7CiAgICBjb25maWcud2Vic2l0ZURhdGFTdG9yZSA9ICQuV0tXZWJzaXRlRGF0YVN0b3JlLmRlZmF1bHREYXRhU3RvcmU7CiAgICAvLyB2MzIwOiBPaG5lIGRpZXNlIFplaWxlIG1lbGRldCBzaWNoIGRhcyBGZW5zdGVyIGFscwogICAgLy8gICAiTW96aWxsYS81LjAgKE1hY2ludG9zaDsg4oCmKSBBcHBsZVdlYktpdC82MDUuMS4xNSAoS0hUTUwsIGxpa2UgR2Vja28pIgogICAgLy8g4oCTIG9obmUgIlZlcnNpb24v4oCmIFNhZmFyaS/igKYiLiBGw7xyIGUtQmljaGVsY2hlbiAoYnp3LiBlaW5lIHZvcmdlbGFnZXJ0ZQogICAgLy8gU2NodXR6c2NoaWNodCkgaXN0IGRhcyBrZWluIGVya2VubmJhcmVyIEJyb3dzZXI7IGRpZSBTZWl0ZSBtZWxkZXRlCiAgICAvLyBkYXJhdWZoaW4gIkVzIGtvbm50ZSBrZWluZSBWZXJiaW5kdW5nIHp1bSBTZXJ2ZXIgZXJzdGVsbHQgd2VyZGVuIi4KICAgIC8vIGFwcGxpY2F0aW9uTmFtZUZvclVzZXJBZ2VudCB3aXJkIHZvbiBXZWJLaXQgYW4gZGllIGVjaHRlIEVuZ2luZS1LZW5udW5nCiAgICAvLyBhbmdlaMOkbmd0LCBkYXMgRXJnZWJuaXMgaXN0IGVpbiB2b2xsd2VydGlnZXIgU2FmYXJpLVVzZXItQWdlbnQuCiAgICB0cnkgewogICAgICBjb25maWcuYXBwbGljYXRpb25OYW1lRm9yVXNlckFnZW50ID0gJChFQ19BUFBfTkFNRV9GT1JfVUEpOwogICAgfSBjYXRjaCAoXykge30KICAgIEVDX1dFQlZJRVcgPSAkLldLV2ViVmlldy5hbGxvYy5pbml0V2l0aEZyYW1lQ29uZmlndXJhdGlvbihyZWN0LCBjb25maWcpOwogICAgLy8gWndlaXRlciBXZWcsIGZhbGxzIGFwcGxpY2F0aW9uTmFtZUZvclVzZXJBZ2VudCBuaWNodCBncmVpZnQuCiAgICB0cnkgewogICAgICBjb25zdCB1YSA9IFN0cmluZyhqc1ZhbHVlKEVDX1dFQlZJRVcudmFsdWVGb3JLZXkoJCgndXNlckFnZW50JykpKSB8fCAnJyk7CiAgICAgIGlmICh1YSAmJiB1YS5pbmRleE9mKCdTYWZhcmkvJykgPCAwKSB7CiAgICAgICAgRUNfV0VCVklFVy5zZXRDdXN0b21Vc2VyQWdlbnQoJCh1YS50cmltKCkgKyAnICcgKyBFQ19BUFBfTkFNRV9GT1JfVUEpKTsKICAgICAgfQogICAgfSBjYXRjaCAoXykge30KICAgIEVDX1dFQlZJRVcuc2V0QWxsb3dzQmFja0ZvcndhcmROYXZpZ2F0aW9uR2VzdHVyZXModHJ1ZSk7CiAgICBFQ19XSU5ET1cuc2V0Q29udGVudFZpZXcoRUNfV0VCVklFVyk7CiAgICBFQ19XSU5ET1cubWFrZUtleUFuZE9yZGVyRnJvbnQobnVsbCk7CiAgICBFQ19BUFAuYWN0aXZhdGVJZ25vcmluZ090aGVyQXBwcyh0cnVlKTsKCiAgICBjb25zdCB1cmwgPSAkLk5TVVJMLlVSTFdpdGhTdHJpbmcoJChFQ19TVEFSVF9VUkwpKTsKICAgIGlmICghdXJsKSB0aHJvdyBuZXcgRXJyb3IoJ0ludmFsaWQgZS1CaWNoZWxjaGVuIFVSTC4nKTsKICAgIGNvbnN0IHJlcXVlc3QgPSAkLk5TVVJMUmVxdWVzdC5yZXF1ZXN0V2l0aFVSTCh1cmwpOwogICAgRUNfV0VCVklFVy5sb2FkUmVxdWVzdChyZXF1ZXN0KTsKCiAgICBFQ19USU1FUiA9ICQuTlNUaW1lci5zY2hlZHVsZWRUaW1lcldpdGhUaW1lSW50ZXJ2YWxSZXBlYXRzQmxvY2soMC44LCB0cnVlLCBmdW5jdGlvbihfKSB7IHBvbGxXZWJWaWV3KCk7IH0pOwogICAgd3JpdGVTdGF0ZSh7c3RhdHVzOidvcGVuJywgc3RhZ2U6J2xvZ2luJywgZW5naW5lOidXS1dlYlZpZXcnLCBwYWdlVXJsOkVDX1NUQVJUX1VSTH0pOwogICAgRUNfQVBQLnJ1bjsKICB9IGNhdGNoIChlKSB7CiAgICBmaW5pc2hXaXRoRXJyb3IoJ1RoZSBtYWNPUyBsb2dpbiB3aW5kb3cgY291bGQgbm90IGJlIHN0YXJ0ZWQuJywgU3RyaW5nKGUgJiYgKGUubWVzc2FnZSB8fCBlKSB8fCBlKSk7CiAgfQp9Cg=="
 MAC_WK_PROCESS: subprocess.Popen | None = None
 MAC_WK_LOCK = threading.RLock()
-MAC_WK_FALLBACK_ARGS: dict = {}
-MAC_WK_FALLBACK_STARTED = False
 
 
 def _mac_wk_resolve_script() -> pathlib.Path:
-    """Create the WKWebView module from the embedded v318 source every time.
+    """Create the WKWebView module from the embedded v320 source every time.
 
     This deliberately does not depend on the bundle path, App Translocation, a
     previous updater cache, or an external helper file.  Atomic replacement also
     prevents an old v307 file from being reused after a partial update.
     """
-    target_dir = DATA_ROOT / "native-runtime" / "v318"
+    target_dir = DATA_ROOT / "native-runtime" / "v320"
     target = target_dir / MAC_WK_SCRIPT_NAME
     try:
         target_dir.mkdir(parents=True, exist_ok=True)
         data = base64.b64decode(MAC_WK_SCRIPT_B64.encode("ascii"), validate=True)
-        if len(data) < 1000 or b"EntretienConnect v318" not in data:
-            raise RuntimeError("embedded v318 module is incomplete")
+        if len(data) < 1000 or b"EntretienConnect v320" not in data:
+            raise RuntimeError("embedded v320 module is incomplete")
         expected = hashlib.sha256(data).hexdigest()
         current_ok = False
         try:
@@ -3318,7 +3214,7 @@ def _mac_wk_resolve_script() -> pathlib.Path:
         return target
     except Exception as exc:
         raise RuntimeError(
-            "WKWebView v318 konnte nicht vorbereitet werden (" + str(target) + "): " + str(exc)
+            "WKWebView v320 konnte nicht vorbereitet werden (" + str(target) + "): " + str(exc)
         ) from exc
 
 def _mac_wk_read_state() -> dict:
@@ -3395,16 +3291,10 @@ def _mac_wk_terminate(mark_closed: bool = False) -> dict:
     return result
 
 
-def _mac_wk_launch(profile: str = "default", preferred_browser: str = "auto", user_agent: str = "") -> dict:
-    global MAC_WK_PROCESS, ACTIVE_BROWSER_MODE, ACTIVE_BROWSER_USER_AGENT, MAC_WK_FALLBACK_ARGS, MAC_WK_FALLBACK_STARTED
+def _mac_wk_launch(profile: str = "default", user_agent: str = "") -> dict:
+    global MAC_WK_PROCESS, ACTIVE_BROWSER_MODE, ACTIVE_BROWSER_USER_AGENT
     if platform.system().lower() != "darwin":
         raise RuntimeError("WKWebView ist nur auf macOS verfügbar.")
-    MAC_WK_FALLBACK_ARGS = {
-        "profile": sanitize_profile_name(profile),
-        "preferred_browser": str(preferred_browser or "auto"),
-        "user_agent": str(user_agent or ""),
-    }
-    MAC_WK_FALLBACK_STARTED = False
     script_file = _mac_wk_resolve_script()
     if not pathlib.Path("/usr/bin/osascript").exists():
         raise RuntimeError("Die macOS-Systemkomponente osascript wurde nicht gefunden.")
@@ -3541,9 +3431,15 @@ def _mac_wk_read_payload(selected_group_id: int | None = None) -> dict:
 
 
 def launch_browser(profile: str, preferred_browser: str = "auto", user_agent: str = "") -> dict:
-    # v319: e-Bichelchen rejects the embedded WKWebView on affected Macs. Do not
-    # show that known-broken window first; open the isolated Chrome/Edge helper
-    # directly and use the same stable CDP path as Windows.
+    if platform.system().lower() == "darwin":
+        # v320: Ausweichweg auf dem Mac. Standard bleibt das native Fenster
+        # ("auto"). Wählt der Benutzer in der Oberfläche ausdrücklich Chrome oder
+        # Edge, wird wieder der bewährte Chromium-Weg benutzt – nützlich, falls
+        # e-Bichelchen im nativen Fenster nicht arbeiten will.
+        pref = str(preferred_browser or "").strip().lower()
+        if pref in ("chrome", "edge", "firefox-current"):
+            return _launch_browser_cdp(profile, pref, user_agent)
+        return _mac_wk_launch(profile, user_agent)
     return _launch_browser_cdp(profile, preferred_browser, user_agent)
 
 
@@ -3562,39 +3458,6 @@ def check_login_ready() -> dict:
         return _check_login_ready_cdp()
     state = _mac_wk_read_state()
     status = str(state.get("status") or "starting")
-    if status == "fallback":
-        global MAC_WK_FALLBACK_STARTED
-        if not MAC_WK_FALLBACK_STARTED:
-            MAC_WK_FALLBACK_STARTED = True
-            args = dict(MAC_WK_FALLBACK_ARGS or {})
-            _mac_wk_terminate(mark_closed=False)
-            try:
-                info = _launch_browser_cdp(
-                    args.get("profile") or "default",
-                    args.get("preferred_browser") or "auto",
-                    args.get("user_agent") or "",
-                )
-                return {
-                    "ok": True,
-                    "ready": False,
-                    "browserClosed": False,
-                    "stage": "browser-fallback",
-                    "detail": "Das native Fenster wurde von e-Bichelchen abgewiesen; Anmeldung wurde automatisch in Chrome/Edge geöffnet.",
-                    "fallback": info,
-                    "via": "chromium-fallback",
-                    "lightweight": True,
-                }
-            except Exception as exc:
-                return {
-                    "ok": True,
-                    "ready": False,
-                    "browserClosed": True,
-                    "stage": "error",
-                    "detail": "WKWebView-Fallback fehlgeschlagen: " + str(exc),
-                    "lightweight": True,
-                }
-        if ACTIVE_BROWSER_MODE != "mac-wkwebview":
-            return _check_login_ready_cdp()
     if status == "ready":
         # v316: `data` ist wieder das vollständige Klassen-Payload aus dem Fenster.
         data = state.get("data") if isinstance(state.get("data"), dict) else {}
@@ -3689,7 +3552,7 @@ def force_close_launched_browser(force: bool = False) -> dict:
 
 def soft_reset_login() -> dict:
     global LATEST_SESSION, LATEST_SESSION_AT
-    if ACTIVE_BROWSER_MODE == "mac-wkwebview" or _mac_wk_process_alive():
+    if ACTIVE_BROWSER_MODE == "mac-wkwebview" or platform.system().lower() == "darwin":
         closed = _mac_wk_terminate(mark_closed=True)
         clear_current()
         with LOCK:
@@ -3711,7 +3574,7 @@ def soft_reset_login() -> dict:
 
 
 def reset_login_session(profile: str = "default", preserve_profile: bool = False) -> dict:
-    if ACTIVE_BROWSER_MODE == "mac-wkwebview" or _mac_wk_process_alive():
+    if ACTIVE_BROWSER_MODE == "mac-wkwebview" or platform.system().lower() == "darwin":
         info = soft_reset_login()
         return {
             "closed": bool((info.get("closedEbichelchen") or {}).get("closed")),

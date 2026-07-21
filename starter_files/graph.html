@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v319</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v320</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 319;
+const APP_VERSION = 320;
 
 window.addEventListener("error", function(ev){
   try{
@@ -6546,7 +6546,9 @@ function ebBrowserPref(){
   // Loginfenster. « auto » lässt den lokalen Helfer Chrome bzw. Edge nur als
   // eingebettetes app-artiges Fenster verwenden; Firefox/Safari werden nicht
   // ferngesteuert und es entsteht kein zusätzlicher normaler Browser-Tab.
-  if(ebNativeLoginWindow()) return "auto";
+  // v320: Auf macOS bedeutet « auto » das native Loginfenster. Wählt der Benutzer
+  // ausdrücklich Chrome oder Edge, weicht der Helfer darauf aus – das ist der
+  // Rückfallweg, falls e-Bichelchen im nativen Fenster nicht arbeiten will.
   return v || "auto";
 }
 function ebCloseSameBrowserPopup(){
@@ -6735,11 +6737,20 @@ function renderEbPanel(){
   }
   // v303: In Firefox ist kein Browserwähler nötig: e-Bichelchen öffnet
   // zwingend als zweiter Tab des aktuell verwendeten Firefox.
-  // v311: Auf macOS ebenfalls nicht – dort entscheidet der Helfer allein.
+  // v320: Auf macOS ist die Auswahl wieder sichtbar und wirksam. « auto » ist das
+  // native Loginfenster; Chrome/Edge sind der Ausweichweg, falls e-Bichelchen
+  // darin nicht arbeiten will. Vorher war sie dort ohne jede Wirkung.
   if(browserSel){
     const ua=navigator.userAgent||"";
     const sameFirefox=/Firefox\//.test(ua);
-    browserSel.style.display = (ebReady() || sameFirefox || nativeLogin) ? "none" : "";
+    browserSel.style.display = (ebReady() || sameFirefox) ? "none" : "";
+    const autoOpt=browserSel.querySelector('option[value="auto"]');
+    const ffOpt=browserSel.querySelector('option[value="firefox-current"]');
+    if(nativeLogin){
+      if(autoOpt) autoOpt.textContent="Fenêtre native";
+      if(ffOpt) ffOpt.style.display="none";
+      browserSel.title="Fenêtre native = fenêtre de connexion intégrée (recommandé). Chrome ou Edge : solution de secours si e-Bichelchen refuse de fonctionner dans la fenêtre intégrée.";
+    }
   }
   renderEbGroupChooser();
   renderEbMatch();
@@ -6958,10 +6969,6 @@ async function ebAutoAttempt(){
       "| browserClosed:", !!probe.browserClosed, "| detail:", probe.detail||"", "| url:", probe.pageUrl||"");
   }catch(e){
     console.debug("Vérification e-Bichelchen indisponible :",e);
-  }
-
-  if(probe && probe.stage==="browser-fallback"){
-    setEbStatus("Ouverture de la fenêtre e-Bichelchen dans Chrome ou Edge…","info");
   }
 
   if(probe && probe.stage==="error"){
