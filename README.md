@@ -1,4 +1,21 @@
-# EntretienConnect v339
+# EntretienConnect v342
+
+**Windows-Kaltstart ohne leeren zweiten Tab.** Wenn noch kein sichtbares
+Edge-/Chrome-Fenster existiert, startet EntretienConnect im App-Modus als
+eigenständiges Browserfenster ohne Tab- und Adressleiste. Läuft der Browser
+bereits, öffnet sich EntretienConnect weiterhin als normaler neuer Tab.
+
+**Windows-Fenster zuverlässig im Vordergrund.** Das neu gestartete Fenster wird
+kurz in die oberste Fensterebene gesetzt, aktiviert und anschließend wieder auf
+den normalen Fenstermodus zurückgesetzt. Zwei aufeinanderfolgende Prüfungen
+stellen sicher, dass Edge es während der Profilinitialisierung nicht wieder
+hinter den Explorer legt.
+
+Die unter Windows geprüfte e-Bichelchen-Sitzungswiederaufnahme aus v339 bleibt
+unverändert erhalten. Bei einer noch gültigen gespeicherten Sitzung wird zudem
+sofort der letzte erfolgreich gelesene Stand angezeigt; die Prüfung und
+Aktualisierung läuft anschließend still im Hintergrund. Dadurch ist
+e-Bichelchen beim zweiten Start bereits grün wie auf dem Mac.
 
 **e-Bichelchen reste maintenant connecté sous Windows aussi.** C'était le point resté ouvert en v338, et il a été construit et vérifié directement sur la machine Windows. La cause n'était pas la connexion elle-même, mais ce qu'il en advenait ensuite : Chromium n'écrit jamais sur le disque les cookies de session pure. Ils ne vivaient donc que dans le navigateur auxiliaire — lequel est fermé après la lecture. Au démarrage suivant, la connexion était perdue. Sur Mac, cette perte n'existe plus depuis la v325, parce que les cookies y sont enregistrés après la lecture. Windows procède désormais de la même façon.
 

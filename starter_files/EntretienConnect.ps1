@@ -31,7 +31,9 @@ try { if (-not (Test-Path $BackupDir -PathType Container)) { New-Item -ItemType 
 $LogFile   = Join-Path $RuntimeDir "EntretienConnect-log.txt"
 $PidFile   = Join-Path $RuntimeDir "helper.pid"
 $EbCacheFile = Join-Path $RuntimeDir "ebichelchen_cache.json"
-$EbSavedSessionFile = Join-Path $RuntimeDir "ebichelchen_windows_session.json"
+# v339: Vom e-Bichelchen-Helfer nach jedem Lesen geschrieben. Liegt hier eine noch
+# gueltige Sitzung, verbindet sich die Oberflaeche beim Start von selbst.
+$EbSessionFile = Join-Path $RuntimeDir "eb-session.json"
 $EbSessionMaxAgeSeconds = 12 * 3600
 $script:Pending = $null
 $script:PendingWeb = $null   # v176: état PKCE du login sans code (state/verifier/redirect)
@@ -546,61 +548,43 @@ function Open-AppInBrowser($u) {
     # Browser-.exe direkt mit der Adresse gestartet, ist die Adresse der einzige
     # Startauftrag. Läuft der Browser bereits, reicht Chromium die Adresse wie bisher
     # an das offene Fenster weiter - es kommt also nur ein Tab dazu, genau so gewollt.
-    # v340: Chromium unterscheidet jetzt zwischen Warm- und Kaltstart. Bei einem
-    # Kaltstart erzwingt --new-window, dass die EntretienConnect-Adresse das erste
-    # und einzige Fensterziel ist; Edge/Chrome legen dann nicht zusaetzlich ihren
-    # leeren Start-Tab an. Wenn der Browser schon laeuft, wird die Adresse ohne
-    # --new-window uebergeben und landet wie bisher als neuer Tab im vorhandenen
-    # Browserfenster. Firefox erhaelt dieselbe Trennung explizit ueber -new-window
-    # bzw. -new-tab.
-    # Registry nicht lesbar oder unbekannter Browser: alles wie bisher.
+    # v342: Wenn noch kein sichtbares Chromium-Fenster existiert, startet die
+    # Haupt-App im Chromium-App-Modus. Nur dieser Weg unterdrueckt Edge' eigenen
+    # leeren Start-Tab zuverlaessig. Laeuft bereits ein Browserfenster, bleibt das
+    # gewohnte Verhalten erhalten: EntretienConnect kommt als neuer normaler Tab
+    # in den vorhandenen Browser.
+    # Firefox wird entsprechend mit -new-window / -new-tab behandelt.
+    # Registry nicht lesbar oder unbekannter Browser: Windows-Verknuepfung nutzen.
     $exe = Get-DefaultBrowserExe
     $leaf = ""
     if ($exe) { $leaf = (Split-Path $exe -Leaf).ToLower() }
     if ($exe -and ($leaf -match '^(msedge|chrome|brave|vivaldi|opera)\.exe$')) {
         try {
             $processName = [IO.Path]::GetFileNameWithoutExtension($leaf)
-            # Edge/Chrome koennen durch Startup Boost noch Hintergrundprozesse
-            # besitzen, obwohl kein Browserfenster offen ist. Deshalb zaehlt nur
-            # ein Prozess mit echtem Hauptfenster als laufender Browser.
-            $alreadyRunning = [bool](Get-Process -Name $processName -ErrorAction SilentlyContinue |
-                Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1)
-            $browserArgs = @("--no-first-run","--no-default-browser-check")
-            $launchMode = "neuer Tab"
-            if (-not $alreadyRunning) {
-                # v341: --new-window erzeugt bei Edge trotz URL zuerst dessen
-                # eigenen Start-Tab. --same-tab ersetzt diesen ersten aktiven Tab
-                # durch EntretienConnect und behaelt trotzdem ein normales
-                # Browserfenster mit Tableiste.
-                $browserArgs += "--same-tab"
-                $launchMode = "Kaltstart ohne Leertab"
+            $visibleWindow = Get-Process -Name $processName -ErrorAction SilentlyContinue |
+                Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+            if ($visibleWindow) {
+                Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",$u)
+                Log ("Browser direkt gestartet: neuer Tab im sichtbaren " + $leaf)
+            } else {
+                Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",("--app=" + $u))
+                Log ("Browser direkt gestartet: Kaltstart im App-Modus ohne Leertab (" + $leaf + ")")
             }
-            $browserArgs += $u
-            Start-Process -FilePath $exe -ArgumentList $browserArgs
-            Log ("Browser direkt gestartet (" + $launchMode + "): " + $exe)
             return
         } catch {
             Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
         }
     }
-    if ($exe -and ($leaf -eq 'firefox.exe')) {
+    if ($exe -and $leaf -eq 'firefox.exe') {
         try {
-            $alreadyRunning = [bool](Get-Process -Name "firefox" -ErrorAction SilentlyContinue |
-                Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1)
-            $browserArgs = @()
-            $launchMode = "neuer Tab"
-            if ($alreadyRunning) {
-                $browserArgs += "-new-tab"
-            } else {
-                $browserArgs += "-new-window"
-                $launchMode = "Kaltstart ohne Leertab"
-            }
-            $browserArgs += $u
-            Start-Process -FilePath $exe -ArgumentList $browserArgs
-            Log ("Firefox direkt gestartet (" + $launchMode + "): " + $exe)
+            $visibleWindow = Get-Process -Name "firefox" -ErrorAction SilentlyContinue |
+                Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+            $mode = $(if ($visibleWindow) { "-new-tab" } else { "-new-window" })
+            Start-Process -FilePath $exe -ArgumentList @($mode,$u)
+            Log ("Firefox direkt gestartet: " + $(if ($visibleWindow) { "neuer Tab" } else { "neues Fenster ohne Leertab" }))
             return
         } catch {
-            Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
+            Log ("Firefox-Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
         }
     }
     Log ("Browser über die Windows-Verknüpfung geöffnet (Standard-Browser: " + $(if ($exe) { $leaf } else { "unbekannt" }) + ").")
@@ -634,6 +618,8 @@ public static class EntretienConnectAppWin32 {
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr pid);
   [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
   [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint flags);
+  [DllImport("user32.dll")] public static extern void SwitchToThisWindow(IntPtr hWnd, bool altTab);
 
   public static bool IsForeground(IntPtr hWnd) { return GetForegroundWindow() == hWnd; }
 
@@ -648,10 +634,19 @@ public static class EntretienConnectAppWin32 {
     uint me = GetCurrentThreadId();
     bool attached = false;
     if (fgThread != 0 && fgThread != me) { attached = AttachThreadInput(fgThread, me, true); }
+    // Kurz in die oberste Z-Ebene setzen und sofort wieder auf normal stellen.
+    // Das aktiviert kein dauerhaftes "Immer im Vordergrund", ueberwindet aber
+    // den Fall, dass Explorer trotz AttachThreadInput vor dem neuen Edge bleibt.
+    SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, 0x0043);
     BringWindowToTop(hWnd);
     bool ok = SetForegroundWindow(hWnd);
+    SetWindowPos(hWnd, new IntPtr(-2), 0, 0, 0, 0, 0x0043);
     if (attached) { AttachThreadInput(fgThread, me, false); }
     if (!ok) { ok = (GetForegroundWindow() == hWnd); }
+    if (!ok) {
+      SwitchToThisWindow(hWnd, true);
+      ok = (GetForegroundWindow() == hWnd);
+    }
     return ok;
   }
 }
@@ -710,18 +705,15 @@ function Clear-EbCache {
 }
 
 function Test-EbSavedSession {
+    # v339: Nur nachsehen, ob gemerkte Cookies da und nicht zu alt sind. Ob
+    # education.lu sie noch annimmt, zeigt erst /api/eb/resume. Bewusst ohne
+    # Helferaufruf - diese Route wird bei jedem Start abgefragt.
     try {
-        if (-not (Test-Path $EbSavedSessionFile -PathType Leaf)) { return $false }
-        $raw = Get-Content -LiteralPath $EbSavedSessionFile -Raw -Encoding UTF8 -ErrorAction Stop
-        if (-not $raw) { return $false }
-        $saved = $raw | ConvertFrom-Json
-        if (-not $saved -or @($saved.cookies).Count -eq 0) { return $false }
-        $savedAt = [DateTime]::Parse([string]$saved.savedAtUtc).ToUniversalTime()
-        if (([DateTime]::UtcNow - $savedAt).TotalSeconds -gt $EbSessionMaxAgeSeconds) {
-            try { Remove-Item -LiteralPath $EbSavedSessionFile -Force -ErrorAction SilentlyContinue } catch {}
-            return $false
-        }
-        return $true
+        if (-not (Test-Path $EbSessionFile -PathType Leaf)) { return $false }
+        $data = (Get-Content -LiteralPath $EbSessionFile -Raw -Encoding UTF8) | ConvertFrom-Json
+        if (@($data.cookies).Count -eq 0) { return $false }
+        $now = [int64](([DateTime]::UtcNow) - (New-Object DateTime(1970,1,1,0,0,0,[DateTimeKind]::Utc))).TotalSeconds
+        return (($now - [int64]$data.savedAt) -le $EbSessionMaxAgeSeconds)
     } catch { return $false }
 }
 
@@ -729,23 +721,33 @@ function Handle-EbRequest($stream, $req) {
     $path = ($req.Path -split '\?')[0]
     try {
         if ($req.Method -eq "GET" -and $path -eq "/api/eb/status") {
+            # v339: savedSession sagt der Oberfläche, dass eine gemerkte Sitzung
+            # vorliegt – sie verbindet dann beim Start von selbst (wie auf dem Mac).
+            $saved = Test-EbSavedSession
             $cache = Read-EbCache
-            $savedSession = Test-EbSavedSession
             if ($null -ne $cache -and $null -ne $cache.data) {
-                Send-Json $stream @{ ok=$true; hasData=$true; savedSession=$savedSession; data=$cache.data; receivedAt=$cache.receivedAt; cachedAt=$cache.cachedAt; note="Données e-Bichelchen récupérées depuis le cache local." }
+                Send-Json $stream @{ ok=$true; hasData=$true; data=$cache.data; receivedAt=$cache.receivedAt; cachedAt=$cache.cachedAt; savedSession=$saved; note="Données e-Bichelchen récupérées depuis le cache local." }
             } else {
-                Send-Json $stream @{ ok=$true; hasData=$false; savedSession=$savedSession; data=$null; note="Aucune donnée e-Bichelchen lue pour cette session." }
+                Send-Json $stream @{ ok=$true; hasData=$false; data=$null; savedSession=$saved; note="Aucune donnée e-Bichelchen lue pour cette session." }
             }
             return
         }
 
         if ($req.Method -eq "GET" -and $path -eq "/api/eb/resume") {
-            $r = Invoke-EbHelper "resume"
-            if ($r.ok -and $null -ne $r.data) {
+            # v339: Klassen aus der gemerkten Sitzung lesen – ohne Loginfenster.
+            # Scheitert das, meldet die Oberfläche einfach « nicht verbunden » und
+            # der Benutzer klickt wie bisher auf « Connecter ».
+            if (-not (Test-EbSavedSession)) {
+                Send-Json $stream @{ ok=$false; resumed=$false; error="Keine gemerkte e-Bichelchen-Sitzung vorhanden." }
+                return
+            }
+            $groupId = Get-QueryParam $req.Path "groupId" ""
+            $r = Invoke-EbHelper "resume" $groupId
+            if ($r.ok) {
                 Write-EbCache $r.data $r.receivedAt
                 Send-Json $stream @{ ok=$true; data=$r.data; receivedAt=$r.receivedAt; resumed=$true }
             } else {
-                Send-Json $stream @{ ok=$false; resumed=$false; sessionExpired=[bool]$r.sessionExpired; error=[string]$r.error }
+                Send-Json $stream @{ ok=$false; resumed=$false; sessionExpired=(-not (Test-EbSavedSession)); error=[string]$r.error }
             }
             return
         }
@@ -1295,8 +1297,10 @@ if (-not $NoAutoOpen) {
     $script:RaiseAppAt = (Get-Date).AddMilliseconds(1500)
     $script:RaiseAppUntil = (Get-Date).AddSeconds(25)
     $script:RaiseAppDone = $false
+    $script:RaiseAppConfirmations = 0
 } else {
     $script:RaiseAppDone = $true
+    $script:RaiseAppConfirmations = 0
 }
 
 while (-not $script:ShutdownRequested) {
@@ -1324,11 +1328,20 @@ while (-not $script:ShutdownRequested) {
         $raised = $null
         try { $raised = Raise-AppWindowOnly } catch { Log ("Fenster nach vorne holen fehlgeschlagen: " + $_.Exception.Message) }
         if ($raised -and $raised.focused) {
-            $script:RaiseAppDone = $true
-            Log ("Fenster steht vorne: " + ($raised | ConvertTo-Json -Compress -Depth 3))
-        } elseif ((Get-Date) -ge $script:RaiseAppUntil) {
-            $script:RaiseAppDone = $true
-            Log "Fenster liess sich nicht nach vorne holen - aufgegeben."
+            # Zweimal bestaetigen: Edge kann sein Fenster kurz aktivieren und es
+            # waehrend der Profilinitialisierung gleich wieder hinter Explorer
+            # legen. Nach zwei Treffern im Abstand von 0,7 s bleibt es stabil vorne.
+            $script:RaiseAppConfirmations++
+            if ($script:RaiseAppConfirmations -ge 2) {
+                $script:RaiseAppDone = $true
+                Log ("Fenster steht stabil vorne: " + ($raised | ConvertTo-Json -Compress -Depth 3))
+            }
+        } else {
+            $script:RaiseAppConfirmations = 0
+            if ((Get-Date) -ge $script:RaiseAppUntil) {
+                $script:RaiseAppDone = $true
+                Log "Fenster liess sich nicht nach vorne holen - aufgegeben."
+            }
         }
     }
 
