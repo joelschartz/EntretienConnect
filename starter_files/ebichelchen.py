@@ -3311,6 +3311,28 @@ def _mac_wk_valid_app_url(value) -> str:
     return url
 
 
+def has_saved_session() -> bool:
+    """v331: Liegt eine noch gültige, gemerkte e-Bichelchen-Sitzung vor?
+
+    Die Oberfläche fragt das beim Start ab und verbindet dann von selbst, statt
+    auf einen Klick zu warten – so ist e-Bichelchen wie Microsoft gleich grün.
+    Geprüft wird nur, ob Cookies gespeichert und nicht zu alt sind; ob
+    education.lu sie noch akzeptiert, zeigt erst das Loginfenster.
+    """
+    if platform.system().lower() != "darwin":
+        return False
+    try:
+        if not MAC_WK_SAVED_SESSION_FILE.exists():
+            return False
+        data = json.loads(MAC_WK_SAVED_SESSION_FILE.read_text(encoding="utf-8"))
+        cookies = data.get("cookies")
+        if not isinstance(cookies, list) or not cookies:
+            return False
+        return (time.time() - float(data.get("savedAt") or 0)) <= EB_SESSION_MAX_AGE
+    except Exception:
+        return False
+
+
 def _mac_wk_clear_saved_session() -> None:
     for path in (MAC_WK_SAVED_SESSION_FILE, MAC_WK_RESTORE_COOKIES_FILE):
         try:

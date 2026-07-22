@@ -1,15 +1,22 @@
-# EntretienConnect v330
+# EntretienConnect v331
 
-La session e-Bichelchen mémorisée en v325 était bien enregistrée et bien réinjectée — mais elle ne servait à rien, car la fenêtre était ensuite envoyée sur la page d’identification.
+e-Bichelchen se connecte désormais tout seul au démarrage, comme Microsoft — quand une session mémorisée est disponible.
 
-Constaté sur l’installation réelle : les deux fichiers existent, avec les bons droits (0600), et contiennent les quinze cookies de la session, répartis sur `ssl.education.lu`, `auth.education.lu` et `iam2fa.auth.education.lu`. Les cookies étaient donc restaurés correctement. Seulement, la fenêtre démarrait toujours sur `…/ebichelchen/app/login` — et cette page relance l’authentification IAM même quand la session est encore valable.
+Depuis v330, la session survit à la fermeture de l’application : la fenêtre s’ouvre, reconnaît la session et se referme sans rien demander. Il fallait cependant encore cliquer sur « Connecter », alors que Microsoft est vert dès le lancement. La différence tenait à ceci : pour Microsoft, l’assistant local peut vérifier le jeton sur le disque ; pour e-Bichelchen, les classes ne peuvent être lues que par la fenêtre.
 
-Désormais, l’endroit où la session était valable est mémorisé avec elle, et la fenêtre y retourne directement. Si la session a réellement expiré, le serveur redirige de lui-même vers l’identification : au pire, c’est comme avant.
+L’application demande donc au démarrage si une session est mémorisée et, le cas échéant, lance la connexion d’elle-même. La fenêtre s’ouvre brièvement, reprend la session et se referme — puis e-Bichelchen est vert, sans aucun clic.
 
-L’adresse mémorisée est contrôlée avant usage — elle doit commencer par `https://ssl.education.lu/ebichelchen/app/` et ne pas être la page d’identification. Vérifié : une page d’application est acceptée, la page d’identification (y compris en majuscules), un autre domaine, une adresse sans HTTPS et une valeur vide sont refusés, avec repli sur le comportement précédent.
+Volontairement prudent, et vérifié :
 
-Vérifié aussi de bout en bout sur banc d’essai : au deuxième démarrage, la fenêtre reçoit l’adresse de l’application au lieu de la page d’identification, et le cookie de session est bien renvoyé dès la première requête.
+| Situation | Comportement |
+|---|---|
+| Aucune session mémorisée | rien ne s’ouvre |
+| Session mémorisée | une seule connexion automatique |
+| `ebFetchStatus` appelé plusieurs fois | toujours une seule tentative |
+| Mode « Uniquement e-mail » | rien ne s’ouvre |
 
-**Ce qui reste à confirmer :** que le serveur education.lu accepte réellement la session restaurée. Cela ne peut se voir que sur un compte réel — fermez l’application après une connexion réussie, rouvrez-la et reconnectez-vous. Si l’identification est encore demandée, c’est que la session est liée à autre chose côté serveur, et il faudra chercher ailleurs.
+Aucune donnée ancienne n’est réaffichée : la classe est relue par la fenêtre, comme lors d’une connexion manuelle. La session mémorisée expire après 12 h et une reconnexion volontaire l’efface — dans les deux cas, plus d’ouverture automatique.
 
-Rappel v329 : les noms en double après un import CSV sont corrigés (le rapprochement s’applique désormais dans tous les modes).
+Sous Windows, rien ne change : la session mémorisée n’existe que pour la fenêtre native de macOS.
+
+Rappel v330 : la session mémorisée est enfin utilisée, parce que la fenêtre retourne à l’adresse où la session était valable au lieu de la page d’identification.
