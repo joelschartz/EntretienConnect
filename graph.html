@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v342</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v343</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 342;
+const APP_VERSION = 343;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3241,6 +3241,7 @@ function goTab(tab){
 }
 function setWorkflowMode(mode, opts={}){
   if(!["ebichelchen","email","both"].includes(mode)) mode="";
+  const hadEbMode=modeNeedsEb(workflowMode());
   state.options.workflowMode=mode;
   state.options.setupDone=!!mode;
   state.options.emailEnabled=modeNeedsEmail(mode);
@@ -3268,6 +3269,16 @@ function setWorkflowMode(mode, opts={}){
   if(typeof requestAnimationFrame==="function") requestAnimationFrame(_finishModeRender);
   else setTimeout(_finishModeRender, 0);
   if(modeNeedsEmail(mode)) setTimeout(()=>maybeAutoLoadLocalCsv("workflow"), 250);
+  // v343: Der E-Mail-Modus deaktiviert nur den Kanal in der Oberfläche; er
+  // meldet e-Bichelchen nicht ab. Wird e-Bichelchen später wieder gewählt,
+  // muss die gespeicherte Sitzung genauso wie beim App-Start aufgenommen
+  // werden. Zuvor fehlte dieser Aufruf beim Wechsel über die Moduskarten.
+  if(!hadEbMode && modeNeedsEb(mode) && !ebData){
+    ebAutoConnectTried=false;
+    setTimeout(()=>{
+      if(modeNeedsEb(workflowMode()) && !ebData) ebFetchStatus();
+    },0);
+  }
   if(opts.openEb && modeNeedsEb(mode)) ebConnectFlow();
   if(opts.openEmail && modeNeedsEmail(mode)){ const b=document.getElementById("signIn"); if(b) b.click(); }
 }
@@ -6918,11 +6929,13 @@ async function ebFetchStatus(){
 }
 async function ebAutoConnect(){
   if(ebAutoConnectTried) return;
-  ebAutoConnectTried=true;
   if(!ebichelchenEnabled() || ebReady() || ebConnectBusy || ebLoginPending) return;
   if(!localBackendAvailable()) return;
+  // v343: Ein Aufruf im reinen E-Mail-Modus darf den einzigen automatischen
+  // Wiederaufnahmeversuch nicht verbrauchen.
+  ebAutoConnectTried=true;
   let d=null;
-  try{ d=await ebGet("/api/eb/status"); }catch(e){ return; }
+  try{ d=await ebGet("/api/eb/status"); }catch(e){ ebAutoConnectTried=false; return; }
   if(!d || !d.savedSession) return;          // ohne gemerkte Sitzung passiert nichts
   if(ebReady() || ebConnectBusy || ebLoginPending) return;
   // v342: Die letzte erfolgreich gelesene Klasse sofort anzeigen, sobald der

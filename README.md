@@ -1,4 +1,10 @@
-# EntretienConnect v342
+# EntretienConnect v343
+
+**e-Bichelchen bleibt beim Moduswechsel angemeldet.** Der reine E-Mail-Modus
+deaktiviert lediglich den Kanal in der Oberfläche. Beim späteren Wechsel zu
+„Uniquement e-Bichelchen“ oder zum kombinierten Modus wird die gespeicherte
+Sitzung nun automatisch und sofort wieder aufgenommen. Abgemeldet wird nur
+noch ausdrücklich über „Déconnecter“.
 
 **Windows-Kaltstart ohne leeren zweiten Tab.** Wenn noch kein sichtbares
 Edge-/Chrome-Fenster existiert, startet EntretienConnect im App-Modus als
