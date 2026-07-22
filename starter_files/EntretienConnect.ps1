@@ -584,6 +584,30 @@ public static class EntretienConnectAppWin32 {
   [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr pid);
+  [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+  [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+
+  public static bool IsForeground(IntPtr hWnd) { return GetForegroundWindow() == hWnd; }
+
+  // v338: Windows verweigert SetForegroundWindow einem Prozess, der nicht selbst
+  // im Vordergrund ist - deshalb blieb der Explorer-Ordner vorne. Haengt man die
+  // Eingabewarteschlange kurz an den aktuellen Vordergrund-Thread an, gilt der
+  // Aufruf als von dort kommend und wird ausgefuehrt.
+  public static bool ForceForeground(IntPtr hWnd) {
+    if (GetForegroundWindow() == hWnd) return true;
+    IntPtr fg = GetForegroundWindow();
+    uint fgThread = (fg == IntPtr.Zero) ? 0 : GetWindowThreadProcessId(fg, IntPtr.Zero);
+    uint me = GetCurrentThreadId();
+    bool attached = false;
+    if (fgThread != 0 && fgThread != me) { attached = AttachThreadInput(fgThread, me, true); }
+    BringWindowToTop(hWnd);
+    bool ok = SetForegroundWindow(hWnd);
+    if (attached) { AttachThreadInput(fgThread, me, false); }
+    if (!ok) { ok = (GetForegroundWindow() == hWnd); }
+    return ok;
+  }
 }
 "@
             }
@@ -595,12 +619,14 @@ public static class EntretienConnectAppWin32 {
             if ([EntretienConnectAppWin32]::IsIconic($h)) {
                 [EntretienConnectAppWin32]::ShowWindowAsync($h, 9) | Out-Null
             }
-            [EntretienConnectAppWin32]::BringWindowToTop($h) | Out-Null
+            if ([EntretienConnectAppWin32]::IsForeground($h)) {
+                return @{ focused=$true; method="already-front"; processId=$proc.Id; title=$proc.MainWindowTitle }
+            }
             try {
                 $shell = New-Object -ComObject WScript.Shell
                 $null = $shell.AppActivate($proc.Id)
             } catch {}
-            $ok = [bool][EntretienConnectAppWin32]::SetForegroundWindow($h)
+            $ok = [bool][EntretienConnectAppWin32]::ForceForeground($h)
             return @{ focused=$ok; method="windows-user32"; processId=$proc.Id; title=$proc.MainWindowTitle }
         } catch {}
     }
@@ -1188,7 +1214,12 @@ if (-not $NoAutoOpen) {
     # dem Browserfenster stehen. Das Fenster wird kurz nach dem Laden der Seite
     # einmalig nach vorne geholt. Das darf NICHT hier blockierend passieren: die
     # Seite kann erst laden, wenn die Anfrageschleife unten läuft.
-    $script:RaiseAppAt = (Get-Date).AddMilliseconds(2500)
+    # v338: EIN Versuch nach 2,5 s war zu früh - ein kalt startender Edge hat das
+    # Fenster dann noch nicht geladen, es heißt noch nicht "EntretienConnect" und
+    # wird gar nicht gefunden. Jetzt wird es wiederholt versucht, bis das Fenster
+    # wirklich vorne steht, längstens 25 Sekunden.
+    $script:RaiseAppAt = (Get-Date).AddMilliseconds(1500)
+    $script:RaiseAppUntil = (Get-Date).AddSeconds(25)
     $script:RaiseAppDone = $false
 } else {
     $script:RaiseAppDone = $true
@@ -1211,13 +1242,20 @@ while (-not $script:ShutdownRequested) {
         if ($client) { try { $client.Close() } catch {} }
     }
 
-    # v336: einmalig das App-Fenster nach vorne holen (siehe oben beim Start).
+    # v336/v338: das App-Fenster nach vorne holen (siehe oben beim Start). Wird so
+    # lange wiederholt, bis es wirklich vorne steht - danach nie wieder, damit der
+    # App der Nutzerin/dem Nutzer nicht dauernd den Fokus wegnimmt.
     if (-not $script:RaiseAppDone -and (Get-Date) -ge $script:RaiseAppAt) {
-        $script:RaiseAppDone = $true
-        try {
-            $raised = Raise-AppWindowOnly
-            Log ("Fenster nach vorne geholt: " + ($raised | ConvertTo-Json -Compress -Depth 3))
-        } catch { Log ("Fenster nach vorne holen fehlgeschlagen: " + $_.Exception.Message) }
+        $script:RaiseAppAt = (Get-Date).AddMilliseconds(700)
+        $raised = $null
+        try { $raised = Raise-AppWindowOnly } catch { Log ("Fenster nach vorne holen fehlgeschlagen: " + $_.Exception.Message) }
+        if ($raised -and $raised.focused) {
+            $script:RaiseAppDone = $true
+            Log ("Fenster steht vorne: " + ($raised | ConvertTo-Json -Compress -Depth 3))
+        } elseif ((Get-Date) -ge $script:RaiseAppUntil) {
+            $script:RaiseAppDone = $true
+            Log "Fenster liess sich nicht nach vorne holen - aufgegeben."
+        }
     }
 
     try {
