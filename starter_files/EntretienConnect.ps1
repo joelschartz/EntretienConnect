@@ -5,9 +5,10 @@
 #  Start ueber: EntretienConnect.vbs oder EntretienConnect-Start.bat
 # =====================================================================
 
-param([switch]$NoAutoOpen)
+param([switch]$NoAutoOpen, [switch]$UpdateUiOnly)
 
-
+$script:SelfPath = $MyInvocation.MyCommand.Path
+try { $script:ProcessStartedAt = (Get-Process -Id $PID -ErrorAction Stop).StartTime } catch { $script:ProcessStartedAt = Get-Date }
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -29,6 +30,9 @@ $StateFile = Join-Path $RuntimeDir "state.json"
 $BackupDir = Join-Path $RuntimeDir "backups"
 try { if (-not (Test-Path $BackupDir -PathType Container)) { New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null } } catch {}
 $LogFile   = Join-Path $RuntimeDir "EntretienConnect-log.txt"
+if (-not $UpdateUiOnly) {
+    try { [System.IO.File]::WriteAllText($LogFile, ("=== Start " + $script:ProcessStartedAt + " ===" + [Environment]::NewLine), [Text.Encoding]::UTF8) } catch {}
+}
 $PidFile   = Join-Path $RuntimeDir "helper.pid"
 $EbCacheFile = Join-Path $RuntimeDir "ebichelchen_cache.json"
 # v339: Vom e-Bichelchen-Helfer nach jedem Lesen geschrieben. Liegt hier eine noch
@@ -59,6 +63,11 @@ function Log($msg) {
     try { [System.IO.File]::AppendAllText($LogFile, $line + [Environment]::NewLine, [Text.Encoding]::UTF8) } catch {}
 }
 
+if (-not $UpdateUiOnly) {
+    $initMs = [int](((Get-Date) - $script:ProcessStartedAt).TotalMilliseconds)
+    Log ("PowerShell-Helfer initialisiert nach " + $initMs + " ms.")
+}
+
 
 function Test-EntretienConnectPortOpen {
     try {
@@ -77,6 +86,26 @@ function Wait-EntretienConnectPortClosed($msTotal) {
         Start-Sleep -Milliseconds 150
     }
     return (-not (Test-EntretienConnectPortOpen))
+}
+function Get-ReusableEntretienConnectHelper {
+    # v345: Ein bereits laufender Helfer derselben Version und desselben Starter-
+    # Ordners kann sofort weiterverwendet werden. Das spart PowerShell-Neustart,
+    # Prozesssuche und erneutes Binden des Servers bei jedem App-Oeffnen.
+    try {
+        $cap = Invoke-WebRequest -Uri ("http://127.0.0.1:$PreferredPort/api/graph/capabilities") -UseBasicParsing -TimeoutSec 1
+        if (-not $cap -or $cap.StatusCode -ne 200) { return $null }
+        $data = $cap.Content | ConvertFrom-Json
+        $theirVersion = [int]$data.appVersion
+        $theirPath = [string]$data.instancePath
+        $ourPath = [System.IO.Path]::GetFullPath($ScriptDir).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
+        if ($theirVersion -eq $script:HelperVersion -and $theirPath) {
+            $theirFull = [System.IO.Path]::GetFullPath($theirPath).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
+            if ($theirFull -ieq $ourPath) {
+                return [pscustomobject]@{ Port = [int]$data.port; Version = $theirVersion; Path = $theirFull }
+            }
+        }
+    } catch {}
+    return $null
 }
 function Stop-OldEntretienConnectHelpers {
     # v195: robuste Startbereinigung. Nutzer müssen nicht manuell beenden.
@@ -198,9 +227,8 @@ function Get-HtmlAppVersion($path) {
     return 0
 }
 
-# Laedt beim Start die neueste graph.html aus dem GitHub-Repo und ersetzt die lokale Kopie.
-# So bekommen alle Nutzer App-Updates ohne Neuinstallation. Schlaegt es fehl (offline /
-# gesperrt), bleibt die vorhandene lokale Datei erhalten.
+# Laedt nach dem sichtbaren Start die neuesten Webdateien aus dem GitHub-Repo und
+# ersetzt die lokalen Kopien fuer den naechsten Start. Offline bleibt alles erhalten.
 function Update-UiFromGitHub {
     # Télécharge au démarrage la dernière interface depuis GitHub Pages.
     # La page est ensuite servie localement (127.0.0.1) afin que Microsoft/e-Bichelchen
@@ -228,6 +256,20 @@ function Update-UiFromGitHub {
         } catch {
             Log ("Mise à jour GitHub ignorée pour " + $name + " : " + $_.Exception.Message)
         }
+    }
+}
+
+function Start-UiUpdateInBackground {
+    # v345: Die drei GitHub-Downloads blockierten bisher jeden App-Start. Jetzt
+    # laufen sie erst nach dem sichtbaren Start in einem separaten Prozess und
+    # gelten damit spaetestens beim naechsten Oeffnen.
+    try {
+        $hostExe = (Get-Process -Id $PID -ErrorAction Stop).Path
+        $quotedScript = '"' + $script:SelfPath.Replace('"','""') + '"'
+        Start-Process -FilePath $hostExe -WindowStyle Hidden -ArgumentList @("-NoLogo","-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-File",$quotedScript,"-UpdateUiOnly") | Out-Null
+        Log "GitHub-Aktualisierung im Hintergrund gestartet."
+    } catch {
+        Log ("GitHub-Aktualisierung konnte nicht im Hintergrund starten: " + $_.Exception.Message)
     }
 }
 
@@ -543,33 +585,19 @@ function Get-DefaultBrowserExe {
 }
 
 function Open-AppInBrowser($u) {
-    # v337: Beim Kaltstart legte Edge zusätzlich seine Neuer-Tab-Seite an, wenn die
-    # Adresse über die Windows-Verknüpfung (ShellExecute) geöffnet wurde. Wird die
-    # Browser-.exe direkt mit der Adresse gestartet, ist die Adresse der einzige
-    # Startauftrag. Läuft der Browser bereits, reicht Chromium die Adresse wie bisher
-    # an das offene Fenster weiter - es kommt also nur ein Tab dazu, genau so gewollt.
-    # v342: Wenn noch kein sichtbares Chromium-Fenster existiert, startet die
-    # Haupt-App im Chromium-App-Modus. Nur dieser Weg unterdrueckt Edge' eigenen
-    # leeren Start-Tab zuverlaessig. Laeuft bereits ein Browserfenster, bleibt das
-    # gewohnte Verhalten erhalten: EntretienConnect kommt als neuer normaler Tab
-    # in den vorhandenen Browser.
-    # Firefox wird entsprechend mit -new-window / -new-tab behandelt.
+    # v344: EntretienConnect startet in Chromium immer als eigenes, maximiertes
+    # Browser-App-Fenster - unabhaengig davon, ob der Browser schon laeuft. Dadurch
+    # sind Darstellung und Bedienung immer gleich und es entsteht nie ein Leertab.
+    # Firefox besitzt keinen entsprechenden App-Modus und bekommt stets ein eigenes
+    # normales Fenster.
     # Registry nicht lesbar oder unbekannter Browser: Windows-Verknuepfung nutzen.
     $exe = Get-DefaultBrowserExe
     $leaf = ""
     if ($exe) { $leaf = (Split-Path $exe -Leaf).ToLower() }
     if ($exe -and ($leaf -match '^(msedge|chrome|brave|vivaldi|opera)\.exe$')) {
         try {
-            $processName = [IO.Path]::GetFileNameWithoutExtension($leaf)
-            $visibleWindow = Get-Process -Name $processName -ErrorAction SilentlyContinue |
-                Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
-            if ($visibleWindow) {
-                Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",$u)
-                Log ("Browser direkt gestartet: neuer Tab im sichtbaren " + $leaf)
-            } else {
-                Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",("--app=" + $u))
-                Log ("Browser direkt gestartet: Kaltstart im App-Modus ohne Leertab (" + $leaf + ")")
-            }
+            Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check","--window-size=1200,800",("--app=" + $u))
+            Log ("Browser direkt gestartet: App-Modus 1200x800 ohne Leertab (" + $leaf + ")")
             return
         } catch {
             Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
@@ -577,11 +605,8 @@ function Open-AppInBrowser($u) {
     }
     if ($exe -and $leaf -eq 'firefox.exe') {
         try {
-            $visibleWindow = Get-Process -Name "firefox" -ErrorAction SilentlyContinue |
-                Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
-            $mode = $(if ($visibleWindow) { "-new-tab" } else { "-new-window" })
-            Start-Process -FilePath $exe -ArgumentList @($mode,$u)
-            Log ("Firefox direkt gestartet: " + $(if ($visibleWindow) { "neuer Tab" } else { "neues Fenster ohne Leertab" }))
+            Start-Process -FilePath $exe -ArgumentList @("-new-window",$u)
+            Log "Firefox direkt gestartet: eigenes Fenster (kein Browser-App-Modus verfügbar)."
             return
         } catch {
             Log ("Firefox-Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
@@ -989,7 +1014,7 @@ function Handle-Request($stream, $req) {
         return
     }
     if ($path -eq "/api/graph/capabilities") {
-        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = $script:HelperVersion; port = $Port }
+        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = $script:HelperVersion; port = $Port; instancePath = $ScriptDir }
         return
     }
     if ($path -eq "/api/graph/account") {
@@ -1248,12 +1273,32 @@ function Handle-Request($stream, $req) {
 }
 
 # ----------------------------------------------------------- Start
-# Interface chargée depuis GitHub, puis servie localement.
+# Lokale Oberfläche sofort starten; GitHub-Aktualisierung danach im Hintergrund.
 # v138: arrêt automatique quand l’onglet principal est fermé; une nouvelle ouverture de l’app ne doit pas afficher d’anciennes classes
 # e-Bichelchen comme si l’utilisateur était encore connecté.
-Stop-OldEntretienConnectHelpers
-Clear-EbCache
-Update-UiFromGitHub
+if ($UpdateUiOnly) {
+    Update-UiFromGitHub
+    exit 0
+}
+
+$reusable = Get-ReusableEntretienConnectHelper
+if ($reusable) {
+    $url = "http://127.0.0.1:$($reusable.Port)/graph.html"
+    Log ("Laufender v" + $reusable.Version + "-Helfer wird sofort wiederverwendet.")
+    if (-not $NoAutoOpen) { Open-AppInBrowser $url }
+    exit 0
+}
+
+$cleanupStarted = Get-Date
+if (Test-EntretienConnectPortOpen) {
+    Stop-OldEntretienConnectHelpers
+} else {
+    Log "Kein alter Helfer aktiv; langsame Prozesssuche uebersprungen."
+}
+Log ("Alte Helfer geprueft nach " + [int](((Get-Date) - $cleanupStarted).TotalMilliseconds) + " ms.")
+# v345: Den letzten bestaetigten e-Bichelchen-Stand nicht bei jedem Start loeschen.
+# Bei abgelaufener Sitzung ignoriert die Oberflaeche ihn; beim Abmelden/Neuanmelden
+# wird er weiterhin ausdruecklich entfernt.
 
 try {
     $started = New-EntretienConnectListener -Preferred $PreferredPort
@@ -1264,13 +1309,13 @@ try {
     if ($started.Fallback) {
         Log ("Port " + $PreferredPort + " était occupé. EntretienConnect utilise automatiquement le port " + $Port + ".")
     }
+    Log ("Lokaler Server bereit nach insgesamt " + [int](((Get-Date) - $script:ProcessStartedAt).TotalMilliseconds) + " ms.")
 } catch {
     Write-Host ""
     Write-Host ("EntretienConnect konnte keinen lokalen Port öffnen: " + $_.Exception.Message)
     throw
 }
 
-try { [System.IO.File]::WriteAllText($LogFile, ("=== Start " + (Get-Date) + " ===" + [Environment]::NewLine), [Text.Encoding]::UTF8) } catch {}
 Write-Host "============================================================"
 Write-Host ("  EntretienConnect est lancé.   [Version : v" + $script:HelperVersion + " GitHub Starter - sans Python]")
 Write-Host "  Dans le navigateur :  $url"
@@ -1285,23 +1330,16 @@ if (-not $NoAutoOpen) {
     # schwarz auf weiß, dass der zweite nicht von uns stammt.
     Log ("Browser wird EINMAL geöffnet mit: " + $url)
     Open-AppInBrowser $url
-    # v336: Windows lässt einen Hintergrundprozess den Vordergrund nicht einfach
-    # übernehmen - der Explorer-Ordner, aus dem gestartet wurde, blieb deshalb vor
-    # dem Browserfenster stehen. Das Fenster wird kurz nach dem Laden der Seite
-    # einmalig nach vorne geholt. Das darf NICHT hier blockierend passieren: die
-    # Seite kann erst laden, wenn die Anfrageschleife unten läuft.
-    # v338: EIN Versuch nach 2,5 s war zu früh - ein kalt startender Edge hat das
-    # Fenster dann noch nicht geladen, es heißt noch nicht "EntretienConnect" und
-    # wird gar nicht gefunden. Jetzt wird es wiederholt versucht, bis das Fenster
-    # wirklich vorne steht, längstens 25 Sekunden.
-    $script:RaiseAppAt = (Get-Date).AddMilliseconds(1500)
-    $script:RaiseAppUntil = (Get-Date).AddSeconds(25)
+    # v345: Nur noch eine erfolgreiche Vordergrundaktivierung, ohne Groessenaenderung
+    # und ohne doppelte Bestaetigung. Die kurzen Suchversuche laufen nicht blockierend.
+    $script:RaiseAppAt = (Get-Date).AddMilliseconds(250)
+    $script:RaiseAppUntil = (Get-Date).AddSeconds(10)
     $script:RaiseAppDone = $false
-    $script:RaiseAppConfirmations = 0
 } else {
     $script:RaiseAppDone = $true
-    $script:RaiseAppConfirmations = 0
 }
+$script:UpdateUiAt = (Get-Date).AddSeconds(3)
+$script:UpdateUiStarted = $false
 
 while (-not $script:ShutdownRequested) {
     $client = $null
@@ -1320,29 +1358,25 @@ while (-not $script:ShutdownRequested) {
         if ($client) { try { $client.Close() } catch {} }
     }
 
-    # v336/v338: das App-Fenster nach vorne holen (siehe oben beim Start). Wird so
-    # lange wiederholt, bis es wirklich vorne steht - danach nie wieder, damit der
-    # App der Nutzerin/dem Nutzer nicht dauernd den Fokus wegnimmt.
+    # App-Fenster einmal nach vorne holen; danach nie wieder den Fokus wegnehmen.
     if (-not $script:RaiseAppDone -and (Get-Date) -ge $script:RaiseAppAt) {
-        $script:RaiseAppAt = (Get-Date).AddMilliseconds(700)
+        $script:RaiseAppAt = (Get-Date).AddMilliseconds(250)
         $raised = $null
         try { $raised = Raise-AppWindowOnly } catch { Log ("Fenster nach vorne holen fehlgeschlagen: " + $_.Exception.Message) }
         if ($raised -and $raised.focused) {
-            # Zweimal bestaetigen: Edge kann sein Fenster kurz aktivieren und es
-            # waehrend der Profilinitialisierung gleich wieder hinter Explorer
-            # legen. Nach zwei Treffern im Abstand von 0,7 s bleibt es stabil vorne.
-            $script:RaiseAppConfirmations++
-            if ($script:RaiseAppConfirmations -ge 2) {
-                $script:RaiseAppDone = $true
-                Log ("Fenster steht stabil vorne: " + ($raised | ConvertTo-Json -Compress -Depth 3))
-            }
+            $script:RaiseAppDone = $true
+            Log ("Fenster steht vorne: " + ($raised | ConvertTo-Json -Compress -Depth 3))
         } else {
-            $script:RaiseAppConfirmations = 0
             if ((Get-Date) -ge $script:RaiseAppUntil) {
                 $script:RaiseAppDone = $true
                 Log "Fenster liess sich nicht nach vorne holen - aufgegeben."
             }
         }
+    }
+
+    if (-not $script:UpdateUiStarted -and (Get-Date) -ge $script:UpdateUiAt) {
+        $script:UpdateUiStarted = $true
+        Start-UiUpdateInBackground
     }
 
     try {

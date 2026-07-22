@@ -1,4 +1,18 @@
-# EntretienConnect v343
+# EntretienConnect v345
+
+**Schneller und ohne Fenstersprung unter Windows.** Chromium öffnet das
+Browser-App-Fenster direkt mit 1200 × 800 Pixeln. Es wird nicht mehr verzögert
+maximiert und nur einmal nicht blockierend in den Vordergrund geholt. Die drei
+GitHub-Dateiprüfungen laufen erst nach dem sichtbaren Start im Hintergrund.
+Ein bereits laufender v345-Helfer desselben Starter-Ordners wird sofort
+weiterverwendet. Das Startprotokoll enthält nun Millisekundenwerte für
+PowerShell-Initialisierung, Helferbereinigung und Serverbereitschaft.
+
+**Windows startet immer im Browser-App-Modus.** Edge, Chrome, Brave, Vivaldi
+und Opera öffnen EntretienConnect nun bei jedem Start als eigenes App-Fenster –
+auch wenn der Browser bereits läuft. Das Fenster wird maximiert, damit die
+verfügbare Bildschirmfläche genutzt und die Oberfläche nicht unnötig gekürzt
+wird. Firefox öffnet mangels App-Modus stets ein separates normales Fenster.
 
 **e-Bichelchen bleibt beim Moduswechsel angemeldet.** Der reine E-Mail-Modus
 deaktiviert lediglich den Kanal in der Oberfläche. Beim späteren Wechsel zu
