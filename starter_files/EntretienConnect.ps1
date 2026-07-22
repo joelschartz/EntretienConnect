@@ -516,8 +516,14 @@ function Focus-EntretienConnectWindow {
         $cdp = Invoke-EbHelper "focus-app"
         if ($cdp.ok -and $cdp.info.focused) { return $cdp.info }
     } catch {}
-    # Windows-Fenster-Fallback, falls DevTools kurzzeitig nicht erreichbar ist.
-    # holen. Keine neue URL / kein zusätzlicher Tab wird geöffnet.
+    return (Raise-AppWindowOnly)
+}
+
+function Raise-AppWindowOnly {
+    # v336: Nur der Fenster-Teil, ohne den Umweg über den e-Bichelchen-Helfer.
+    # Beim Programmstart wird genau das gebraucht: der Explorer-Ordner, aus dem
+    # gestartet wurde, bleibt sonst vor dem frisch geöffneten Browserfenster.
+    # Keine neue URL / kein zusätzlicher Tab wird geöffnet.
     $candidates = @()
     try {
         $candidates = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
@@ -1130,7 +1136,20 @@ if (-not $NoAutoOpen) {
     # v303: EntretienConnect wieder im Standardbrowser öffnen. Der kontrollierte
     # Chromium-Browser wird nur dann verwendet, wenn Windows ihn für die
     # e-Bichelchen-Automation wirklich benötigt.
+    # v336: protokollieren, WAS geöffnet wird. EntretienConnect öffnet den Browser
+    # genau einmal - falls dennoch zwei Tabs erscheinen, steht in der Logdatei
+    # schwarz auf weiß, dass der zweite nicht von uns stammt.
+    Log ("Browser wird EINMAL geöffnet mit: " + $url)
     try { Start-Process $url } catch {}
+    # v336: Windows lässt einen Hintergrundprozess den Vordergrund nicht einfach
+    # übernehmen - der Explorer-Ordner, aus dem gestartet wurde, blieb deshalb vor
+    # dem Browserfenster stehen. Das Fenster wird kurz nach dem Laden der Seite
+    # einmalig nach vorne geholt. Das darf NICHT hier blockierend passieren: die
+    # Seite kann erst laden, wenn die Anfrageschleife unten läuft.
+    $script:RaiseAppAt = (Get-Date).AddMilliseconds(2500)
+    $script:RaiseAppDone = $false
+} else {
+    $script:RaiseAppDone = $true
 }
 
 while (-not $script:ShutdownRequested) {
@@ -1148,6 +1167,15 @@ while (-not $script:ShutdownRequested) {
         # einzelne fehlerhafte Anfrage ignorieren, Server weiterlaufen lassen
     } finally {
         if ($client) { try { $client.Close() } catch {} }
+    }
+
+    # v336: einmalig das App-Fenster nach vorne holen (siehe oben beim Start).
+    if (-not $script:RaiseAppDone -and (Get-Date) -ge $script:RaiseAppAt) {
+        $script:RaiseAppDone = $true
+        try {
+            $raised = Raise-AppWindowOnly
+            Log ("Fenster nach vorne geholt: " + ($raised | ConvertTo-Json -Compress -Depth 3))
+        } catch { Log ("Fenster nach vorne holen fehlgeschlagen: " + $_.Exception.Message) }
     }
 
     try {
