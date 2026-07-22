@@ -1,4 +1,10 @@
-# EntretienConnect v338
+# EntretienConnect v340
+
+**Windows-Kaltstart ohne zusätzliches leeres Browser-Tab.** Ist der
+Standardbrowser noch vollständig geschlossen, startet EntretienConnect ihn nun
+gezielt mit der App-Adresse als einzigem Fensterziel. Läuft Edge, Chrome, Brave,
+Vivaldi, Opera oder Firefox bereits, bleibt das bisherige Verhalten erhalten:
+EntretienConnect öffnet sich als ein neuer Tab im vorhandenen Browser.
 
 **Le dossier de l’Explorateur ne reste plus au premier plan.** La tentative de v336 échouait pour deux raisons. D’abord, Windows refuse `SetForegroundWindow` à un processus qui n’est pas lui-même au premier plan : l’appel restait sans effet. La file d’entrée est désormais rattachée brièvement au thread du premier plan (`AttachThreadInput`), ce qui rend l’appel recevable. Ensuite, il n’y avait qu’**une seule** tentative, 2,5 s après le démarrage : un Edge démarrant à froid n’a alors pas encore chargé la page, la fenêtre ne s’appelle pas encore « EntretienConnect » et n’est donc pas trouvée. La tentative est maintenant répétée toutes les 0,7 s jusqu’à ce que la fenêtre soit réellement devant — au maximum 25 secondes, et plus jamais ensuite, afin de ne pas voler le focus.
 

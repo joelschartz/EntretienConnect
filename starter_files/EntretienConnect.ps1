@@ -544,14 +544,54 @@ function Open-AppInBrowser($u) {
     # Browser-.exe direkt mit der Adresse gestartet, ist die Adresse der einzige
     # Startauftrag. Läuft der Browser bereits, reicht Chromium die Adresse wie bisher
     # an das offene Fenster weiter - es kommt also nur ein Tab dazu, genau so gewollt.
-    # Kein Chromium (z. B. Firefox) oder Registry nicht lesbar: alles wie bisher.
+    # v340: Chromium unterscheidet jetzt zwischen Warm- und Kaltstart. Bei einem
+    # Kaltstart erzwingt --new-window, dass die EntretienConnect-Adresse das erste
+    # und einzige Fensterziel ist; Edge/Chrome legen dann nicht zusaetzlich ihren
+    # leeren Start-Tab an. Wenn der Browser schon laeuft, wird die Adresse ohne
+    # --new-window uebergeben und landet wie bisher als neuer Tab im vorhandenen
+    # Browserfenster. Firefox erhaelt dieselbe Trennung explizit ueber -new-window
+    # bzw. -new-tab.
+    # Registry nicht lesbar oder unbekannter Browser: alles wie bisher.
     $exe = Get-DefaultBrowserExe
     $leaf = ""
     if ($exe) { $leaf = (Split-Path $exe -Leaf).ToLower() }
     if ($exe -and ($leaf -match '^(msedge|chrome|brave|vivaldi|opera)\.exe$')) {
         try {
-            Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",$u)
-            Log ("Browser direkt gestartet: " + $exe)
+            $processName = [IO.Path]::GetFileNameWithoutExtension($leaf)
+            # Edge/Chrome koennen durch Startup Boost noch Hintergrundprozesse
+            # besitzen, obwohl kein Browserfenster offen ist. Deshalb zaehlt nur
+            # ein Prozess mit echtem Hauptfenster als laufender Browser.
+            $alreadyRunning = [bool](Get-Process -Name $processName -ErrorAction SilentlyContinue |
+                Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1)
+            $browserArgs = @("--no-first-run","--no-default-browser-check")
+            $launchMode = "neuer Tab"
+            if (-not $alreadyRunning) {
+                $browserArgs += "--new-window"
+                $launchMode = "Kaltstart ohne Leertab"
+            }
+            $browserArgs += $u
+            Start-Process -FilePath $exe -ArgumentList $browserArgs
+            Log ("Browser direkt gestartet (" + $launchMode + "): " + $exe)
+            return
+        } catch {
+            Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
+        }
+    }
+    if ($exe -and ($leaf -eq 'firefox.exe')) {
+        try {
+            $alreadyRunning = [bool](Get-Process -Name "firefox" -ErrorAction SilentlyContinue |
+                Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1)
+            $browserArgs = @()
+            $launchMode = "neuer Tab"
+            if ($alreadyRunning) {
+                $browserArgs += "-new-tab"
+            } else {
+                $browserArgs += "-new-window"
+                $launchMode = "Kaltstart ohne Leertab"
+            }
+            $browserArgs += $u
+            Start-Process -FilePath $exe -ArgumentList $browserArgs
+            Log ("Firefox direkt gestartet (" + $launchMode + "): " + $exe)
             return
         } catch {
             Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
