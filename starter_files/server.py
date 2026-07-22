@@ -735,7 +735,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path.split("?", 1)[0] == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 331, "nativeLoginEngine": ("WKWebView-v330" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 332, "nativeLoginEngine": ("WKWebView-v332" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -856,6 +856,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 except Exception:
                     saved = False
                 return self._json(200, {"ok": True, "hasData": bool(data), "receivedAt": at, "data": data, "savedSession": saved})
+            if path == "/api/eb/resume":
+                # v332: Klassen aus der gemerkten Sitzung lesen – ohne Loginfenster.
+                # Scheitert das, meldet die Oberfläche einfach « nicht verbunden »
+                # und der Benutzer klickt wie bisher auf « Verbinden ».
+                try:
+                    payload = eb.resume_saved_session()
+                    _, at = eb.get_current()
+                    return self._json(200, {"ok": True, "data": payload, "receivedAt": at, "resumed": True})
+                except Exception as exc:
+                    expired = isinstance(exc, getattr(eb, "EbSessionExpired", ()))
+                    return self._json(200, {"ok": False, "resumed": False, "sessionExpired": bool(expired), "error": str(exc)})
             if path == "/api/eb/open-browser":
                 info = eb.launch_browser(q("profile", "default"), preferred_browser=q("browser", "auto"), user_agent=q("ua", ""))
                 return self._json(200, {"ok": True, "info": info})

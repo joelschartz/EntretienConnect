@@ -1,22 +1,18 @@
-# EntretienConnect v331
+# EntretienConnect v332
 
-e-Bichelchen se connecte désormais tout seul au démarrage, comme Microsoft — quand une session mémorisée est disponible.
+Au démarrage, e-Bichelchen se reconnecte **sans ouvrir aucune fenêtre** — comme Microsoft.
 
-Depuis v330, la session survit à la fermeture de l’application : la fenêtre s’ouvre, reconnaît la session et se referme sans rien demander. Il fallait cependant encore cliquer sur « Connecter », alors que Microsoft est vert dès le lancement. La différence tenait à ceci : pour Microsoft, l’assistant local peut vérifier le jeton sur le disque ; pour e-Bichelchen, les classes ne peuvent être lues que par la fenêtre.
+En v331, la fenêtre s’ouvrait brièvement puis disparaissait. Elle n’est plus nécessaire : l’assistant local relit lui-même les classes à partir de la session mémorisée. Mesuré sur un compte réel : **67 ms**, aucune fenêtre.
 
-L’application demande donc au démarrage si une session est mémorisée et, le cas échéant, lance la connexion d’elle-même. La fenêtre s’ouvre brièvement, reprend la session et se referme — puis e-Bichelchen est vert, sans aucun clic.
+**Un bogue de ma part, corrigé.** Depuis v311, toute réponse HTML était interprétée comme « session expirée ». Or e-Bichelchen renvoie un HTTP 404 avec page HTML quand on interroge une adresse de matières qui n’existe pas — et l’application en essaie plusieurs. La lecture s’interrompait donc immédiatement, avec un message trompeur. C’est très probablement ce qui avait fait échouer la tentative de v315, que j’avais attribuée à tort à une panne du serveur. L’expiration est désormais reconnue uniquement à la redirection vers l’identification IAM, ce qui est le seul signal fiable.
 
-Volontairement prudent, et vérifié :
+**Deux autres corrections de fond :**
 
-| Situation | Comportement |
-|---|---|
-| Aucune session mémorisée | rien ne s’ouvre |
-| Session mémorisée | une seule connexion automatique |
-| `ebFetchStatus` appelé plusieurs fois | toujours une seule tentative |
-| Mode « Uniquement e-mail » | rien ne s’ouvre |
+- Les cookies envoyés sont désormais choisis selon le serveur contacté. La session couvre quatre domaines, et trois noms de cookies s’y répètent avec des valeurs différentes ; seuls les trois cookies valables pour `ssl.education.lu` sont maintenant transmis.
+- La catégorie « Message » ne peut pas être devinée : toutes les adresses connues répondent 404, la fenêtre la découvre dans la page. Elle est donc mémorisée par classe lors de la connexion et réutilisée ensuite.
 
-Aucune donnée ancienne n’est réaffichée : la classe est relue par la fenêtre, comme lors d’une connexion manuelle. La session mémorisée expire après 12 h et une reconnexion volontaire l’efface — dans les deux cas, plus d’ouverture automatique.
+**Important pour le premier essai :** la session déjà enregistrée ne contient pas encore la catégorie mémorisée. Au premier lancement après la mise à jour, la fenêtre s’ouvrira donc encore une fois. À partir du deuxième, tout se fait en silence.
 
-Sous Windows, rien ne change : la session mémorisée n’existe que pour la fenêtre native de macOS.
+Si la reprise échoue, aucune fenêtre ne s’ouvre d’elle-même : e-Bichelchen reste gris et un clic sur « Connecter » suffit, comme avant.
 
-Rappel v330 : la session mémorisée est enfin utilisée, parce que la fenêtre retourne à l’adresse où la session était valable au lieu de la page d’identification.
+Ces corrections concernent aussi la publication des messages et le changement de classe, qui empruntent le même chemin — cela reste à confirmer sur un compte réel.
