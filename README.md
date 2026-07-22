@@ -1,13 +1,15 @@
-# EntretienConnect v325
+# EntretienConnect v328
 
-Deux améliorations de la fenêtre de connexion e-Bichelchen sur macOS.
+Robustesse face aux bloqueurs de fenêtres surgissantes.
 
-**Ne plus se reconnecter à chaque démarrage.** La session e-Bichelchen tient à un cookie de session, qui ne vit que dans la mémoire du processus de la fenêtre — dès que celle-ci se fermait, il était perdu, d’où une nouvelle identification à chaque lancement de l’application. Les cookies education.lu du dernier login sont désormais enregistrés (fichier lisible par vous seul, droits 0600) et réinjectés dans la fenêtre **avant** le chargement de la page. Si la session IAM est encore valable côté serveur, vous arrivez directement connecté.
+v327 réglait le cas courant — la fenêtre s’ouvre pendant le clic, donc les navigateurs l’autorisent. Restait le cas d’un blocage général : réglage strict, extension ou politique d’entreprise. `window.open` renvoyait alors `null`, et l’application attendait six minutes en silence, avec une simple mention en petit.
 
-Vérifié de bout en bout sur banc d’essai : au 1er lancement les deux cookies sont capturés et enregistrés ; au 2ᵉ, le cookie de session — celui qui ne survivait pas — est bien renvoyé au serveur dès la première requête. Garde-fous testés : la session expire après 12 h et est alors supprimée ; une reconnexion volontaire (« recommencer ») efface la session mémorisée ; une session vide n’est jamais enregistrée. C’est le même principe que le jeton Microsoft, déjà conservé sur le disque.
+Trois niveaux désormais :
 
-**Plus d’icône « osascript » dans le Dock.** La fenêtre s’annonce désormais comme accessoire : l’icône supplémentaire dans le Dock disparaît. La fenêtre reste pleinement utilisable — fenêtre active, saisie au clavier et **⌘V** fonctionnent (vérifié : le WKWebView est premier répondeur et gère paste:). Un menu « Édition » a été ajouté exprès pour que les raccourcis Couper/Copier/Coller marchent, utile quand le mot de passe vient d’un gestionnaire.
+1. **Fenêtre dédiée** (520 × 720), ouverte pendant le clic.
+2. **Sinon, un onglet ordinaire** — sans dimensions, une ouverture est bien moins souvent refusée. Mieux vaut un onglet que pas de connexion.
+3. **Sinon, message immédiat** : « Votre navigateur a bloqué la fenêtre de connexion », avec un bouton « Ouvrir la connexion Microsoft ». Ce bouton est un vrai lien : le clic est un nouveau geste de l’utilisateur, qu’aucun bloqueur ne refuse. L’interrogation continue en arrière-plan, donc l’identification faite par ce lien termine la connexion normalement.
 
-Une limite honnête : le mot **« osascript »** peut encore apparaître dans la barre de menus en haut, mais uniquement tant que la fenêtre de connexion est au premier plan. Ce nom vient du programme réellement exécuté (`/usr/bin/osascript`) et ne peut pas être renommé sans envelopper le tout dans une véritable application — un changement bien plus lourd, écarté pour l’instant. L’icône du Dock, elle, disparaît vraiment.
+Vérifié en simulant un blocage total : les deux tentatives d’ouverture ont lieu (avec puis sans dimensions), le message et le lien apparaissent immédiatement, la méthode par code reste proposée, et une identification effectuée via le lien mène bien au bout. Contrôlé aussi que le cas normal n’a pas changé : une seule fenêtre, aux bonnes dimensions, refermée par l’application, sans message d’erreur.
 
-Rappel v324 : la connexion Microsoft réagit aussi vite que celle d’e-Bichelchen (attente après identification réduite de 4,5 s à moins d’1,5 s). La connexion Microsoft reste dans le navigateur système à dessein — Microsoft bloque souvent l’authentification en fenêtre intégrée.
+Rappel v327 : la fenêtre s’ouvre pendant le clic (sinon Safari la refuse après les appels réseau). v325 : session e-Bichelchen mémorisée entre deux démarrages, plus d’icône supplémentaire dans le Dock.

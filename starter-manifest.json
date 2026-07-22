@@ -1,10 +1,10 @@
 {
-  "version": "v325",
+  "version": "v328",
   "files": [
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "208fbb4385e2afdd1d21c0e61a0e14087879044e634378fe6af476022aec0994",
+      "sha256": "6a489d28c70a0bf05209f4623f0a4b5cc2f61b2e984c4997d8d6f2952be2acb9",
       "size": 75503
     },
     {
@@ -46,7 +46,7 @@
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "750bebd7012ecee2b3ef61f260b1a690ba2edbd701f0075a56bc9ffe35b6a96d",
+      "sha256": "2399df2af6d7830bda9eff0a40b2de51ec62cfbb2ecfc6b54964c84eacb950ca",
       "size": 5
     },
     {

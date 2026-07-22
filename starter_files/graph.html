@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v325</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v328</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 325;
+const APP_VERSION = 328;
 
 window.addEventListener("error", function(ev){
   try{
@@ -5867,12 +5867,28 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   if(inBtn) inBtn.disabled=true;
   lb.style.display="block";
   lb.innerHTML='<div class="banner info">Préparation de la connexion …</div>';
+  // v327: Das Fenster MUSS hier aufgehen – synchron im Klick, vor jedem await.
+  // Safari (und oft auch Chrome) erlauben ein Popup nur, solange die Nutzergeste
+  // frisch ist. Danach wurde es blockiert. Die Adresse kennen wir noch nicht, also
+  // öffnen wir leer und schicken das Fenster weiter, sobald sie da ist.
+  msLoginWindow = openMsLoginWindow("about:blank");
+  try{
+    if(msLoginWindow && msLoginWindow.document){
+      msLoginWindow.document.write('<!doctype html><meta charset="utf-8"><title>Microsoft</title>'
+        +'<body style="font:15px -apple-system,Segoe UI,Arial;padding:32px;text-align:center;color:#555">'
+        +'Connexion Microsoft en préparation …</body>');
+      msLoginWindow.document.close();
+    }
+  }catch(_){ }
   try{ await api("/api/graph/login-reset"); }catch(e){}
   // v174: connexion SANS code — le helper local reçoit la redirection OAuth (PKCE).
   // Si le helper n'est pas encore à jour (endpoint inconnu), on retombe sur le code d'appareil.
   let w=null;
   try{ w=await api("/api/graph/login-start-web"); }catch(e){ w=null; }
   if(w && w.ok && w.authUrl) return runWebLoginFlow(lb, inBtn, w.authUrl, loginBoxId, buttonId);
+  // v327: Kein Web-Login möglich → das vorsorglich geöffnete Fenster wieder zumachen,
+  // sonst bliebe beim Weg über den Gerätecode ein leeres Fenster stehen.
+  closeMsLoginWindow();
   return startMicrosoftLoginDevice(loginBoxId, buttonId);
 }
 function microsoftRetryHtml(message){
@@ -5886,18 +5902,81 @@ function bindMicrosoftRetryButtons(lb, loginBoxId, buttonId){
     if(reset) reset.onclick=async()=>{ try{ await api("/api/graph/login-reset"); }catch(e){} startMicrosoftLogin(loginBoxId, buttonId); };
   }catch(e){}
 }
+// v326: Der Microsoft-Login öffnet ein eigenes kleines Fenster statt eines Tabs in
+// der Tab-Leiste. Es bleibt ein echtes Browserfenster — die Anmeldung läuft also
+// weiter im Systembrowser, wie Microsoft es verlangt — wirkt aber wie das
+// e-Bichelchen-Fenster: geht auf, man meldet sich an, es verschwindet.
+//
+// Bewusst OHNE "noopener": nur so behält die App eine Referenz und kann das
+// Fenster nach erfolgreicher Anmeldung selbst schließen. Verließe man sich allein
+// auf das window.close() der Rückleitseite, bliebe bei blockiertem Selbstschließen
+// ein Fenster stehen. Das Ziel ist Microsofts eigene Anmeldeseite, kein fremdes.
+let msLoginWindow = null;
+function openMsLoginWindow(authUrl){
+  const w = 520, h = 720;
+  let feat = "width="+w+",height="+h+",menubar=no,toolbar=no,status=no,resizable=yes,scrollbars=yes";
+  try{
+    const left = Math.max(0, Math.round(((window.screen && window.screen.width  || 1280) - w) / 2));
+    const top  = Math.max(0, Math.round(((window.screen && window.screen.height || 800)  - h) / 3));
+    feat += ",left="+left+",top="+top;
+  }catch(_){ }
+  let win=null;
+  try{ win = window.open(authUrl, "ecMicrosoftLogin", feat); }catch(e){ win=null; }
+  // v328: Wird ein Fenster MIT Maßangaben abgewiesen, zählt es für den Browser als
+  // Popup. Ein normaler Tab (ohne Maße) wird deutlich seltener blockiert – lieber
+  // ein Tab als gar keine Anmeldung.
+  if(!win){ try{ win = window.open(authUrl, "ecMicrosoftLogin"); }catch(e){ win=null; } }
+  // Manche Blocker liefern ein Fenster, das sofort wieder zu ist.
+  try{ if(win && win.closed) win=null; }catch(_){ }
+  return win;
+}
+// v328: Alles blockiert – dann sagen wir das sofort und deutlich, statt sechs
+// Minuten lang stumm zu warten. Der Knopf ist ein echter Link: ein Klick darauf
+// ist eine frische Nutzergeste und wird von keinem Blocker abgewiesen.
+function msPopupBlockedHtml(authUrl){
+  return '<div class="banner warn" style="line-height:1.7"><b>Votre navigateur a bloqué la fenêtre de connexion.</b><br>'
+    + '<a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>Ouvrir la connexion Microsoft</b></a>'
+    + ' — la connexion se terminera ici automatiquement.<br>'
+    + '<span class="muted">Vous pouvez aussi autoriser les fenêtres surgissantes pour cette page, ou '
+    + '<a href="#" id="deviceFlowFallback">utiliser la méthode classique avec code</a>.</span></div>';
+}
+function closeMsLoginWindow(){
+  try{ if(msLoginWindow && !msLoginWindow.closed) msLoginWindow.close(); }catch(_){ }
+  msLoginWindow = null;
+}
 function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
-  lb.innerHTML='<div class="banner info" style="line-height:1.7"><b>1.</b> Une page Microsoft s’ouvre — connectez-vous avec votre compte (IAM). <b>Aucun code à saisir.</b><br><b>2.</b> Revenez ensuite ici : la connexion se termine automatiquement.<br><span class="muted">Rien ne s’est ouvert ? <a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>Cliquez ici</b></a> — ou <a href="#" id="deviceFlowFallback">utilisez la méthode classique avec code</a>.</span></div>';
-  const fb=document.getElementById("deviceFlowFallback");
-  if(fb) fb.onclick=(e)=>{ e.preventDefault(); if(pollTimer) clearInterval(pollTimer); startMicrosoftLoginDevice(loginBoxId, buttonId); };
-  try{ window.open(authUrl,"_blank","noopener"); }catch(e){}
+  lb.innerHTML='<div class="banner info" style="line-height:1.7">Une fenêtre Microsoft s’ouvre — connectez-vous avec votre compte (IAM). <b>Aucun code à saisir.</b> Elle se referme toute seule et la connexion se termine ici.<br><span class="muted">Rien ne s’est ouvert ? Autorisez les fenêtres surgissantes, <a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>ouvrez la page ici</b></a> — ou <a href="#" id="deviceFlowFallback">utilisez la méthode classique avec code</a>.</span></div>';
+  const bindDeviceFallback=()=>{
+    const fb=document.getElementById("deviceFlowFallback");
+    if(fb) fb.onclick=(e)=>{ e.preventDefault(); if(pollTimer) clearInterval(pollTimer); closeMsLoginWindow(); startMicrosoftLoginDevice(loginBoxId, buttonId); };
+  };
+  bindDeviceFallback();
+  // v327: Das Fenster steht schon offen (synchron beim Klick geöffnet) – jetzt nur
+  // noch weiterschicken. Nur falls das nicht klappte, ein zweiter Versuch.
+  if(msLoginWindow && !msLoginWindow.closed){
+    try{ msLoginWindow.location.href = authUrl; }
+    catch(_){ msLoginWindow = openMsLoginWindow(authUrl); }
+  } else {
+    msLoginWindow = openMsLoginWindow(authUrl);
+  }
+  // v328: Nichts ging auf – sofort sagen und einen anklickbaren Weg anbieten,
+  // statt den Benutzer vor einer scheinbar arbeitenden App sitzen zu lassen.
+  // Die Abfrage läuft weiter: meldet er sich über den Link an, ist die App fertig.
+  if(!msLoginWindow){
+    lb.innerHTML=msPopupBlockedHtml(authUrl);
+    bindDeviceFallback();
+  }
   if(pollTimer) clearInterval(pollTimer);
   const startedAt=Date.now();
+  let closedSeenAt=0;
   pollTimer=setInterval(async()=>{
     let d=null;
     try{ const res=await fetch("/api/graph/account",{cache:"no-store"}); d=await res.json(); }catch(e){ return; }
     if(d && d.signedIn){
       clearInterval(pollTimer);
+      // v326: Die App schließt das Anmeldefenster selbst. Die Rückleitseite
+      // versucht es zwar auch, aber Browser blockieren window.close() manchmal.
+      closeMsLoginWindow();
       account=d.account;
       if(typeof applyChannelVisibility==="function") applyChannelVisibility();
       lb.style.display="none";
@@ -5906,9 +5985,22 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
       renderAuth(); renderSetup(); renderMails();
     } else if(d && d.lastLoginError){
       clearInterval(pollTimer);
+      closeMsLoginWindow();
       lb.innerHTML=microsoftRetryHtml(d.lastLoginError);
       bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
+    } else if(msLoginWindow && msLoginWindow.closed){
+      // v326: Fenster von Hand geschlossen, ohne dass die Anmeldung ankam. Nicht
+      // sofort abbrechen – die Rückleitung braucht einen Moment, bis der Helfer das
+      // Token hat. Erst nach gut zwei Sekunden ohne Erfolg zum Neuversuch anbieten.
+      if(!closedSeenAt) closedSeenAt=Date.now();
+      else if(Date.now()-closedSeenAt > 2200){
+        clearInterval(pollTimer);
+        msLoginWindow=null;
+        lb.innerHTML=microsoftRetryHtml('La fenêtre de connexion a été fermée avant la fin. Vous pouvez réessayer.');
+        bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
+        if(inBtn) inBtn.disabled=false;
+      }
     } else if(Date.now()-startedAt > 6*60*1000){
       clearInterval(pollTimer);
       lb.innerHTML=microsoftRetryHtml('La connexion n’a pas abouti. Vous pouvez réessayer sans recharger la page.');
