@@ -2067,8 +2067,16 @@ def focus_app_tab() -> dict:
             user32.EnumWindows(EnumWindowsProc(callback), 0)
             hwnd = found["hwnd"]
             if hwnd:
+                # v335: SW_RESTORE NUR bei einem wirklich minimierten Fenster.
+                # Auf ein MAXIMIERTES Fenster angewandt stellt SW_RESTORE die
+                # vorherige, kleinere Größe wieder her - das Fenster schrumpfte
+                # also beim Zurückholen. Genau das sah wie "die App minimiert
+                # sich" aus.
                 SW_RESTORE = 9
-                user32.ShowWindow(hwnd, SW_RESTORE)
+                user32.IsIconic.argtypes = [wintypes.HWND]
+                user32.IsIconic.restype = wintypes.BOOL
+                if user32.IsIconic(hwnd):
+                    user32.ShowWindow(hwnd, SW_RESTORE)
                 user32.BringWindowToTop(hwnd)
                 ok = bool(user32.SetForegroundWindow(hwnd))
                 return {"method": "windows-user32", "foundExistingTab": True, "setForegroundOk": ok, "title": found["title"], "openedNewTab": False}

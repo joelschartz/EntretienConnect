@@ -146,6 +146,7 @@ public static class EntretienConnectWin32 {
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
 }
 "@
         }
@@ -175,7 +176,13 @@ public static class EntretienConnectWin32 {
             $proc = Get-Process -Id $id -ErrorAction Stop
             $h = $proc.MainWindowHandle
             if ($h -and $h -ne 0) {
-                try { [EntretienConnectWin32]::ShowWindowAsync($h, 9) | Out-Null } catch {}
+                # v335: SW_RESTORE nur, wenn das Fenster wirklich minimiert ist -
+                # auf ein maximiertes Fenster angewandt verkleinert es dieses.
+                try {
+                    if ([EntretienConnectWin32]::IsIconic($h)) {
+                        [EntretienConnectWin32]::ShowWindowAsync($h, 9) | Out-Null
+                    }
+                } catch {}
                 try { [EntretienConnectWin32]::BringWindowToTop($h) | Out-Null } catch {}
                 try {
                     $shell = New-Object -ComObject WScript.Shell
@@ -387,7 +394,13 @@ function Start-EbBrowser($profile = "default", $preferredBrowser = "auto") {
 
     # v299: separates, aktives Hilfsfenster. Es wird nur die e-Bichelchen-App geöffnet;
     # deren eigene Startseite (z. B. Pinnwand) darf unverändert bleiben.
-    $argLine = "--remote-debugging-port=$EbCdpPort --user-data-dir=`"$profileDir`" --no-first-run --no-default-browser-check --new-window `"$EbUrl`""
+    # v335: --app= statt --new-window. Beim Kaltstart oeffnete Chromium mit
+    # --new-window zuerst sein eigenes Startfenster (leere Seite / Neuer Tab) und
+    # DANN die Login-Seite - daher die zwei Tabs. --app= erzeugt genau ein
+    # Fenster ohne Tableiste und ohne Adressleiste, so wie es der Mac-Weg seit je
+    # macht. Groesse/Position wie dort, damit das Fenster nicht bildschirmfuellend
+    # ueber der App liegt.
+    $argLine = "--remote-debugging-port=$EbCdpPort --user-data-dir=`"$profileDir`" --no-first-run --no-default-browser-check --disable-session-crashed-bubble --window-size=1120,820 --window-position=120,80 --app=`"$EbUrl`""
     $proc = Start-Process -FilePath $browser.path -ArgumentList $argLine -PassThru
     try { Set-Content -LiteralPath $pidFile -Value ([string]$proc.Id) -Encoding ASCII } catch {}
 

@@ -535,11 +535,18 @@ public static class EntretienConnectAppWin32 {
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
 }
 "@
             }
             $h = $proc.MainWindowHandle
-            [EntretienConnectAppWin32]::ShowWindowAsync($h, 9) | Out-Null
+            # v335: SW_RESTORE (9) NUR bei einem wirklich minimierten Fenster.
+            # Auf ein MAXIMIERTES Fenster angewandt stellt SW_RESTORE die vorherige,
+            # kleinere Größe wieder her. Das App-Fenster schrumpfte deshalb jedes Mal,
+            # wenn nach dem Login der Fokus zurückgeholt wurde.
+            if ([EntretienConnectAppWin32]::IsIconic($h)) {
+                [EntretienConnectAppWin32]::ShowWindowAsync($h, 9) | Out-Null
+            }
             [EntretienConnectAppWin32]::BringWindowToTop($h) | Out-Null
             try {
                 $shell = New-Object -ComObject WScript.Shell
