@@ -3,7 +3,7 @@ ObjC.import('WebKit');
 ObjC.import('Foundation');
 
 /*
- * EntretienConnect v325 – native macOS e-Bichelchen login window.
+ * EntretienConnect v330 – native macOS e-Bichelchen login window.
  * Runs through /usr/bin/osascript -l JavaScript and uses WKWebView (Safari/WebKit),
  * so no Chrome, Edge or remotely controlled Firefox is required.
  */
@@ -212,9 +212,9 @@ function finalizePayload(payload, pageUrl) {
           userAgent: ua,
           capturedAt: new Date().toISOString(),
           targetUrl: String(pageUrl || ''),
-          browser: 'macOS WKWebView v325'
+          browser: 'macOS WKWebView v330'
         },
-        engine: 'WKWebView-v325',
+        engine: 'WKWebView-v330',
         startedAt: new Date(EC_STARTED_AT).toISOString()
       });
       try { EC_WINDOW.orderOut(null); } catch (_) {}
@@ -232,9 +232,9 @@ function buildControllerScript() {
     const href = String(location.href || '');
     const onEb = href.indexOf('/ebichelchen/app/') >= 0;
     if (!onEb) return JSON.stringify({phase:'login',url:href});
-    if (!window.__entretienConnectNative325) {
-      window.__entretienConnectNative325 = {phase:'starting',url:href,error:'',data:null,startedAt:Date.now()};
-      const s = window.__entretienConnectNative325;
+    if (!window.__entretienConnectNative330) {
+      window.__entretienConnectNative330 = {phase:'starting',url:href,error:'',data:null,startedAt:Date.now()};
+      const s = window.__entretienConnectNative330;
       s.phase = 'reading';
       Promise.resolve(${EC_READ_EXPRESSION})
         .then(v => { s.data = v; s.phase = 'ready'; s.url = String(location.href || href); })
@@ -242,10 +242,10 @@ function buildControllerScript() {
           s.error = String(e && (e.message || e) || 'unknown error');
           s.phase = 'waiting';
           s.url = String(location.href || href);
-          setTimeout(() => { try { delete window.__entretienConnectNative325; } catch (_) {} }, 1200);
+          setTimeout(() => { try { delete window.__entretienConnectNative330; } catch (_) {} }, 1200);
         });
     }
-    const s = window.__entretienConnectNative325;
+    const s = window.__entretienConnectNative330;
     return JSON.stringify({phase:s.phase,url:String(s.url||href),error:String(s.error||''),data:s.data||null,age:Date.now()-Number(s.startedAt||Date.now())});
   })()`;
 }
