@@ -1,18 +1,13 @@
-# EntretienConnect v332
+# EntretienConnect v333
 
-Au démarrage, e-Bichelchen se reconnecte **sans ouvrir aucune fenêtre** — comme Microsoft.
+Sous Windows, la session e-Bichelchen est désormais mémorisée elle aussi : après un premier login, les démarrages suivants se reconnectent en silence, sans ouvrir de navigateur.
 
-En v331, la fenêtre s’ouvrait brièvement puis disparaissait. Elle n’est plus nécessaire : l’assistant local relit lui-même les classes à partir de la session mémorisée. Mesuré sur un compte réel : **67 ms**, aucune fenêtre.
+Jusqu’ici, tout ce qui a été construit depuis v325 ne valait que pour la fenêtre native de macOS. Sous Windows, e-Bichelchen repassait donc au gris à chaque redémarrage. La session capturée sur ce chemin est maintenant enregistrée de la même manière (fichier lisible par vous seul), et la reprise silencieuse fonctionne sur les deux systèmes — elle repose sur de simples requêtes HTTP, indépendantes du système.
 
-**Un bogue de ma part, corrigé.** Depuis v311, toute réponse HTML était interprétée comme « session expirée ». Or e-Bichelchen renvoie un HTTP 404 avec page HTML quand on interroge une adresse de matières qui n’existe pas — et l’application en essaie plusieurs. La lecture s’interrompait donc immédiatement, avec un message trompeur. C’est très probablement ce qui avait fait échouer la tentative de v315, que j’avais attribuée à tort à une panne du serveur. L’expiration est désormais reconnue uniquement à la redirection vers l’identification IAM, ce qui est le seul signal fiable.
+Une correction de fond au passage : les cookies capturés sous Windows étaient rassemblés en une seule ligne, où le dernier cookie d’un même nom écrasait les précédents. Or trois noms se répètent sur des serveurs différents avec des valeurs différentes. Les cookies sont désormais conservés individuellement avec leur domaine, et seuls ceux valables pour le serveur interrogé sont envoyés. Cela concerne aussi la publication des messages, qui empruntait la même ligne rassemblée.
 
-**Deux autres corrections de fond :**
+**Ce qui n’a pas changé, et pourquoi.** Sous Windows, la connexion n’ouvre pas une petite fenêtre comme sur macOS : l’assistant lance une instance séparée de Chrome ou Edge, avec son propre profil. D’où une fenêtre de navigateur avec un onglet vide en plus, et l’application qui passe à l’arrière-plan. Ce n’est pas voulu, mais je ne peux pas tester Windows d’ici, et je préfère ne pas modifier à l’aveugle un chemin qui fonctionne. En pratique la gêne disparaît largement : après le premier login, plus aucun navigateur ne s’ouvre aux démarrages suivants.
 
-- Les cookies envoyés sont désormais choisis selon le serveur contacté. La session couvre quatre domaines, et trois noms de cookies s’y répètent avec des valeurs différentes ; seuls les trois cookies valables pour `ssl.education.lu` sont maintenant transmis.
-- La catégorie « Message » ne peut pas être devinée : toutes les adresses connues répondent 404, la fenêtre la découvre dans la page. Elle est donc mémorisée par classe lors de la connexion et réutilisée ensuite.
+**Au premier lancement après la mise à jour**, la connexion s’ouvrira encore une fois — la session déjà enregistrée ne contient pas les informations nouvellement mémorisées. À partir du deuxième démarrage, tout se fait en silence.
 
-**Important pour le premier essai :** la session déjà enregistrée ne contient pas encore la catégorie mémorisée. Au premier lancement après la mise à jour, la fenêtre s’ouvrira donc encore une fois. À partir du deuxième, tout se fait en silence.
-
-Si la reprise échoue, aucune fenêtre ne s’ouvre d’elle-même : e-Bichelchen reste gris et un clic sur « Connecter » suffit, comme avant.
-
-Ces corrections concernent aussi la publication des messages et le changement de classe, qui empruntent le même chemin — cela reste à confirmer sur un compte réel.
+Rappel v332 : sur macOS, reprise sans aucune fenêtre (67 ms mesurées) et correction de la détection de session expirée, qui prenait toute page HTML — y compris un simple 404 — pour une déconnexion.

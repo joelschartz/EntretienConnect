@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# eBichelchenHelper v1.17.0 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
+# eBichelchenHelper v1.18.0 - lokaler Helfer für individuelle e-Bichelchen-Nachrichten.
 # Keine e-Bichelchen-Zugangsdaten. v1.10.16 kann nach Vorschau mehrere individuelle Message-Einträge erstellen und wieder löschen.
 # v1.10.17: Browser.close/Profil-Löschung nur noch, wenn KEIN App-Tab (127.0.0.1/localhost) im
 # Debug-Browser läuft — sonst verschwand die App mitsamt Fenster beim Verbinden/Aufräumen.
@@ -94,7 +94,7 @@ try:
 except Exception:
     SSL_CONTEXT = None
 
-HELPER_VERSION = "1.17.0"
+HELPER_VERSION = "1.18.0"
 
 LATEST_DATA = None
 LATEST_AT = None
@@ -1986,6 +1986,10 @@ def read_from_chrome(selected_group_id: int | None = None) -> dict:
         with LOCK:
             LATEST_SESSION = session
             LATEST_SESSION_AT = session.get("capturedAt")
+        # v333: Auch auf dem Windows-Weg die Sitzung für den nächsten Start merken.
+        # Bisher gab es das nur für das native macOS-Fenster – deshalb war
+        # e-Bichelchen unter Windows nach einem Neustart immer grau.
+        _mac_wk_save_session(session, payload)
         payload["source"]["sessionCaptured"] = True
         payload["source"]["sessionCookieNames"] = session.get("cookieNames", [])
     except Exception as exc:
@@ -2457,6 +2461,16 @@ def capture_browser_session(target: dict) -> dict:
     return {
         "cookieHeader": cookie_header,
         "cookieNames": sorted(m.keys()),
+        # v333: Die Cookies auch EINZELN mit ihrer Domäne mitgeben. Die
+        # zusammengeworfene Kopfzeile oben lässt gleichnamige Cookies verschiedener
+        # Hosts einander überschreiben (SAML, SAMLAuthToken und TS… kommen mehrfach
+        # vor, mit unterschiedlichen Werten). Mit der Einzelliste kann
+        # _cookie_header_for_host() je Zielserver das Richtige auswählen – und die
+        # Sitzung lässt sich für den nächsten Start merken, wie auf dem Mac.
+        "cookies": [
+            {"name": n, "value": v, "domain": d or "ssl.education.lu", "path": "/", "secure": True}
+            for (n, v, d) in eb_cookies
+        ],
         "userAgent": ua,
         "capturedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
         "targetUrl": target.get("url") or "",
@@ -3390,10 +3404,11 @@ def has_saved_session() -> bool:
     Die Oberfläche fragt das beim Start ab und verbindet dann von selbst, statt
     auf einen Klick zu warten – so ist e-Bichelchen wie Microsoft gleich grün.
     Geprüft wird nur, ob Cookies gespeichert und nicht zu alt sind; ob
-    education.lu sie noch akzeptiert, zeigt erst das Loginfenster.
+    education.lu sie noch akzeptiert, zeigt erst der Abruf.
+
+    v333: gilt auf allen Systemen. Die Sitzung wird inzwischen auch auf dem
+    Windows-Weg gemerkt, und das Weiterlesen läuft ohnehin über gewöhnliches HTTP.
     """
-    if platform.system().lower() != "darwin":
-        return False
     try:
         if not MAC_WK_SAVED_SESSION_FILE.exists():
             return False
@@ -3813,6 +3828,9 @@ def soft_reset_login() -> dict:
             "profilePreserved": True,
             "engine": "WKWebView",
         }
+    # v333: Auch auf dem Windows-Weg gilt: bewusstes Neuanmelden verwirft die
+    # gemerkte Sitzung, sonst käme sie beim nächsten Start gleich wieder.
+    _mac_wk_clear_saved_session()
     return _soft_reset_login_cdp()
 
 
