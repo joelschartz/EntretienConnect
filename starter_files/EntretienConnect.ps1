@@ -31,6 +31,8 @@ try { if (-not (Test-Path $BackupDir -PathType Container)) { New-Item -ItemType 
 $LogFile   = Join-Path $RuntimeDir "EntretienConnect-log.txt"
 $PidFile   = Join-Path $RuntimeDir "helper.pid"
 $EbCacheFile = Join-Path $RuntimeDir "ebichelchen_cache.json"
+$EbSavedSessionFile = Join-Path $RuntimeDir "ebichelchen_windows_session.json"
+$EbSessionMaxAgeSeconds = 12 * 3600
 $script:Pending = $null
 $script:PendingWeb = $null   # v176: état PKCE du login sans code (state/verifier/redirect)
 $script:LastLoginError = $null
@@ -566,7 +568,11 @@ function Open-AppInBrowser($u) {
             $browserArgs = @("--no-first-run","--no-default-browser-check")
             $launchMode = "neuer Tab"
             if (-not $alreadyRunning) {
-                $browserArgs += "--new-window"
+                # v341: --new-window erzeugt bei Edge trotz URL zuerst dessen
+                # eigenen Start-Tab. --same-tab ersetzt diesen ersten aktiven Tab
+                # durch EntretienConnect und behaelt trotzdem ein normales
+                # Browserfenster mit Tableiste.
+                $browserArgs += "--same-tab"
                 $launchMode = "Kaltstart ohne Leertab"
             }
             $browserArgs += $u
@@ -703,15 +709,43 @@ function Clear-EbCache {
     try { if (Test-Path $EbCacheFile -PathType Leaf) { Remove-Item -Force $EbCacheFile } } catch {}
 }
 
+function Test-EbSavedSession {
+    try {
+        if (-not (Test-Path $EbSavedSessionFile -PathType Leaf)) { return $false }
+        $raw = Get-Content -LiteralPath $EbSavedSessionFile -Raw -Encoding UTF8 -ErrorAction Stop
+        if (-not $raw) { return $false }
+        $saved = $raw | ConvertFrom-Json
+        if (-not $saved -or @($saved.cookies).Count -eq 0) { return $false }
+        $savedAt = [DateTime]::Parse([string]$saved.savedAtUtc).ToUniversalTime()
+        if (([DateTime]::UtcNow - $savedAt).TotalSeconds -gt $EbSessionMaxAgeSeconds) {
+            try { Remove-Item -LiteralPath $EbSavedSessionFile -Force -ErrorAction SilentlyContinue } catch {}
+            return $false
+        }
+        return $true
+    } catch { return $false }
+}
+
 function Handle-EbRequest($stream, $req) {
     $path = ($req.Path -split '\?')[0]
     try {
         if ($req.Method -eq "GET" -and $path -eq "/api/eb/status") {
             $cache = Read-EbCache
+            $savedSession = Test-EbSavedSession
             if ($null -ne $cache -and $null -ne $cache.data) {
-                Send-Json $stream @{ ok=$true; hasData=$true; data=$cache.data; receivedAt=$cache.receivedAt; cachedAt=$cache.cachedAt; note="Données e-Bichelchen récupérées depuis le cache local." }
+                Send-Json $stream @{ ok=$true; hasData=$true; savedSession=$savedSession; data=$cache.data; receivedAt=$cache.receivedAt; cachedAt=$cache.cachedAt; note="Données e-Bichelchen récupérées depuis le cache local." }
             } else {
-                Send-Json $stream @{ ok=$true; hasData=$false; data=$null; note="Aucune donnée e-Bichelchen lue pour cette session." }
+                Send-Json $stream @{ ok=$true; hasData=$false; savedSession=$savedSession; data=$null; note="Aucune donnée e-Bichelchen lue pour cette session." }
+            }
+            return
+        }
+
+        if ($req.Method -eq "GET" -and $path -eq "/api/eb/resume") {
+            $r = Invoke-EbHelper "resume"
+            if ($r.ok -and $null -ne $r.data) {
+                Write-EbCache $r.data $r.receivedAt
+                Send-Json $stream @{ ok=$true; data=$r.data; receivedAt=$r.receivedAt; resumed=$true }
+            } else {
+                Send-Json $stream @{ ok=$false; resumed=$false; sessionExpired=[bool]$r.sessionExpired; error=[string]$r.error }
             }
             return
         }

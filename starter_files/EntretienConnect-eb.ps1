@@ -18,6 +18,12 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # ----------------------------------------------------------- e-Bichelchen (PowerShell, ohne Python)
 $EbCdpPort = 9223
 $EbUrl = "https://ssl.education.lu/ebichelchen/app/login"
+$EbAppUrl = "https://ssl.education.lu/ebichelchen/app/"
+$EbSessionMaxAgeSeconds = 12 * 3600
+if ($env:LOCALAPPDATA) { $EbRuntimeDir = Join-Path $env:LOCALAPPDATA "EntretienConnect" }
+else { $EbRuntimeDir = $ScriptDir }
+try { New-Item -ItemType Directory -Force -Path $EbRuntimeDir | Out-Null } catch {}
+$EbSavedSessionFile = Join-Path $EbRuntimeDir "ebichelchen_windows_session.json"
 $script:EbData = $null
 $script:EbReceivedAt = $null
 $script:EbCreatedEntries = @()
@@ -71,6 +77,118 @@ function Find-EbBrowserExecutable($preferred = "auto") {
 
 function Invoke-JsonUrl($url, $method = "GET", $timeoutSec = 4) {
     return Invoke-RestMethod -Uri $url -Method $method -TimeoutSec $timeoutSec -Headers @{ Accept="application/json" }
+}
+
+function Clear-EbSavedSession {
+    try {
+        if (Test-Path $EbSavedSessionFile -PathType Leaf) {
+            Remove-Item -LiteralPath $EbSavedSessionFile -Force -ErrorAction SilentlyContinue
+        }
+    } catch {}
+}
+
+function Get-EbSavedSession {
+    try {
+        if (-not (Test-Path $EbSavedSessionFile -PathType Leaf)) { return $null }
+        $raw = Get-Content -LiteralPath $EbSavedSessionFile -Raw -Encoding UTF8 -ErrorAction Stop
+        if (-not $raw) { return $null }
+        $saved = $raw | ConvertFrom-Json
+        if (-not $saved -or @($saved.cookies).Count -eq 0) { return $null }
+        $savedAt = [DateTime]::Parse([string]$saved.savedAtUtc).ToUniversalTime()
+        if (([DateTime]::UtcNow - $savedAt).TotalSeconds -gt $EbSessionMaxAgeSeconds) {
+            Clear-EbSavedSession
+            return $null
+        }
+        return $saved
+    } catch {
+        return $null
+    }
+}
+
+function Get-EbSavedStartUrl {
+    $saved = Get-EbSavedSession
+    if ($saved) {
+        $u = [string]$saved.pageUrl
+        if ($u -match '^https://ssl\.education\.lu/ebichelchen/app/' -and $u -notmatch '/login(?:[/?#]|$)') {
+            return $u
+        }
+        return $EbAppUrl
+    }
+    return $EbUrl
+}
+
+function Save-EbSessionCookies {
+    try {
+        $target = Get-EbTarget
+        $msg = Invoke-CdpCall $target.webSocketDebuggerUrl "Network.getAllCookies" @{} 880 8
+        $cookies = @($msg.result.cookies)
+        $slim = @()
+        foreach ($c in $cookies) {
+            $domain = ([string]$c.domain).Trim().ToLower()
+            $name = [string]$c.name
+            if (-not $name -or $domain -notmatch '(^|\.)education\.lu$') { continue }
+            $item = [ordered]@{
+                name=$name
+                value=[string]$c.value
+                domain=[string]$c.domain
+                path=$(if ($c.path) { [string]$c.path } else { "/" })
+                secure=[bool]$c.secure
+                httpOnly=[bool]$c.httpOnly
+            }
+            $sameSite = [string]$c.sameSite
+            if ($sameSite -in @("Strict","Lax","None")) { $item["sameSite"] = $sameSite }
+            try {
+                $expires = [double]$c.expires
+                if ($expires -gt 0) { $item["expires"] = $expires }
+            } catch {}
+            $slim += [pscustomobject]$item
+        }
+        if ($slim.Count -eq 0) { return @{ saved=$false; cookieCount=0 } }
+        $pageUrl = [string]$target.url
+        if ($pageUrl -notmatch '^https://ssl\.education\.lu/ebichelchen/app/' -or $pageUrl -match '/login(?:[/?#]|$)') {
+            $pageUrl = $EbAppUrl
+        }
+        $entry = [ordered]@{
+            savedAtUtc=[DateTime]::UtcNow.ToString("o")
+            pageUrl=$pageUrl
+            cookies=$slim
+        }
+        ($entry | ConvertTo-Json -Depth 12) | Set-Content -LiteralPath $EbSavedSessionFile -Encoding UTF8
+        return @{ saved=$true; cookieCount=$slim.Count; pageUrl=$pageUrl }
+    } catch {
+        return @{ saved=$false; cookieCount=0; error=$_.Exception.Message }
+    }
+}
+
+function Restore-EbSessionCookies($wsUrl) {
+    $saved = Get-EbSavedSession
+    if (-not $saved -or -not $wsUrl) { return @{ restored=$false; cookieCount=0 } }
+    try {
+        $params = @()
+        foreach ($c in @($saved.cookies)) {
+            if (-not $c.name -or -not $c.domain) { continue }
+            $p = [ordered]@{
+                name=[string]$c.name
+                value=[string]$c.value
+                domain=[string]$c.domain
+                path=$(if ($c.path) { [string]$c.path } else { "/" })
+                secure=[bool]$c.secure
+                httpOnly=[bool]$c.httpOnly
+            }
+            $sameSite = [string]$c.sameSite
+            if ($sameSite -in @("Strict","Lax","None")) { $p["sameSite"] = $sameSite }
+            try {
+                $expires = [double]$c.expires
+                if ($expires -gt 0) { $p["expires"] = $expires }
+            } catch {}
+            $params += [pscustomobject]$p
+        }
+        if ($params.Count -eq 0) { return @{ restored=$false; cookieCount=0 } }
+        $null = Invoke-CdpCall $wsUrl "Network.setCookies" @{ cookies=$params } 881 10
+        return @{ restored=$true; cookieCount=$params.Count }
+    } catch {
+        return @{ restored=$false; cookieCount=0; error=$_.Exception.Message }
+    }
 }
 
 function Get-EbTargets {
@@ -320,6 +438,9 @@ function Start-EbPrewarm($profile = "default", $preferredBrowser = "auto") {
 
 function Stop-EbControlledBrowser {
     $closed = $false
+    $method = "none"
+    try { $null = Save-EbSessionCookies } catch {}
+    $owner = Get-EbOwnerProcessId
     try {
         $targets = @(Get-EbTargets)
         $ws = [string](($targets | Where-Object { $_.webSocketDebuggerUrl } | Select-Object -First 1).webSocketDebuggerUrl)
@@ -328,17 +449,32 @@ function Stop-EbControlledBrowser {
             $ws = [string]$version.webSocketDebuggerUrl
         }
         if ($ws) {
-            try { $null = Invoke-CdpCall $ws "Browser.close" @{} 931 3; $closed = $true } catch {}
+            try {
+                $null = Invoke-CdpCall $ws "Browser.close" @{} 931 3
+                $closed = $true
+                $method = "Browser.close"
+            } catch {}
         }
     } catch {}
-    try {
-        $owner = Get-EbOwnerProcessId
-        if ($owner) {
-            Start-Sleep -Milliseconds 250
-            try { Stop-Process -Id $owner -Force -ErrorAction Stop; $closed = $true } catch {}
+
+    # v341: Chromium mehrere Sekunden geben, Profil und Cookies sauber auf die
+    # Platte zu schreiben. v340 zwang den Prozess schon nach 250 ms zum Ende.
+    if ($closed) {
+        for ($i=0; $i -lt 50; $i++) {
+            Start-Sleep -Milliseconds 100
+            try { $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1 }
+            catch { return @{ closed=$true; method=$method; graceful=$true } }
         }
-    } catch {}
-    return @{ closed=$closed; method=($(if ($closed) { "Browser.close/Process" } else { "none" })) }
+    }
+
+    if ($owner) {
+        try {
+            Stop-Process -Id $owner -Force -ErrorAction Stop
+            $closed = $true
+            $method = "Process"
+        } catch {}
+    }
+    return @{ closed=$closed; method=$method; graceful=$false }
 }
 
 function Start-EbBrowser($profile = "default", $preferredBrowser = "auto") {
@@ -379,7 +515,21 @@ function Start-EbBrowser($profile = "default", $preferredBrowser = "auto") {
             throw "Verwaister e-Bichelchen-Hilfsbrowser wurde neu gestartet."
         }
 
-        Open-EbRemoteTab $EbUrl | Out-Null
+        $startUrl = Get-EbSavedStartUrl
+        # Der vorgewaermte Browser kann noch gar kein Page-Target besitzen. Erst
+        # eine leere Seite anlegen, Cookies in genau dieses Target einsetzen und
+        # danach zur App navigieren.
+        Open-EbRemoteTab "about:blank" | Out-Null
+        $blank = $null
+        for ($b=0; $b -lt 20 -and -not $blank; $b++) {
+            Start-Sleep -Milliseconds 100
+            $blank = @(Get-EbTargets | Where-Object { $_.type -eq "page" -and $_.webSocketDebuggerUrl } | Select-Object -First 1)
+            if ($blank.Count -eq 0) { $blank = $null }
+        }
+        if ($blank) {
+            try { $null = Restore-EbSessionCookies ([string]$blank[0].webSocketDebuggerUrl) } catch {}
+            try { $null = Invoke-CdpCall $blank[0].webSocketDebuggerUrl "Page.navigate" @{ url=$startUrl } 933 8 } catch {}
+        }
         Start-Sleep -Milliseconds 180
         $target = $null
         try { $target = Get-EbTarget } catch {}
@@ -389,7 +539,7 @@ function Start-EbBrowser($profile = "default", $preferredBrowser = "auto") {
         $savedPid = 0
         try { $savedPid = [int](Get-Content -LiteralPath $pidFile -Raw -ErrorAction Stop) } catch {}
         $activated = Activate-EbBrowserWindow $savedPid
-        return @{ alreadyRunning=$true; openedTab=$true; active=$activated; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
+        return @{ alreadyRunning=$true; openedTab=$true; active=$activated; profile=$safeProfile; profileDir=$profileDir; url=$startUrl; restoredSession=($null -ne (Get-EbSavedSession)); port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; devtoolsBrowser=$version.Browser }
     } catch {}
 
     # v299: separates, aktives Hilfsfenster. Es wird nur die e-Bichelchen-App geöffnet;
@@ -400,24 +550,37 @@ function Start-EbBrowser($profile = "default", $preferredBrowser = "auto") {
     # Fenster ohne Tableiste und ohne Adressleiste, so wie es der Mac-Weg seit je
     # macht. Groesse/Position wie dort, damit das Fenster nicht bildschirmfuellend
     # ueber der App liegt.
-    $argLine = "--remote-debugging-port=$EbCdpPort --user-data-dir=`"$profileDir`" --no-first-run --no-default-browser-check --disable-session-crashed-bubble --window-size=1120,820 --window-position=120,80 --app=`"$EbUrl`""
+    # v341 startet zunaechst about:blank, setzt dort die gemerkten Cookies und
+    # navigiert erst danach in die App. So wird die Loginroute nicht schon vor
+    # dem Wiederherstellen der Sitzung aufgerufen.
+    $startUrl = Get-EbSavedStartUrl
+    $argLine = "--remote-debugging-port=$EbCdpPort --user-data-dir=`"$profileDir`" --no-first-run --no-default-browser-check --disable-session-crashed-bubble --window-size=1120,820 --window-position=120,80 --app=about:blank"
     $proc = Start-Process -FilePath $browser.path -ArgumentList $argLine -PassThru
     try { Set-Content -LiteralPath $pidFile -Value ([string]$proc.Id) -Encoding ASCII } catch {}
 
+    $prepared = $false
     for ($i=0; $i -lt 30; $i++) {
         Start-Sleep -Milliseconds 250
         try {
             $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
+            if (-not $prepared) {
+                $blank = @(Get-EbTargets | Where-Object { $_.type -eq "page" -and $_.webSocketDebuggerUrl } | Select-Object -First 1)
+                if ($blank.Count -gt 0) {
+                    try { $null = Restore-EbSessionCookies ([string]$blank[0].webSocketDebuggerUrl) } catch {}
+                    $null = Invoke-CdpCall $blank[0].webSocketDebuggerUrl "Page.navigate" @{ url=$startUrl } 932 8
+                    $prepared = $true
+                }
+            }
             $target = $null
             try { $target = Get-EbTarget } catch {}
             if ($target) {
                 try { $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Page.bringToFront" @{} 914 6 } catch {}
             }
             $activated = Activate-EbBrowserWindow $proc.Id
-            return @{ alreadyRunning=$false; active=$activated; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; processId=$proc.Id; devtoolsBrowser=$version.Browser }
+            return @{ alreadyRunning=$false; active=$activated; profile=$safeProfile; profileDir=$profileDir; url=$startUrl; restoredSession=($null -ne (Get-EbSavedSession)); port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; processId=$proc.Id; devtoolsBrowser=$version.Browser }
         } catch {}
     }
-    return @{ alreadyRunning=$false; active=$false; profile=$safeProfile; profileDir=$profileDir; url=$EbUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; processId=$proc.Id; warning="Browser wurde gestartet, DevTools war aber noch nicht erreichbar." }
+    return @{ alreadyRunning=$false; active=$false; profile=$safeProfile; profileDir=$profileDir; url=$startUrl; port=$EbCdpPort; browser=$browser.name; browserId=$browser.id; browserPath=$browser.path; processId=$proc.Id; warning="Browser wurde gestartet, DevTools war aber noch nicht erreichbar." }
 }
 
 function Get-EbTarget {
@@ -947,6 +1110,80 @@ function Get-PropValue($obj, $name) {
     return $null
 }
 
+function Resume-EbSavedSession($profile = "default", $preferredBrowser = "auto") {
+    $saved = Get-EbSavedSession
+    if (-not $saved) { throw "Keine gültige gemerkte e-Bichelchen-Sitzung vorhanden." }
+
+    $browser = Find-EbBrowserExecutable $preferredBrowser
+    $safeProfile = ([regex]::Replace(([string]$profile), '[^A-Za-z0-9_.-]', '_')).Trim('._-')
+    if (-not $safeProfile) { $safeProfile = "default" }
+    $baseProfileRoot = $env:LOCALAPPDATA
+    if (-not $baseProfileRoot) { $baseProfileRoot = $ScriptDir }
+    $profileDir = Join-Path $baseProfileRoot ("EntretienConnect\profiles\" + $browser.id + "\" + $safeProfile)
+    New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+
+    $startedHere = $false
+    try {
+        $version = $null
+        try { $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1 } catch {}
+        if (-not $version) {
+            # v341: Die automatische Wiederaufnahme bleibt unsichtbar. Ein kleiner
+            # Headless-Chromium liest mit den wiederhergestellten Cookies dieselben
+            # Daten wie das sichtbare Loginfenster und wird danach sauber beendet.
+            $argLine = "--headless=new --disable-gpu --remote-debugging-port=$EbCdpPort --user-data-dir=`"$profileDir`" --no-first-run --no-default-browser-check about:blank"
+            $proc = Start-Process -FilePath $browser.path -ArgumentList $argLine -PassThru -WindowStyle Hidden
+            $startedHere = $true
+            for ($i=0; $i -lt 60 -and -not $version; $i++) {
+                Start-Sleep -Milliseconds 100
+                try { $version = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1 } catch {}
+                try { if ($proc.HasExited) { break } } catch {}
+            }
+        }
+        if (-not $version) { throw "Der Browser für die Sitzungswiederaufnahme ist nicht gestartet." }
+
+        $page = Get-EbTargets | Where-Object { $_.type -eq "page" -and $_.webSocketDebuggerUrl } | Select-Object -First 1
+        if (-not $page) {
+            Open-EbRemoteTab "about:blank" | Out-Null
+            for ($i=0; $i -lt 30 -and -not $page; $i++) {
+                Start-Sleep -Milliseconds 100
+                $page = Get-EbTargets | Where-Object { $_.type -eq "page" -and $_.webSocketDebuggerUrl } | Select-Object -First 1
+            }
+        }
+        if (-not $page) { throw "Kein Browser-Target für die Sitzungswiederaufnahme gefunden." }
+
+        $restore = Restore-EbSessionCookies ([string]$page.webSocketDebuggerUrl)
+        if (-not $restore.restored) { throw "Die gemerkten e-Bichelchen-Cookies konnten nicht wiederhergestellt werden." }
+        $startUrl = Get-EbSavedStartUrl
+        $null = Invoke-CdpCall $page.webSocketDebuggerUrl "Page.navigate" @{ url=$startUrl } 934 8
+
+        $target = $null
+        $lastUrl = ""
+        for ($i=0; $i -lt 70; $i++) {
+            Start-Sleep -Milliseconds 150
+            $candidate = Get-EbTargets | Where-Object { $_.type -eq "page" } | Select-Object -First 1
+            if ($candidate) { $lastUrl = [string]$candidate.url }
+            if ($candidate -and $lastUrl -match '^https://ssl\.education\.lu/ebichelchen/app/' -and $lastUrl -notmatch '/login(?:[/?#]|$)') {
+                $target = $candidate
+                break
+            }
+        }
+        if (-not $target) {
+            if ($lastUrl -match '/login(?:[/?#]|$)|iam|auth') { Clear-EbSavedSession }
+            throw "Die gemerkte e-Bichelchen-Sitzung ist abgelaufen oder konnte nicht geöffnet werden."
+        }
+
+        $expr = New-EbReadExpression
+        $data = Invoke-CdpEval $expr 35000 935
+        if ($null -eq $data) { throw "e-Bichelchen hat bei der Wiederaufnahme keine Daten geliefert." }
+        try { $null = Save-EbSessionCookies } catch {}
+        return $data
+    } finally {
+        if ($startedHere) {
+            try { $null = Stop-EbControlledBrowser } catch {}
+        }
+    }
+}
+
 function As-IntOrNull($v) {
     try { if ($null -eq $v -or [string]$v -eq "") { return $null }; return [int]$v } catch { return $null }
 }
@@ -1082,6 +1319,12 @@ try {
         exit 0
     }
 
+    if ($Action -eq "resume") {
+        $data = Resume-EbSavedSession "default" $Browser
+        @{ ok=$true; data=$data; receivedAt=(Get-Date).ToString("yyyy-MM-dd HH:mm:ss"); resumed=$true } | ConvertTo-Json -Depth 30 -Compress
+        exit 0
+    }
+
     if ($Action -eq "shutdown") {
         $info = Stop-EbControlledBrowser
         @{ ok=$true; info=$info } | ConvertTo-Json -Depth 20 -Compress
@@ -1118,11 +1361,13 @@ try {
         }
         if ($null -eq $data) { throw $lastError }
         try { $data.source.contextRetries = $attempt } catch {}
-        @{ ok=$true; data=$data; receivedAt=(Get-Date).ToString("yyyy-MM-dd HH:mm:ss") } | ConvertTo-Json -Depth 30 -Compress
+        $sessionInfo = Save-EbSessionCookies
+        @{ ok=$true; data=$data; receivedAt=(Get-Date).ToString("yyyy-MM-dd HH:mm:ss"); sessionSaved=[bool]$sessionInfo.saved; sessionCookieCount=[int]$sessionInfo.cookieCount } | ConvertTo-Json -Depth 30 -Compress
         exit 0
     }
 
     if ($Action -eq "cleanup") {
+        try { $null = Save-EbSessionCookies } catch {}
         $info = Close-EbHelperBrowser
         @{ ok=$true; info=$info } | ConvertTo-Json -Depth 10 -Compress
         exit 0
@@ -1154,6 +1399,7 @@ try {
                 try { $null = Invoke-CdpCall $target.webSocketDebuggerUrl "Page.navigate" @{ url = $EbUrl } 721 6; $navigated = $true } catch {}
             } catch {}
         }
+        Clear-EbSavedSession
         @{ ok=$true; info=@{ softReset=$true; browserRunning=$running; cookiesCleared=$cleared; navigated=$navigated } } | ConvertTo-Json -Depth 10 -Compress
         exit 0
     }
@@ -1162,6 +1408,7 @@ try {
     exit 2
 } catch {
     $browserClosed = $false
+    $sessionExpired = $false
     if ($Action -in @("read","ready")) {
         try {
             $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
@@ -1169,6 +1416,9 @@ try {
             $browserClosed = $true
         }
     }
-    @{ ok=$false; action=$Action; error=$_.Exception.Message; browserClosed=$browserClosed } | ConvertTo-Json -Depth 10 -Compress
+    if ($Action -eq "resume" -and ([string]$_.Exception.Message) -match 'abgelaufen|Keine gültige gemerkte') {
+        $sessionExpired = $true
+    }
+    @{ ok=$false; action=$Action; error=$_.Exception.Message; browserClosed=$browserClosed; sessionExpired=$sessionExpired } | ConvertTo-Json -Depth 10 -Compress
     exit 1
 }
