@@ -1,17 +1,17 @@
-# EntretienConnect v341
+# EntretienConnect v339
 
-**Windows: Kaltstart ohne leeren Edge-/Chrome-Tab.** Beim vollständig
-geschlossenen Chromium-Browser ersetzt `--same-tab` dessen anfängliche
-Startseite durch EntretienConnect. Ist bereits ein Browserfenster geöffnet,
-kommt weiterhin genau ein neuer Tab hinzu.
+**e-Bichelchen reste maintenant connecté sous Windows aussi.** C'était le point resté ouvert en v338, et il a été construit et vérifié directement sur la machine Windows. La cause n'était pas la connexion elle-même, mais ce qu'il en advenait ensuite : Chromium n'écrit jamais sur le disque les cookies de session pure. Ils ne vivaient donc que dans le navigateur auxiliaire — lequel est fermé après la lecture. Au démarrage suivant, la connexion était perdue. Sur Mac, cette perte n'existe plus depuis la v325, parce que les cookies y sont enregistrés après la lecture. Windows procède désormais de la même façon.
 
-**Windows: e-Bichelchen-Sitzung bleibt erhalten.** Nach erfolgreichem Lesen
-werden ausschließlich die benötigten `education.lu`-Cookies lokal gespeichert.
-Beim nächsten App-Start versucht ein unsichtbarer Browserlauf, die aktuellen
-Klassen- und Schülerdaten mit dieser Sitzung neu zu lesen. Die Sitzung wird wie
-auf dem Mac höchstens zwölf Stunden behalten; eine abgelaufene Sitzung führt
-wieder zur normalen Anmeldung.
+Après chaque lecture réussie, les cookies education.lu sont enregistrés, avec la page où ils étaient valables en dernier et l'User-Agent : `%LOCALAPPDATA%\EntretienConnect\eb-session.json`, valable douze heures, accessible au seul utilisateur connecté (héritage désactivé).
 
-**Le dossier de l’Explorateur ne reste plus au premier plan.** La tentative de v336 échouait pour deux raisons. D’abord, Windows refuse `SetForegroundWindow` à un processus qui n’est pas lui-même au premier plan : l’appel restait sans effet. La file d’entrée est désormais rattachée brièvement au thread du premier plan (`AttachThreadInput`), ce qui rend l’appel recevable. Ensuite, il n’y avait qu’**une seule** tentative, 2,5 s après le démarrage : un Edge démarrant à froid n’a alors pas encore chargé la page, la fenêtre ne s’appelle pas encore « EntretienConnect » et n’est donc pas trouvée. La tentative est maintenant répétée toutes les 0,7 s jusqu’à ce que la fenêtre soit réellement devant — au maximum 25 secondes, et plus jamais ensuite, afin de ne pas voler le focus.
+Au démarrage suivant, l'interface voit la session mémorisée et se connecte d'elle-même — sans clic et sans fenêtre. Derrière, un navigateur invisible démarre, reçoit les cookies mémorisés **avant** de charger la page, puis exécute exactement la même routine de lecture que la fenêtre visible. C'est pourquoi la catégorie « Message » continue d'être trouvée correctement : elle est découverte dans la page elle-même, elle n'est pas devinée. Les cookies rafraîchis sont réenregistrés dans la foulée, si bien qu'un usage quotidien ne demande plus de se reconnecter sans cesse.
 
-Rappel v337 : boutons de déconnexion pour e-Bichelchen et Microsoft (l’ancien bouton Microsoft se trouvait dans une carte toujours masquée), et le navigateur est lancé directement avec l’adresse au lieu de passer par l’association Windows.
+La déconnexion via « Déconnecter » supprime aussi la session mémorisée — sans quoi l'app se reconnecterait silencieusement au démarrage suivant.
+
+Si la connexion silencieuse échoue (session expirée côté serveur, pas de réseau), e-Bichelchen reste simplement gris et un clic sur « Connecter » ouvre la fenêtre de connexion comme avant. La tentative infructueuse dure une dizaine de secondes, se déroule en arrière-plan et ne laisse jamais de fenêtre de navigateur derrière elle. Aucune fenêtre ne s'ouvre jamais d'elle-même.
+
+L'interface savait déjà faire tout cela : depuis la v331, elle interroge la session mémorisée puis appelle `/api/eb/resume`. Sous Windows, cette route n'existait pas — elle répondait « Route e-Bichelchen inconnue ».
+
+Rappel v338 : le dossier de l'Explorateur ne reste plus au premier plan (`AttachThreadInput`, et la tentative est répétée toutes les 0,7 s au lieu d'une seule fois après 2,5 s).
+
+Rappel v337 : boutons de déconnexion pour e-Bichelchen et Microsoft (l'ancien bouton Microsoft se trouvait dans une carte toujours masquée), et le navigateur est lancé directement avec l'adresse au lieu de passer par l'association Windows.
