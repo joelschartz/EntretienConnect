@@ -1,13 +1,13 @@
-# EntretienConnect v333
+# EntretienConnect v334
 
-Sous Windows, la session e-Bichelchen est désormais mémorisée elle aussi : après un premier login, les démarrages suivants se reconnectent en silence, sans ouvrir de navigateur.
+Un ancien assistant local ne bloque plus la mise à jour.
 
-Jusqu’ici, tout ce qui a été construit depuis v325 ne valait que pour la fenêtre native de macOS. Sous Windows, e-Bichelchen repassait donc au gris à chaque redémarrage. La session capturée sur ce chemin est maintenant enregistrée de la même manière (fichier lisible par vous seul), et la reprise silencieuse fonctionne sur les deux systèmes — elle repose sur de simples requêtes HTTP, indépendantes du système.
+Le message « le helper local actif est encore v332 » avait une cause simple : un EntretienConnect plus ancien tournait encore et occupait le port standard. Le nouveau démarrage se rabattait silencieusement sur un port de remplacement — et laissait donc l’ancien exactement là où il était. Or les deux partagent le même cache pour l’interface : le nouveau démarrage le renouvelait, l’ancien assistant servait ensuite la **nouvelle** interface tout en annonçant son **ancienne** version. C’est précisément là que la connexion échouait.
 
-Une correction de fond au passage : les cookies capturés sous Windows étaient rassemblés en une seule ligne, où le dernier cookie d’un même nom écrasait les précédents. Or trois noms se répètent sur des serveurs différents avec des valeurs différentes. Les cookies sont désormais conservés individuellement avec leur domaine, et seuls ceux valables pour le serveur interrogé sont envoyés. Cela concerne aussi la publication des messages, qui empruntait la même ligne rassemblée.
+Désormais, le nouveau démarrage demande à un assistant plus ancien de s’arrêter et reprend le port standard. Seul un EntretienConnect plus ancien est remplacé : une instance de même génération ou plus récente, ainsi que tout service étranger sur ce même port, restent intacts (vérifié). Si le port est libre, la vérification ne coûte aucun temps mesurable.
 
-**Ce qui n’a pas changé, et pourquoi.** Sous Windows, la connexion n’ouvre pas une petite fenêtre comme sur macOS : l’assistant lance une instance séparée de Chrome ou Edge, avec son propre profil. D’où une fenêtre de navigateur avec un onglet vide en plus, et l’application qui passe à l’arrière-plan. Ce n’est pas voulu, mais je ne peux pas tester Windows d’ici, et je préfère ne pas modifier à l’aveugle un chemin qui fonctionne. En pratique la gêne disparaît largement : après le premier login, plus aucun navigateur ne s’ouvre aux démarrages suivants.
+Le message lui-même nommait par ailleurs « EntretienConnect_MAC.app » sous Windows. Il indique maintenant le bon lanceur et la vraie raison — un ancien EntretienConnect encore ouvert.
 
-**Au premier lancement après la mise à jour**, la connexion s’ouvrira encore une fois — la session déjà enregistrée ne contient pas les informations nouvellement mémorisées. À partir du deuxième démarrage, tout se fait en silence.
+**Ce qui n’a pas changé, et pourquoi.** L’onglet vide au démarrage sous Windows : l’assistant confie l’adresse au navigateur par défaut ; si celui-ci démarre à froid, il affiche en plus sa propre page d’accueil. C’est le comportement du navigateur. On ne pourrait le changer qu’en lançant le navigateur directement avec l’adresse — une modification que je ne fais pas sans pouvoir tester Windows. De même, la connexion ouvre sous Windows une instance séparée de Chrome ou Edge au lieu d’une petite fenêtre comme sur macOS ; mais après le premier login, plus aucun navigateur ne s’ouvre aux démarrages suivants.
 
-Rappel v332 : sur macOS, reprise sans aucune fenêtre (67 ms mesurées) et correction de la détection de session expirée, qui prenait toute page HTML — y compris un simple 404 — pour une déconnexion.
+Rappel v333 : la session e-Bichelchen est mémorisée sous Windows aussi, et les cookies y sont conservés individuellement avec leur domaine — auparavant, à nom identique, le dernier écrasait les précédents, alors que trois noms se répètent sur des serveurs différents avec des valeurs différentes.

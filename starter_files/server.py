@@ -29,6 +29,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 import errno
+import socket
 from email.message import EmailMessage
 from datetime import datetime, timezone, timedelta
 
@@ -52,6 +53,8 @@ def _initial_port():
     return 8765
 
 PORT = _initial_port()
+# v334: Eine einzige Stelle für die Generation, die graph.html erwartet.
+BACKEND_GENERATION = 334
 last_heartbeat_time = None
 server_started_time = time.time()
 HEARTBEAT_TIMEOUT_SECONDS = 180  # v204: Browser-Heartbeat; Helper beendet sich ca. 3 Minuten nach geschlossenem Tab
@@ -70,6 +73,57 @@ def _helper_version():
 
 def _port_is_in_use_error(exc):
     return isinstance(exc, OSError) and getattr(exc, "errno", None) in (errno.EADDRINUSE, 48, 98, 10048)
+
+
+def _port_is_free(host, port):
+    sock = socket.socket()
+    try:
+        sock.settimeout(0.3)
+        sock.connect((host, port))
+        return False
+    except Exception:
+        return True
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass
+
+
+def _retire_older_helper(host, port):
+    """v334: Loest einen noch laufenden AELTEREN Helfer auf dem Standardport ab.
+
+    Beide Versionen benutzen denselben Zwischenspeicher fuer graph.html. Der neue
+    Start erneuert ihn, der alte Helfer liefert danach die NEUE Oberflaeche aus
+    und meldet trotzdem seine alte Version - die App bricht dann mit
+    « le helper local actif est encore vNNN » ab. Bisher wich der neue Helfer auf
+    einen Ersatzport aus, was den alten genau dort stehen liess. Jetzt wird der
+    alte gebeten, sich zu beenden, und der Standardport wieder frei.
+    """
+    base = "http://%s:%d" % (host, port)
+    try:
+        with urllib.request.urlopen(base + "/api/graph/capabilities", timeout=1.2) as resp:
+            cap = json.loads(resp.read().decode("utf-8", "replace") or "{}")
+    except Exception:
+        return False
+    try:
+        other = int(cap.get("backendGeneration") or 0)
+    except Exception:
+        return False
+    # Gleich alt oder neuer: das ist eine gleichwertige zweite Instanz, die wird
+    # nicht abgeschossen. Nur eine aeltere steht dem Update im Weg.
+    if other <= 0 or other >= BACKEND_GENERATION:
+        return False
+    print(f"  Un helper plus ancien (v{other}) occupait le port {port} : arrêt demandé.")
+    try:
+        urllib.request.urlopen(base + "/api/app/shutdown", timeout=1.5).read()
+    except Exception:
+        pass
+    for _ in range(30):
+        time.sleep(0.1)
+        if _port_is_free(host, port):
+            return True
+    return False
 
 
 def _make_server_with_fallback(host, preferred_port, handler_cls):
@@ -735,7 +789,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/outlook-signatures":
             return self.handle_signatures()
         if self.path.split("?", 1)[0] == "/api/graph/capabilities":
-            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": 333, "nativeLoginEngine": ("WKWebView-v332" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
+            return self._json(200, {"ok": True, "deferredSend": True, "platform": "python", "appVersion": _helper_version(), "backendGeneration": BACKEND_GENERATION, "nativeLoginEngine": ("WKWebView-v332" if sys.platform == "darwin" else "chromium-helper"), "port": getattr(self.server, "server_address", (None, PORT))[1], "ebichelchen": EB_AVAILABLE, "firefoxBidi": bool(EB_AVAILABLE and getattr(eb, "supports_firefox_bidi", lambda: False)()), "webDir": DIRECTORY, "persistDir": PERSIST_DIR})
         if self.path == "/api/graph/account":
             return self.handle_graph_account()
         if self.path.split("?", 1)[0] == "/oauth/redirect":
@@ -1685,6 +1739,7 @@ def main():
     restart_after_helper_update_if_needed(updated_helper)
     update_ui_from_github()
     host = "127.0.0.1"
+    _retire_older_helper(host, PORT)
     with _make_server_with_fallback(host, PORT, Handler)[0] as httpd:
         actual_port = httpd.server_address[1]
         used_fallback = actual_port != PORT
