@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v336</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v337</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 336;
+const APP_VERSION = 337;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3303,7 +3303,10 @@ function setupConnectionSlotHtml(cardMode,isActive){
       const g=(typeof ebData!=="undefined" && ebData.group) ? ebData.group : {};
       const n=ebStudents().length;
       const detail=String(g.classAlias||g.name||g.id||"") ? 'Classe « '+esc(String(g.classAlias||g.name||g.id||""))+' » · '+studentCount(n) : studentCount(n);
-      rows.push('<div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-connected-label">Connecté</span></div><span class="status-detail">'+detail+'</span></div></div>');
+      // v337: Im verbundenen Zustand gab es bisher gar keinen Ausweg – nur einen
+      // grünen Punkt. Jetzt steht neben « Connecté » ein Abmeldeknopf.
+      const ebOut=isActive?'<button type="button" class="ghost sm" data-setup-eb-disconnect>Déconnecter</button>':'';
+      rows.push('<div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-connected-label">Connecté</span></div><span class="status-detail">'+detail+'</span></div>'+ebOut+'</div>');
     }else{
       const btnId='setupEbConnect_'+suffix;
       const pendingLabel=ebPending ? 'Connexion en cours' : 'Non connecté';
@@ -3323,7 +3326,11 @@ function setupConnectionSlotHtml(cardMode,isActive){
   if(modeNeedsEmail(cardMode)){
     if(account){
       const who=[account.name||"", account.email||""].filter(Boolean).join(" · ");
-      rows.push('<div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><div class="setup-service-title"><b>Microsoft 365</b><span class="setup-connected-label">Connecté</span></div>'+(who?'<span class="status-detail">'+esc(who)+'</span>':'')+'</div></div>');
+      // v337: dasselbe für Microsoft. Der alte « Se déconnecter »-Knopf saß in der
+      // Karte #authCard, die renderAuth am Ende immer ausblendet – er war also nie
+      // erreichbar.
+      const msOut=isActive?'<button type="button" class="ghost sm" data-setup-ms-disconnect>Déconnecter</button>':'';
+      rows.push('<div class="setup-status-row"><span class="status-dot on"></span><div class="status-main"><div class="setup-service-title"><b>Microsoft 365</b><span class="setup-connected-label">Connecté</span></div>'+(who?'<span class="status-detail">'+esc(who)+'</span>':'')+'</div>'+msOut+'</div>');
     }else{
       const btnId='setupMsConnect_'+suffix;
       const boxId='setupLoginBox_'+suffix;
@@ -3367,6 +3374,40 @@ function renderSetup(){
     btn.onclick=()=>startMicrosoftLogin(btn.dataset.loginBox,btn.id);
   });
   document.querySelectorAll('[data-eb-connect]').forEach(btn=>btn.onclick=ebConnectFlow);
+  document.querySelectorAll('[data-setup-eb-disconnect]').forEach(btn=>btn.onclick=ebDisconnectFlow);
+  document.querySelectorAll('[data-setup-ms-disconnect]').forEach(btn=>btn.onclick=msDisconnectFlow);
+}
+// v337: Abmelden von e-Bichelchen. Gleiche Aufräumarbeit wie beim abgebrochenen
+// Login, nur bewusst ausgelöst: die gelesene Klasse wird verworfen und die
+// Sitzung serverseitig verworfen, damit die nächste Anmeldung sauber startet.
+async function ebDisconnectFlow(){
+  if(!confirm("Se déconnecter d’e-Bichelchen ?\n\nLa classe et les élèves importés depuis e-Bichelchen seront retirés. Vos modèles et votre signature ne sont pas touchés.")) return;
+  try{ ebStopAuto(); }catch(_){ }
+  ebConnectBusy=false;
+  ebLoginPending=false;
+  ebBrowserMissingCount=0;
+  ebData=null;
+  state.ebichelchenData=null;
+  state.ebLoginDirty=true;
+  saveState();
+  try{ await ebGet("/api/eb/reset-session"); }
+  catch(_){ try{ await ebGet("/api/eb/clear"); }catch(_2){ } }
+  renderSetup();
+  renderStudents();
+  renderEbPanel();
+  applyChannelVisibility();
+  renderMails();
+  setEbStatus("Déconnecté d’e-Bichelchen.","info");
+}
+// v337: Abmelden von Microsoft. Löscht die lokal gespeicherten Token. Die
+// Anmeldung im Browser selbst bleibt bestehen – darauf wird hingewiesen.
+async function msDisconnectFlow(){
+  if(!confirm("Se déconnecter de Microsoft 365 ?\n\nLes jetons enregistrés localement seront supprimés. Votre session Microsoft dans le navigateur reste ouverte : la prochaine connexion pourra donc se faire sans mot de passe.")) return;
+  try{ await api("/api/graph/logout"); }catch(_){ }
+  account=null;
+  renderAuth();
+  renderSetup();
+  renderMails();
 }
 function bindSetup(){
   // v186: l'export/import JSON des modèles a été retiré (code mort depuis le retrait des

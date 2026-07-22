@@ -519,6 +519,48 @@ function Focus-EntretienConnectWindow {
     return (Raise-AppWindowOnly)
 }
 
+function Get-DefaultBrowserExe {
+    # v337: Die im System hinterlegte Standard-App für http ermitteln.
+    try {
+        $uc = "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice"
+        $progId = $null
+        try { $progId = (Get-ItemProperty -Path $uc -ErrorAction Stop).ProgId } catch {}
+        if (-not $progId) { return $null }
+        $cmdKey = "Registry::HKEY_CLASSES_ROOT\" + $progId + "\shell\open\command"
+        $cmd = $null
+        try { $cmd = (Get-ItemProperty -Path $cmdKey -ErrorAction Stop).'(default)' } catch {}
+        if (-not $cmd) { return $null }
+        $exe = $null
+        if ($cmd -match '^\s*"([^"]+\.exe)"') { $exe = $matches[1] }
+        elseif ($cmd -match '^\s*([^\s"]+\.exe)') { $exe = $matches[1] }
+        if ($exe -and (Test-Path -LiteralPath $exe -PathType Leaf)) { return $exe }
+    } catch {}
+    return $null
+}
+
+function Open-AppInBrowser($u) {
+    # v337: Beim Kaltstart legte Edge zusätzlich seine Neuer-Tab-Seite an, wenn die
+    # Adresse über die Windows-Verknüpfung (ShellExecute) geöffnet wurde. Wird die
+    # Browser-.exe direkt mit der Adresse gestartet, ist die Adresse der einzige
+    # Startauftrag. Läuft der Browser bereits, reicht Chromium die Adresse wie bisher
+    # an das offene Fenster weiter - es kommt also nur ein Tab dazu, genau so gewollt.
+    # Kein Chromium (z. B. Firefox) oder Registry nicht lesbar: alles wie bisher.
+    $exe = Get-DefaultBrowserExe
+    $leaf = ""
+    if ($exe) { $leaf = (Split-Path $exe -Leaf).ToLower() }
+    if ($exe -and ($leaf -match '^(msedge|chrome|brave|vivaldi|opera)\.exe$')) {
+        try {
+            Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",$u)
+            Log ("Browser direkt gestartet: " + $exe)
+            return
+        } catch {
+            Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
+        }
+    }
+    Log ("Browser über die Windows-Verknüpfung geöffnet (Standard-Browser: " + $(if ($exe) { $leaf } else { "unbekannt" }) + ").")
+    try { Start-Process $u } catch {}
+}
+
 function Raise-AppWindowOnly {
     # v336: Nur der Fenster-Teil, ohne den Umweg über den e-Bichelchen-Helfer.
     # Beim Programmstart wird genau das gebraucht: der Explorer-Ordner, aus dem
@@ -1140,7 +1182,7 @@ if (-not $NoAutoOpen) {
     # genau einmal - falls dennoch zwei Tabs erscheinen, steht in der Logdatei
     # schwarz auf weiß, dass der zweite nicht von uns stammt.
     Log ("Browser wird EINMAL geöffnet mit: " + $url)
-    try { Start-Process $url } catch {}
+    Open-AppInBrowser $url
     # v336: Windows lässt einen Hintergrundprozess den Vordergrund nicht einfach
     # übernehmen - der Explorer-Ordner, aus dem gestartet wurde, blieb deshalb vor
     # dem Browserfenster stehen. Das Fenster wird kurz nach dem Laden der Seite
