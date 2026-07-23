@@ -637,6 +637,16 @@ function Initialize-EntretienConnectAppWin32 {
     Add-Type @"
 using System;
 using System.Runtime.InteropServices;
+public struct EC_RECT { public int Left; public int Top; public int Right; public int Bottom; }
+public struct EC_POINT { public int X; public int Y; }
+public struct EC_WINDOWPLACEMENT {
+  public int length;
+  public int flags;
+  public int showCmd;
+  public EC_POINT ptMinPosition;
+  public EC_POINT ptMaxPosition;
+  public EC_RECT rcNormalPosition;
+}
 public static class EntretienConnectAppWin32 {
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
@@ -649,6 +659,9 @@ public static class EntretienConnectAppWin32 {
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint flags);
   [DllImport("user32.dll")] public static extern void SwitchToThisWindow(IntPtr hWnd, bool altTab);
   [DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr dpiContext);
+  [DllImport("user32.dll")] public static extern bool GetWindowPlacement(IntPtr hWnd, ref EC_WINDOWPLACEMENT lpwndpl);
+  [DllImport("user32.dll")] public static extern bool SetWindowPlacement(IntPtr hWnd, ref EC_WINDOWPLACEMENT lpwndpl);
+  [DllImport("user32.dll")] public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref EC_RECT pvParam, uint fWinIni);
 
   public static bool IsForeground(IntPtr hWnd) { return GetForegroundWindow() == hWnd; }
 
@@ -656,6 +669,38 @@ public static class EntretienConnectAppWin32 {
     IntPtr previous = IntPtr.Zero;
     try { previous = SetThreadDpiAwarenessContext(new IntPtr(-4)); } catch {}
     try { return SetWindowPos(hWnd, IntPtr.Zero, x, y, width, height, 0x0014); }
+    finally {
+      if (previous != IntPtr.Zero) {
+        try { SetThreadDpiAwarenessContext(previous); } catch {}
+      }
+    }
+  }
+
+  // v352: Setzt Restore-Rechteck UND Anzeigezustand in EINEM Schritt. Damit erscheint
+  // das erste sichtbare Bild bereits in der Zielgroesse - kein Sprung von der von
+  // Chromium gemerkten Standardgroesse zur eigenen Endposition mehr. SetWindowPos auf
+  // ein minimiertes Fenster aendert das Restore-Rechteck NICHT; SetWindowPlacement schon.
+  // rcNormalPosition ist in Arbeitsbereich-Koordinaten (relativ zum Ursprung des
+  // Arbeitsbereichs des Hauptmonitors) - deshalb dessen Offset abziehen.
+  public static bool ShowAtBoundsPhysical(IntPtr hWnd, int x, int y, int width, int height, bool activate) {
+    IntPtr previous = IntPtr.Zero;
+    try { previous = SetThreadDpiAwarenessContext(new IntPtr(-4)); } catch {}
+    try {
+      int offX = 0, offY = 0;
+      EC_RECT wa = new EC_RECT();
+      if (SystemParametersInfo(0x0030, 0, ref wa, 0)) { offX = wa.Left; offY = wa.Top; }  // SPI_GETWORKAREA
+      EC_WINDOWPLACEMENT wp = new EC_WINDOWPLACEMENT();
+      wp.length = Marshal.SizeOf(typeof(EC_WINDOWPLACEMENT));
+      GetWindowPlacement(hWnd, ref wp);
+      wp.length = Marshal.SizeOf(typeof(EC_WINDOWPLACEMENT));
+      wp.flags = 0;
+      wp.showCmd = activate ? 1 : 4;  // SW_SHOWNORMAL : SW_SHOWNOACTIVATE
+      wp.rcNormalPosition.Left = x - offX;
+      wp.rcNormalPosition.Top = y - offY;
+      wp.rcNormalPosition.Right = x - offX + width;
+      wp.rcNormalPosition.Bottom = y - offY + height;
+      return SetWindowPlacement(hWnd, ref wp);
+    }
     finally {
       if (previous != IntPtr.Zero) {
         try { SetThreadDpiAwarenessContext(previous); } catch {}
@@ -749,18 +794,29 @@ function Raise-AppWindowOnly {
             Initialize-EntretienConnectAppWin32
             $h = $proc.MainWindowHandle
             $resized = $false
+            $iconic = [bool][EntretienConnectAppWin32]::IsIconic($h)
             if ($script:AppWindowPlacement) {
                 $p = $script:AppWindowPlacement
-                # SWP_NOZORDER | SWP_NOACTIVATE: nur Größe und Position setzen.
-                $resized = [bool][EntretienConnectAppWin32]::SetBoundsPhysical(
-                    $h, [int]($p.Left), [int]($p.Top), [int]($p.Width), [int]($p.Height)
-                )
-            }
-            # v335: SW_RESTORE (9) NUR bei einem wirklich minimierten Fenster.
-            # Auf ein MAXIMIERTES Fenster angewandt stellt SW_RESTORE die vorherige,
-            # kleinere Größe wieder her. Das App-Fenster schrumpfte deshalb jedes Mal,
-            # wenn nach dem Login der Fokus zurückgeholt wurde.
-            if ([EntretienConnectAppWin32]::IsIconic($h)) {
+                if ($iconic) {
+                    # v352: Minimiertes Fenster in EINEM Schritt in Zielgröße einblenden.
+                    # SetWindowPlacement setzt Restore-Rechteck und Anzeigezustand zusammen,
+                    # sodass das erste sichtbare Bild schon die eigene Größe hat - kein Sprung
+                    # von der von Chromium gemerkten Standardgröße mehr.
+                    $resized = [bool][EntretienConnectAppWin32]::ShowAtBoundsPhysical(
+                        $h, [int]($p.Left), [int]($p.Top), [int]($p.Width), [int]($p.Height), $true
+                    )
+                } else {
+                    # Bereits sichtbares (nicht minimiertes) Fenster: nur Größe/Position setzen.
+                    # SWP_NOZORDER | SWP_NOACTIVATE.
+                    $resized = [bool][EntretienConnectAppWin32]::SetBoundsPhysical(
+                        $h, [int]($p.Left), [int]($p.Top), [int]($p.Width), [int]($p.Height)
+                    )
+                }
+            } elseif ($iconic) {
+                # v335: SW_RESTORE (9) NUR bei einem wirklich minimierten Fenster.
+                # Auf ein MAXIMIERTES Fenster angewandt stellt SW_RESTORE die vorherige,
+                # kleinere Größe wieder her. Das App-Fenster schrumpfte deshalb jedes Mal,
+                # wenn nach dem Login der Fokus zurückgeholt wurde.
                 [EntretienConnectAppWin32]::ShowWindowAsync($h, 9) | Out-Null
             }
             if ([EntretienConnectAppWin32]::IsForeground($h)) {

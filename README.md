@@ -1,4 +1,17 @@
-# EntretienConnect v351
+# EntretienConnect v352
+
+**Kein sichtbarer Fenstersprung mehr beim Start (Windows).** Chromium merkt sich
+im App-Modus seine zuletzt gespeicherte Fenstergeometrie und ignoriert die
+Startparameter beim nächsten Öffnen. Die bisherige Korrektur setzte Größe und
+Position mit `SetWindowPos` – das ändert bei einem noch minimierten Fenster
+jedoch das Wiederherstellungs-Rechteck nicht, sodass `SW_RESTORE` das Fenster
+zuerst in Chromiums alter Standardgröße zeigte und es erst danach in die
+Zielgröße sprang. v352 blendet das minimierte Fenster stattdessen mit
+`SetWindowPlacement` in einem einzigen Schritt ein: Wiederherstellungs-Rechteck
+und Anzeigezustand werden gemeinsam gesetzt, sodass das allererste sichtbare
+Bild bereits die eigene Zielgröße hat. Die DPI- und Arbeitsbereich-Umrechnung
+aus v347 bleibt erhalten. (Nur Windows; der Mac nutzt WKWebView und war nie
+betroffen.)
 
 **Normales Browserprofil wiederhergestellt.** Das eigene Chromium-Profil aus
 v350 wurde vollständig aus dem Windows-Start entfernt. Dadurch erscheint kein
