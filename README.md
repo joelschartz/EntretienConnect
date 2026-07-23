@@ -1,22 +1,20 @@
-# EntretienConnect v350
+# EntretienConnect v351
 
-**Windows-Fenster ohne sichtbares Umpositionieren.** Edge, Chrome, Brave,
-Vivaldi und Opera erhalten ein eigenes dauerhaftes EntretienConnect-Profil.
-Zusätzlich bekommt jeder Start eine frische App-Fensteridentität. Dadurch gelten
-Größe und zentrale Position schon beim Erzeugen des Fensters; die kleine
-Standardposition links muss nicht erst sichtbar korrigiert werden. Das Profil
-ist je Browser getrennt und erzeugt weiterhin weder Adressleiste noch Leertab.
-
-**Bestehende App-Daten bleiben erhalten.** EntretienConnect lädt seine
-Arbeitsdaten aus der bereits vorhandenen dauerhaften Datei in
-`%LOCALAPPDATA%\EntretienConnect`. Microsoft-Token und e-Bichelchen-Sitzung
-bleiben ebenfalls unabhängig vom neuen App-Browserprofil gespeichert.
+**Normales Browserprofil wiederhergestellt.** Das eigene Chromium-Profil aus
+v350 wurde vollständig aus dem Windows-Start entfernt. Dadurch erscheint kein
+neuer Übersetzungshinweis mehr, und Microsoft öffnet wieder im kleinen,
+zentrierten Login-Popup mit ungefähr 520 × 720 Pixeln.
 
 **Einheitlicher Verbindungshinweis.** Bei e-Bichelchen und Microsoft steht
 derselbe kurze blaue Satz direkt unter der jeweiligen Statuszeile:
 „La connexion s’effectue dans une fenêtre séparée.“ Bei e-Bichelchen erscheint
 er jetzt sofort zusammen mit „Connexion en cours“ und verschwindet beim
 Schließen des Loginfensters wieder.
+
+**Hauptfenster vorerst wieder wie v349.** Chromium wird mit dem normalen Profil
+und dem bisherigen minimierten App-Start geöffnet. Damit sind die unerwünschten
+Nebenwirkungen von v350 zurückgenommen; die sichtbare Startbewegung wird
+separat mit einer anderen Technik gelöst.
 
 **Fenstergeometrie wird sofort nativ durchgesetzt.** Chromium kann bei
 Browser-App-Fenstern seine früher gespeicherte Größe über die korrekten

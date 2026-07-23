@@ -1235,7 +1235,7 @@
   }
 
 
-  /* v350 — même présentation compacte pour les deux connexions.
+  /* v351 — même présentation compacte pour les deux connexions.
      Le message transitoire reste court et prend toute la largeur sous la ligne de statut. */
   .setup-mode-connect-slot{flex-direction:column!important;align-items:stretch!important}
   .setup-mode-connect-slot .setup-status-stack{width:100%!important;max-width:100%!important}
@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v350</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v351</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 350;
+const APP_VERSION = 351;
 
 window.addEventListener("error", function(ev){
   try{
@@ -5944,7 +5944,7 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   return startMicrosoftLoginDevice(loginBoxId, buttonId);
 }
 function microsoftRetryHtml(message){
-  // v350: Der äußere Statusbereich besitzt bereits den einzigen « Connecter »-
+  // v351: Der äußere Statusbereich besitzt bereits den einzigen « Connecter »-
   // Knopf. Kein zweiter « Réessayer »-Knopf direkt daneben.
   return esc(message||"Connexion interrompue.");
 }
@@ -6050,7 +6050,7 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
       bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
     } else if(msLoginWindow && msLoginWindow.closed){
-      // v350: Kurze Sicherheitsfrist für die OAuth-Rückleitung. Bei manuellem
+      // v351: Kurze Sicherheitsfrist für die OAuth-Rückleitung. Bei manuellem
       // Schließen danach direkt wieder nur den vorhandenen « Connecter »-Knopf zeigen.
       if(!closedSeenAt) closedSeenAt=Date.now();
       else if(Date.now()-closedSeenAt > 550){
@@ -6068,7 +6068,7 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
       bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
     }
-  // v350: alle 300 ms, damit ein manuell geschlossenes Microsoft-Fenster
+  // v351: alle 300 ms, damit ein manuell geschlossenes Microsoft-Fenster
   // innerhalb von deutlich unter einer Sekunde wieder den Connecter-Knopf freigibt.
   // Die Abfrage geht nur an den lokalen Helfer.
   },300);
@@ -7178,7 +7178,7 @@ async function ebConnectFlow(){
   ebLoginPending=true;
   ebBrowserMissingCount=0;
   renderSetup();
-  // v350: Den Hinweis sofort gemeinsam mit « Connexion en cours » anzeigen.
+  // v351: Den Hinweis sofort gemeinsam mit « Connexion en cours » anzeigen.
   // Zuvor erschien er erst, nachdem das Loginfenster vollständig bereit war.
   setEbStatus(ebWaitingStatusHtml("Ouverture de la fenêtre de connexion."),"info");
   ebStopAuto();
