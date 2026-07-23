@@ -1,4 +1,20 @@
-# EntretienConnect v348
+# EntretienConnect v349
+
+**Kein sichtbarer Fenstersprung beim Windows-Start.** Chromium erzeugt das
+Browser-App-Fenster zunächst minimiert. Sobald das Fensterhandle existiert,
+setzt EntretienConnect die endgültige Größe und Position und zeigt es erst dann
+an. Das alte kleine Edge-Fenster links sollte dadurch nicht mehr sichtbar sein.
+
+**Login-Abbrüche werden schneller erkannt.** Ein geschlossenes
+e-Bichelchen-Fenster wird im Windows-Haupthelfer direkt am sichtbaren
+Seitentarget erkannt, ohne dafür den vollständigen Zusatzhelfer zu starten.
+Microsoft wird alle 300 ms geprüft und kehrt nach einem manuellen Schließen
+innerhalb von deutlich unter einer Sekunde zum einzigen „Connecter“-Knopf
+zurück.
+
+**Kurze, einheitliche Loginmeldung.** e-Bichelchen zeigt
+„La connexion s’effectue dans une fenêtre séparée.“ Microsoft verwendet
+dieselbe Formulierung mit dem Dienstnamen.
 
 **Fenstergeometrie wird sofort nativ durchgesetzt.** Chromium kann bei
 Browser-App-Fenstern seine früher gespeicherte Größe über die korrekten

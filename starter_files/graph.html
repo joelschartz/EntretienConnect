@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v348</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v349</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 348;
+const APP_VERSION = 349;
 
 window.addEventListener("error", function(ev){
   try{
@@ -5945,7 +5945,9 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   return startMicrosoftLoginDevice(loginBoxId, buttonId);
 }
 function microsoftRetryHtml(message){
-  return '<div class="banner err compact">'+esc(message||"Connexion interrompue.")+' <button type="button" class="ghost sm" data-ms-retry>Réessayer</button></div>';
+  // v349: Der äußere Statusbereich besitzt bereits den einzigen « Connecter »-
+  // Knopf. Kein zweiter « Réessayer »-Knopf direkt daneben.
+  return '<div class="banner err compact">'+esc(message||"Connexion interrompue.")+'</div>';
 }
 function bindMicrosoftRetryButtons(lb, loginBoxId, buttonId){
   try{
@@ -5995,7 +5997,7 @@ function closeMsLoginWindow(){
   msLoginWindow = null;
 }
 function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
-  lb.innerHTML='<div class="banner info compact">Connectez-vous dans la fenêtre Microsoft.</div>';
+  lb.innerHTML='<div class="banner info compact">La connexion Microsoft s’effectue dans une fenêtre séparée.</div>';
   // v327: Das Fenster steht schon offen (synchron beim Klick geöffnet) – jetzt nur
   // noch weiterschicken. Nur falls das nicht klappte, ein zweiter Versuch.
   if(msLoginWindow && !msLoginWindow.closed){
@@ -6034,16 +6036,16 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
       bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
     } else if(msLoginWindow && msLoginWindow.closed){
-      // v326: Fenster von Hand geschlossen, ohne dass die Anmeldung ankam. Nicht
-      // sofort abbrechen – die Rückleitung braucht einen Moment, bis der Helfer das
-      // Token hat. Erst nach gut zwei Sekunden ohne Erfolg zum Neuversuch anbieten.
+      // v349: Kurze Sicherheitsfrist für die OAuth-Rückleitung. Bei manuellem
+      // Schließen danach direkt wieder nur den vorhandenen « Connecter »-Knopf zeigen.
       if(!closedSeenAt) closedSeenAt=Date.now();
-      else if(Date.now()-closedSeenAt > 2200){
+      else if(Date.now()-closedSeenAt > 550){
         clearInterval(pollTimer);
         msLoginWindow=null;
-        lb.innerHTML=microsoftRetryHtml('La fenêtre de connexion a été fermée avant la fin. Vous pouvez réessayer.');
-        bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
+        lb.style.display="none";
+        lb.innerHTML="";
         if(inBtn) inBtn.disabled=false;
+        renderSetup();
       }
     } else if(Date.now()-startedAt > 6*60*1000){
       clearInterval(pollTimer);
@@ -6051,11 +6053,10 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
       bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
     }
-  // v324: alle 900 ms statt alle 3000 ms. Der e-Bichelchen-Login fragt in einem
-  // ähnlichen Takt und wirkt deshalb spürbar flotter; hier vergingen nach der
-  // Anmeldung bis zu drei Sekunden, in denen scheinbar nichts passierte. Die
-  // Abfrage geht an den lokalen Helfer, kostet also praktisch nichts.
-  },900);
+  // v349: alle 300 ms, damit ein manuell geschlossenes Microsoft-Fenster
+  // innerhalb von deutlich unter einer Sekunde wieder den Connecter-Knopf freigibt.
+  // Die Abfrage geht nur an den lokalen Helfer.
+  },300);
 }
 // Ancien flux « code d'appareil » — utilisé si le helper local n'est pas à jour,
 // ou via le lien de secours du flux sans code.
@@ -6700,9 +6701,7 @@ function setEbStatus(msg, cls){
 function ebWaitingStatusHtml(detail){
   const d=String(detail||"").trim();
   if(d) console.debug("e-Bichelchen en attente :", d);
-  // v348: « Connexion en cours » und « Annuler » stehen bereits in der Statuszeile.
-  // Keine zweite, gleichlautende Anleitung darunter anzeigen.
-  return "";
+  return 'La connexion s’effectue dans une fenêtre séparée.';
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
@@ -7237,6 +7236,10 @@ async function ebAutoAttempt(){
 
   if(probe && probe.browserClosed){
     ebReadBusy=false;
+    if(probe.stage==="closed" || probe.stage==="no-windows"){
+      ebResetAfterClosedBrowser();
+      return;
+    }
     ebBrowserMissingCount++;
     if(ebBrowserMissingCount>=2){ ebResetAfterClosedBrowser(); return; }
     ebScheduleAuto(450);
@@ -7254,7 +7257,7 @@ async function ebAutoAttempt(){
       ebReadBusy=false;
       const age=Date.now()-ebAutoStart;
       // v308 prüft die Live-Sitzung direkt im nativen System-Loginfenster.
-      ebScheduleAuto(age<30000 ? 850 : 1400);
+      ebScheduleAuto(age<30000 ? 450 : 900);
       return;
     }
   }
@@ -7266,7 +7269,7 @@ async function ebAutoAttempt(){
   }catch(e){
     ebReadBusy=false;
     setEbStatus(ebWaitingStatusHtml(String(e.message||e)),"info");
-    ebScheduleAuto(probeSupported ? 850 : 2500);
+    ebScheduleAuto(probeSupported ? 450 : 1400);
     return;
   }
   ebReadBusy=false;
@@ -7313,7 +7316,7 @@ async function ebAutoAttempt(){
 
   setEbStatus(ebWaitingStatusHtml(j&&j.error?String(j.error):""),"info");
   // Bei einem kurzzeitigen internen Seitenwechsel schnell erneut prüfen.
-  ebScheduleAuto(j&&j.retrySoon ? 360 : (probeSupported ? 850 : 2500));
+  ebScheduleAuto(j&&j.retrySoon ? 300 : (probeSupported ? 450 : 1400));
 }
 
 async function ebRead(quiet, groupId){

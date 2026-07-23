@@ -709,7 +709,10 @@ function Open-AppInBrowser($u) {
             $script:AppWindowPlacement = $window
             $sizeArg = "--window-size=" + $window.Width + "," + $window.Height
             $positionArg = "--window-position=" + $window.Left + "," + $window.Top
-            Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",$sizeArg,$positionArg,("--app=" + $u))
+            # v349: Zunächst minimiert erzeugen. Sobald das Fensterhandle existiert,
+            # setzt der schnelle native Suchlauf die endgültige Geometrie und zeigt
+            # das Fenster erst danach an. So ist die alte Edge-Größe nie sichtbar.
+            Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check","--start-minimized",$sizeArg,$positionArg,("--app=" + $u))
             Log ("Browser direkt gestartet: App-Modus " + $window.Width + "x" + $window.Height + " bei " + $window.Left + "," + $window.Top + ", Windows-Skalierung " + $window.ScalePercent + "% ohne Leertab (" + $leaf + ")")
             return
         } catch {
@@ -816,6 +819,23 @@ function Test-EbSavedSession {
     } catch { return $false }
 }
 
+function Test-EbVisibleLoginPage {
+    # v349: Extrem schnelle Direktprüfung im bereits laufenden Haupthelfer.
+    # Der vollständige e-Bichelchen-Helfer muss dafür nicht eigens starten.
+    try {
+        $res = Invoke-WebRequest -Uri "http://127.0.0.1:9223/json" -UseBasicParsing -TimeoutSec 1
+        if (-not $res -or $res.StatusCode -ne 200) { return $false }
+        $targets = @($res.Content | ConvertFrom-Json)
+        $pages = @($targets | Where-Object {
+            $_.type -eq "page" -and
+            ([string]$_.url) -notmatch '^(about:blank|(chrome|edge)://newtab/?)$'
+        })
+        return ($pages.Count -gt 0)
+    } catch {
+        return $false
+    }
+}
+
 function Handle-EbRequest($stream, $req) {
     $path = ($req.Path -split '\?')[0]
     try {
@@ -871,6 +891,15 @@ function Handle-EbRequest($stream, $req) {
         }
 
         if ($req.Method -eq "GET" -and $path -eq "/api/eb/login-ready") {
+            # Zweimal kurz bestätigen, damit ein flüchtiger Target-Wechsel während
+            # einer IAM-Weiterleitung nicht als manuelles Schließen gilt.
+            if (-not (Test-EbVisibleLoginPage)) {
+                Start-Sleep -Milliseconds 120
+                if (-not (Test-EbVisibleLoginPage)) {
+                    Send-Json $stream @{ ok=$true; ready=$false; browserClosed=$true; lightweight=$true; stage="closed" }
+                    return
+                }
+            }
             $r = Invoke-EbHelper "ready"
             if ($r.ok) {
                 Send-Json $stream @{ ok=$true; ready=[bool]$r.ready; groupCount=$r.groupCount; status=$r.status; browserClosed=$false; lightweight=$true }
