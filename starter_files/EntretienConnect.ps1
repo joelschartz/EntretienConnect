@@ -732,13 +732,13 @@ public static class EntretienConnectAppWin32 {
 }
 
 function Open-AppInBrowser($u) {
-    # v354: Weiterhin ein normaler Tab im normalen Standardbrowser, aber ohne den
-    # leeren Start-Tab. Der allgemeine Windows-URL-Handler konnte bei einem Browser
-    # ohne sichtbares Fenster zuerst dessen leere Startseite und danach die App-URL
-    # erzeugen. Deshalb starten wir den erkannten Browser direkt mit der URL:
+    # v355: Weiterhin ein normaler Tab im normalen Standardbrowser. Der v354-Log hat
+    # gezeigt, dass Chromium bei "--new-window URL" selbst eine leere Startseite und
+    # die App-URL anlegte. Deshalb starten wir den erkannten Browser direkt nur mit
+    # der URL:
     #   - sichtbares Browserfenster vorhanden -> URL als neuer Tab
     #   - kein sichtbares Fenster (auch bei Edge-Startup-Boost im Hintergrund) ->
-    #     genau ein neues Fenster mit der App-URL
+    #     Browser mit der App-URL starten, ohne --new-window
     # Keine App-Modus-, Profil-, Groessen- oder Login-Aenderung.
     $exe = Get-DefaultBrowserExe
     $leaf = if ($exe) { (Split-Path $exe -Leaf).ToLower() } else { "unbekannt" }
@@ -759,8 +759,8 @@ function Open-AppInBrowser($u) {
                 Start-Process -FilePath $exe -ArgumentList @("-new-window", $u)
                 Log "Firefox ohne sichtbares Fenster: genau ein neues Fenster mit EntretienConnect geoeffnet."
             } elseif ($leaf -match '^(msedge|chrome|brave|vivaldi|opera)\.exe$') {
-                Start-Process -FilePath $exe -ArgumentList @("--new-window", $u)
-                Log ("Chromium-Browser ohne sichtbares Fenster: genau ein neues Fenster mit EntretienConnect geoeffnet (" + $leaf + ").")
+                Start-Process -FilePath $exe -ArgumentList @($u)
+                Log ("Chromium-Browser ohne sichtbares Fenster: direkt nur mit EntretienConnect-URL gestartet, ohne --new-window (" + $leaf + ").")
             } else {
                 Start-Process -FilePath $exe -ArgumentList @($u)
                 Log ("Standardbrowser direkt mit EntretienConnect gestartet (" + $leaf + ").")

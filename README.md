@@ -1,4 +1,8 @@
-# EntretienConnect v354
+# EntretienConnect v355
+
+**Chromium startet ohne `--new-window`.** Der v354-Diagnoselog hat gezeigt, dass Edge bei geschlossenem Browser selbst eine leere Startseite zusätzlich zur EntretienConnect-Adresse erzeugt hat. Deshalb wird Chromium nun ausschließlich mit der EntretienConnect-URL gestartet. Normaler Browsermodus, Standardprofil, Fenstergeometrie und Login-Popups bleiben unverändert.
+
+## v354
 
 **Kein leerer Start-Tab mehr unter Windows.** EntretienConnect bleibt ein normaler Tab mit Adress- und Tableiste. Ist bereits ein sichtbares Fenster des Standardbrowsers geöffnet, wird die App dort als neuer Tab geöffnet. Ist kein Browserfenster sichtbar, startet der Browser direkt mit genau einem Fenster auf der EntretienConnect-Adresse. Bloße Hintergrundprozesse wie Edge Startup Boost gelten dabei nicht als geöffnetes Browserfenster. App-Modus, Browserprofil, Fenstergeometrie und Login-Popups bleiben unverändert.
 
