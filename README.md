@@ -1,4 +1,8 @@
-# EntretienConnect v353
+# EntretienConnect v354
+
+**Kein leerer Start-Tab mehr unter Windows.** EntretienConnect bleibt ein normaler Tab mit Adress- und Tableiste. Ist bereits ein sichtbares Fenster des Standardbrowsers geöffnet, wird die App dort als neuer Tab geöffnet. Ist kein Browserfenster sichtbar, startet der Browser direkt mit genau einem Fenster auf der EntretienConnect-Adresse. Bloße Hintergrundprozesse wie Edge Startup Boost gelten dabei nicht als geöffnetes Browserfenster. App-Modus, Browserprofil, Fenstergeometrie und Login-Popups bleiben unverändert.
+
+## v353
 
 **App öffnet unter Windows wieder als normaler Browser-Tab.** Der Edge-`--app`-
 Fenstermodus hat sich als Sackgasse erwiesen: Weil Edge praktisch immer im

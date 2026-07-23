@@ -732,22 +732,47 @@ public static class EntretienConnectAppWin32 {
 }
 
 function Open-AppInBrowser($u) {
-    # v353: Zurueck zum normalen Browser-Tab. Der Edge --app-Modus hat sich als Sackgasse
-    # erwiesen:
-    #  - Ein bereits laufendes Edge (Hintergrundprozesse/Startup-Boost) verwirft die
-    #    --window-size/-position-Vorgaben -> App-Fenster oeffnete klein.
-    #  - Eine nachtraegliche native Groessenkorrektur verursachte den sichtbaren Sprung
-    #    (per EC_diag.txt eindeutig bestaetigt).
-    #  - Ein frisches Edge (eigenes Profil / alle Edge beenden) oeffnet zwar in Zielgroesse,
-    #    vergroessert aber das Microsoft-Login-Popup und blendet einen Uebersetzungshinweis ein.
-    # Ein normaler Tab im bereits laufenden Standardbrowser umgeht all das: kein Fenstersprung
-    # (es ist nur ein Tab), das Microsoft-Popup bleibt klein (normaler Browserkontext). Preis:
-    # Adressleiste sichtbar und evtl. ein zusaetzlicher leerer Tab - bewusst in Kauf genommen.
+    # v354: Weiterhin ein normaler Tab im normalen Standardbrowser, aber ohne den
+    # leeren Start-Tab. Der allgemeine Windows-URL-Handler konnte bei einem Browser
+    # ohne sichtbares Fenster zuerst dessen leere Startseite und danach die App-URL
+    # erzeugen. Deshalb starten wir den erkannten Browser direkt mit der URL:
+    #   - sichtbares Browserfenster vorhanden -> URL als neuer Tab
+    #   - kein sichtbares Fenster (auch bei Edge-Startup-Boost im Hintergrund) ->
+    #     genau ein neues Fenster mit der App-URL
+    # Keine App-Modus-, Profil-, Groessen- oder Login-Aenderung.
     $exe = Get-DefaultBrowserExe
     $leaf = if ($exe) { (Split-Path $exe -Leaf).ToLower() } else { "unbekannt" }
+    if ($exe) {
+        $processName = [System.IO.Path]::GetFileNameWithoutExtension($leaf)
+        $visibleWindow = $false
+        try {
+            $visibleWindow = @(
+                Get-Process -Name $processName -ErrorAction SilentlyContinue |
+                Where-Object { $_.MainWindowHandle -ne 0 }
+            ).Count -gt 0
+        } catch {}
+        try {
+            if ($visibleWindow) {
+                Start-Process -FilePath $exe -ArgumentList @($u)
+                Log ("Browser sichtbar: EntretienConnect als neuer Tab geoeffnet (" + $leaf + ").")
+            } elseif ($leaf -eq "firefox.exe") {
+                Start-Process -FilePath $exe -ArgumentList @("-new-window", $u)
+                Log "Firefox ohne sichtbares Fenster: genau ein neues Fenster mit EntretienConnect geoeffnet."
+            } elseif ($leaf -match '^(msedge|chrome|brave|vivaldi|opera)\.exe$') {
+                Start-Process -FilePath $exe -ArgumentList @("--new-window", $u)
+                Log ("Chromium-Browser ohne sichtbares Fenster: genau ein neues Fenster mit EntretienConnect geoeffnet (" + $leaf + ").")
+            } else {
+                Start-Process -FilePath $exe -ArgumentList @($u)
+                Log ("Standardbrowser direkt mit EntretienConnect gestartet (" + $leaf + ").")
+            }
+            return
+        } catch {
+            Log ("Direktstart des Standardbrowsers fehlgeschlagen: " + $_.Exception.Message)
+        }
+    }
     try {
         Start-Process $u
-        Log ("Browser als normaler Tab geoeffnet (Standard-Browser: " + $leaf + ").")
+        Log ("Fallback ueber Windows-URL-Handler verwendet (Standard-Browser: " + $leaf + ").")
     } catch {
         Log ("Oeffnen im Standardbrowser fehlgeschlagen: " + $_.Exception.Message)
     }
