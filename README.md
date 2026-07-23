@@ -1,20 +1,22 @@
-# EntretienConnect v349
+# EntretienConnect v350
 
-**Kein sichtbarer Fenstersprung beim Windows-Start.** Chromium erzeugt das
-Browser-App-Fenster zunächst minimiert. Sobald das Fensterhandle existiert,
-setzt EntretienConnect die endgültige Größe und Position und zeigt es erst dann
-an. Das alte kleine Edge-Fenster links sollte dadurch nicht mehr sichtbar sein.
+**Windows-Fenster ohne sichtbares Umpositionieren.** Edge, Chrome, Brave,
+Vivaldi und Opera erhalten ein eigenes dauerhaftes EntretienConnect-Profil.
+Zusätzlich bekommt jeder Start eine frische App-Fensteridentität. Dadurch gelten
+Größe und zentrale Position schon beim Erzeugen des Fensters; die kleine
+Standardposition links muss nicht erst sichtbar korrigiert werden. Das Profil
+ist je Browser getrennt und erzeugt weiterhin weder Adressleiste noch Leertab.
 
-**Login-Abbrüche werden schneller erkannt.** Ein geschlossenes
-e-Bichelchen-Fenster wird im Windows-Haupthelfer direkt am sichtbaren
-Seitentarget erkannt, ohne dafür den vollständigen Zusatzhelfer zu starten.
-Microsoft wird alle 300 ms geprüft und kehrt nach einem manuellen Schließen
-innerhalb von deutlich unter einer Sekunde zum einzigen „Connecter“-Knopf
-zurück.
+**Bestehende App-Daten bleiben erhalten.** EntretienConnect lädt seine
+Arbeitsdaten aus der bereits vorhandenen dauerhaften Datei in
+`%LOCALAPPDATA%\EntretienConnect`. Microsoft-Token und e-Bichelchen-Sitzung
+bleiben ebenfalls unabhängig vom neuen App-Browserprofil gespeichert.
 
-**Kurze, einheitliche Loginmeldung.** e-Bichelchen zeigt
-„La connexion s’effectue dans une fenêtre séparée.“ Microsoft verwendet
-dieselbe Formulierung mit dem Dienstnamen.
+**Einheitlicher Verbindungshinweis.** Bei e-Bichelchen und Microsoft steht
+derselbe kurze blaue Satz direkt unter der jeweiligen Statuszeile:
+„La connexion s’effectue dans une fenêtre séparée.“ Bei e-Bichelchen erscheint
+er jetzt sofort zusammen mit „Connexion en cours“ und verschwindet beim
+Schließen des Loginfensters wieder.
 
 **Fenstergeometrie wird sofort nativ durchgesetzt.** Chromium kann bei
 Browser-App-Fenstern seine früher gespeicherte Größe über die korrekten

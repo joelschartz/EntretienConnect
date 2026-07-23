@@ -1,59 +1,59 @@
 {
-    "version":  "v349",
-    "files":  [
-                  {
-                      "target":  "server.py",
-                      "url":  "starter_files/server.py",
-                      "sha256":  "5903afd1c28a2b59cbf3a9f4028ded217134ffe76510102d5b3370aeff74daf7",
-                      "size":  78639
-                  },
-                  {
-                      "target":  "ebichelchen.py",
-                      "url":  "starter_files/ebichelchen.py",
-                      "sha256":  "ff6b8cc62cd5c6fc45a78b673d84e12996b194ef2596404ea4dad303829768ea",
-                      "size":  194653
-                  },
-                  {
-                      "target":  "EntretienConnect.ps1",
-                      "url":  "starter_files/EntretienConnect.ps1",
-                      "sha256":  "5c141af2a451284563204ce0c432fe247c925ebfdd1a9a4d08781f7dfaa52a66",
-                      "size":  75421
-                  },
-                  {
-                      "target":  "EntretienConnect-eb.ps1",
-                      "url":  "starter_files/EntretienConnect-eb.ps1",
-                      "sha256":  "d07dd5796e9f66880aae74a98876434069322576c265285899054cae61b551ba",
-                      "size":  72932
-                  },
-                  {
-                      "target":  "EntretienConnect-Start.bat",
-                      "url":  "starter_files/EntretienConnect-Start.bat",
-                      "sha256":  "9cabec15a3ed6f8475baac31d5b134125a516a72b76aa1f06ef1abde03f98156",
-                      "size":  1566
-                  },
-                  {
-                      "target":  "EntretienConnect-Start-Hidden.bat",
-                      "url":  "starter_files/EntretienConnect-Start-Hidden.bat",
-                      "sha256":  "70698d7d619b94bf6a7adf7562cb8bce3e3bab1b74a46d56130bb48c419d58cd",
-                      "size":  778
-                  },
-                  {
-                      "target":  "EntretienConnect-WKWebView.js",
-                      "url":  "starter_files/EntretienConnect-WKWebView.js",
-                      "sha256":  "1663064ceff83f4bdc9ce839a9dd4abda7b9008ac2af825faa7c992e55862bd6",
-                      "size":  16522
-                  },
-                  {
-                      "target":  "VERSION.txt",
-                      "url":  "starter_files/VERSION.txt",
-                      "sha256":  "5063cd6880b15fee2eb0fd17f2f0918db13a57023dca84cfc2a49f70fda516a0",
-                      "size":  5
-                  },
-                  {
-                      "target":  "cacert.pem",
-                      "url":  "starter_files/cacert.pem",
-                      "sha256":  "2a4c752b97319381f0f932b4923583f2431f048c3becb300b7f3d4c8e1c03aeb",
-                      "size":  236095
-                  }
-              ]
+  "version": "v350",
+  "files": [
+    {
+      "target": "server.py",
+      "url": "starter_files/server.py",
+      "sha256": "676cc3dd4b077555c128d89db4fbc7d87f0c6c9b29a11778b628f583f9da2e1f",
+      "size": 78639
+    },
+    {
+      "target": "ebichelchen.py",
+      "url": "starter_files/ebichelchen.py",
+      "sha256": "ff6b8cc62cd5c6fc45a78b673d84e12996b194ef2596404ea4dad303829768ea",
+      "size": 194653
+    },
+    {
+      "target": "EntretienConnect.ps1",
+      "url": "starter_files/EntretienConnect.ps1",
+      "sha256": "e3a502145dbbda36077eb42b0c51f5dca5f58f8a34b3f8f91a92b94806ca9939",
+      "size": 76381
+    },
+    {
+      "target": "EntretienConnect-eb.ps1",
+      "url": "starter_files/EntretienConnect-eb.ps1",
+      "sha256": "d07dd5796e9f66880aae74a98876434069322576c265285899054cae61b551ba",
+      "size": 72932
+    },
+    {
+      "target": "EntretienConnect-Start.bat",
+      "url": "starter_files/EntretienConnect-Start.bat",
+      "sha256": "9cabec15a3ed6f8475baac31d5b134125a516a72b76aa1f06ef1abde03f98156",
+      "size": 1566
+    },
+    {
+      "target": "EntretienConnect-Start-Hidden.bat",
+      "url": "starter_files/EntretienConnect-Start-Hidden.bat",
+      "sha256": "70698d7d619b94bf6a7adf7562cb8bce3e3bab1b74a46d56130bb48c419d58cd",
+      "size": 778
+    },
+    {
+      "target": "EntretienConnect-WKWebView.js",
+      "url": "starter_files/EntretienConnect-WKWebView.js",
+      "sha256": "1663064ceff83f4bdc9ce839a9dd4abda7b9008ac2af825faa7c992e55862bd6",
+      "size": 16522
+    },
+    {
+      "target": "VERSION.txt",
+      "url": "starter_files/VERSION.txt",
+      "sha256": "6f00a76ee1279574b5545f327680d2f0e2bbae465df126aa3b9132d4c0914ba4",
+      "size": 5
+    },
+    {
+      "target": "cacert.pem",
+      "url": "starter_files/cacert.pem",
+      "sha256": "2a4c752b97319381f0f932b4923583f2431f048c3becb300b7f3d4c8e1c03aeb",
+      "size": 236095
+    }
+  ]
 }

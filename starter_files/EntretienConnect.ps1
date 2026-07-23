@@ -687,10 +687,16 @@ public static class EntretienConnectAppWin32 {
 }
 
 function Open-AppInBrowser($u) {
-    # v347: EntretienConnect startet in Chromium immer als eigenes, sofort
-    # passend dimensioniertes und zentriertes
-    # Browser-App-Fenster - unabhaengig davon, ob der Browser schon laeuft. Dadurch
-    # sind Darstellung und Bedienung immer gleich und es entsteht nie ein Leertab.
+    # v350: EntretienConnect startet in Chromium mit einem eigenen dauerhaften
+    # Browserprofil. Dadurch kann ein bereits laufender Standardbrowser keine alte
+    # Fenstergeometrie in den Start hineinreichen. Ein pro Start eindeutiger,
+    # funktionsloser Query-Parameter gibt dem App-Fenster außerdem eine frische
+    # Chromium-Fensteridentität; --window-size/--window-position gelten deshalb
+    # bereits beim Erzeugen, statt erst nach einer sichtbaren Korrektur.
+    #
+    # Die EntretienConnect-Daten gehen beim einmaligen Profilwechsel nicht verloren:
+    # Die Oberfläche spiegelt sie zusätzlich in %LOCALAPPDATA%\EntretienConnect\
+    # state.json. Microsoft-Token und e-Bichelchen-Sitzung liegen ebenfalls dort.
     # Firefox besitzt keinen entsprechenden App-Modus und bekommt stets ein eigenes
     # normales Fenster.
     # Registry nicht lesbar oder unbekannter Browser: Windows-Verknuepfung nutzen.
@@ -709,11 +715,24 @@ function Open-AppInBrowser($u) {
             $script:AppWindowPlacement = $window
             $sizeArg = "--window-size=" + $window.Width + "," + $window.Height
             $positionArg = "--window-position=" + $window.Left + "," + $window.Top
-            # v349: Zunächst minimiert erzeugen. Sobald das Fensterhandle existiert,
-            # setzt der schnelle native Suchlauf die endgültige Geometrie und zeigt
-            # das Fenster erst danach an. So ist die alte Edge-Größe nie sichtbar.
-            Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check","--start-minimized",$sizeArg,$positionArg,("--app=" + $u))
-            Log ("Browser direkt gestartet: App-Modus " + $window.Width + "x" + $window.Height + " bei " + $window.Left + "," + $window.Top + ", Windows-Skalierung " + $window.ScalePercent + "% ohne Leertab (" + $leaf + ")")
+            $browserName = [System.IO.Path]::GetFileNameWithoutExtension($leaf)
+            $browserProfile = Join-Path (Join-Path $RuntimeDir "browser-profile") $browserName
+            if (-not (Test-Path $browserProfile -PathType Container)) {
+                New-Item -ItemType Directory -Path $browserProfile -Force | Out-Null
+            }
+            $profileArg = "--user-data-dir=`"" + $browserProfile + "`""
+            $separator = $(if ($u.Contains("?")) { "&" } else { "?" })
+            $launchUrl = $u + $separator + "ec_window=" + [DateTime]::UtcNow.Ticks
+            Start-Process -FilePath $exe -ArgumentList @(
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--disable-session-crashed-bubble",
+                $profileArg,
+                $sizeArg,
+                $positionArg,
+                ("--app=`"" + $launchUrl + "`"")
+            )
+            Log ("Browser direkt gestartet: eigenes " + $browserName + "-App-Profil, App-Modus " + $window.Width + "x" + $window.Height + " bei " + $window.Left + "," + $window.Top + ", Windows-Skalierung " + $window.ScalePercent + "% ohne Leertab")
             return
         } catch {
             Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
@@ -820,7 +839,7 @@ function Test-EbSavedSession {
 }
 
 function Test-EbVisibleLoginPage {
-    # v349: Extrem schnelle Direktprüfung im bereits laufenden Haupthelfer.
+    # v350: Extrem schnelle Direktprüfung im bereits laufenden Haupthelfer.
     # Der vollständige e-Bichelchen-Helfer muss dafür nicht eigens starten.
     try {
         $res = Invoke-WebRequest -Uri "http://127.0.0.1:9223/json" -UseBasicParsing -TimeoutSec 1

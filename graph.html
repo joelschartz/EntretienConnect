@@ -1235,11 +1235,11 @@
   }
 
 
-  /* v285 — connexion e-Bichelchen : état compact dans la carte, sans bannière étroite.
-     Le message transitoire reste court et prend toute la largeur sous la carte de statut. */
+  /* v350 — même présentation compacte pour les deux connexions.
+     Le message transitoire reste court et prend toute la largeur sous la ligne de statut. */
   .setup-mode-connect-slot{flex-direction:column!important;align-items:stretch!important}
   .setup-mode-connect-slot .setup-status-stack{width:100%!important;max-width:100%!important}
-  .setup-eb-live-status{
+  .setup-connection-live-status{
     box-sizing:border-box;
     width:100%;
     max-width:100%;
@@ -1251,17 +1251,17 @@
     line-height:1.42;
     overflow-wrap:anywhere
   }
-  .setup-eb-live-status.info{color:#5965a9}
-  .setup-eb-live-status.warn,
-  .setup-eb-live-status.err{
+  .setup-connection-live-status.info{color:#5965a9}
+  .setup-connection-live-status.warn,
+  .setup-connection-live-status.err{
     padding:8px 10px;
     border:1px solid #f0d59f;
     border-radius:10px;
     background:#fff8e8;
     color:#8a5a13
   }
-  .setup-eb-live-status.err{border-color:#f0c6c1;background:#fff2f0;color:#a33a31}
-  .setup-eb-live-status:empty{display:none!important}
+  .setup-connection-live-status.err{border-color:#f0c6c1;background:#fff2f0;color:#a33a31}
+  .setup-connection-live-status:empty{display:none!important}
   .setup-mode-card.active .setup-mode-connect-slot{min-width:0!important}
   .setup-mode-card.active .setup-mode-connect-slot .setup-status-row{max-width:100%!important}
 
@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v349</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v350</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 349;
+const APP_VERSION = 350;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3331,7 +3331,7 @@ function setupConnectionSlotHtml(cardMode,isActive){
       }else if(isActive && ebPending){
         actionButton='<button type="button" class="ghost sm" data-eb-cancel>Annuler</button>';
       }
-      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-pending-label">'+pendingLabel+'</span></div></div>'+actionButton+'</div>');
+      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>e-Bichelchen</b><span class="setup-pending-label">'+pendingLabel+'</span></div></div>'+actionButton+'</div>'+(isActive?'<div id="setupEbLiveStatus" class="setup-connection-live-status" style="display:none"></div>':''));
     }
   }
   if(modeNeedsEmail(cardMode)){
@@ -3345,11 +3345,10 @@ function setupConnectionSlotHtml(cardMode,isActive){
     }else{
       const btnId='setupMsConnect_'+suffix;
       const boxId='setupLoginBox_'+suffix;
-      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>Microsoft 365</b><span class="setup-pending-label">Non connecté</span></div><div id="'+boxId+'" style="display:none;margin-top:7px"></div></div>'+(isActive?'<button type="button" class="ghost sm" id="'+btnId+'" data-setup-ms-connect data-login-box="'+boxId+'">Connecter</button>':'')+'</div>');
+      rows.push('<div class="setup-status-row"><span class="status-dot"></span><div class="status-main"><div class="setup-service-title"><b>Microsoft 365</b><span class="setup-pending-label">Non connecté</span></div></div>'+(isActive?'<button type="button" class="ghost sm" id="'+btnId+'" data-setup-ms-connect data-login-box="'+boxId+'">Connecter</button>':'')+'</div>'+(isActive?'<div id="'+boxId+'" class="setup-connection-live-status" style="display:none"></div>':''));
     }
   }
   let html='<div class="setup-status-stack">'+rows.join('');
-  if(isActive && modeNeedsEb(cardMode)) html+='<div id="setupEbLiveStatus" class="setup-eb-live-status" style="display:none"></div>';
   html+='</div>';
   if(isActive && modeNeedsEb(cardMode) && ebHasMultipleKnownGroups()) html+='<div class="setup-status-panel">'+ebGroupChoiceHtml()+'</div>';
   return html;
@@ -5918,8 +5917,8 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   const inBtn=typeof buttonId==="string" ? document.getElementById(buttonId) : buttonId;
   if(!lb) return;
   if(inBtn) inBtn.disabled=true;
-  lb.style.display="block";
-  lb.innerHTML='<div class="banner info compact">Ouverture de Microsoft…</div>';
+  setMicrosoftLoginStatus(lb,'La connexion s’effectue dans une fenêtre séparée.','info');
+  setMicrosoftPendingVisual(lb,true);
   // v327: Das Fenster MUSS hier aufgehen – synchron im Klick, vor jedem await.
   // Safari (und oft auch Chrome) erlauben ein Popup nur, solange die Nutzergeste
   // frisch ist. Danach wurde es blockiert. Die Adresse kennen wir noch nicht, also
@@ -5945,9 +5944,9 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   return startMicrosoftLoginDevice(loginBoxId, buttonId);
 }
 function microsoftRetryHtml(message){
-  // v349: Der äußere Statusbereich besitzt bereits den einzigen « Connecter »-
+  // v350: Der äußere Statusbereich besitzt bereits den einzigen « Connecter »-
   // Knopf. Kein zweiter « Réessayer »-Knopf direkt daneben.
-  return '<div class="banner err compact">'+esc(message||"Connexion interrompue.")+'</div>';
+  return esc(message||"Connexion interrompue.");
 }
 function bindMicrosoftRetryButtons(lb, loginBoxId, buttonId){
   try{
@@ -5989,15 +5988,29 @@ function openMsLoginWindow(authUrl){
 // Minuten lang stumm zu warten. Der Knopf ist ein echter Link: ein Klick darauf
 // ist eine frische Nutzergeste und wird von keinem Blocker abgewiesen.
 function msPopupBlockedHtml(authUrl){
-  return '<div class="banner warn compact">Fenêtre bloquée. '
-    + '<a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>Ouvrir Microsoft</b></a>.</div>';
+  return 'Fenêtre bloquée. '
+    + '<a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>Ouvrir Microsoft</b></a>.';
+}
+function setMicrosoftLoginStatus(lb, message, cls){
+  if(!lb) return;
+  const text=String(message||"");
+  lb.className="setup-connection-live-status "+(cls||"info");
+  lb.style.display=text ? "block" : "none";
+  lb.innerHTML=text;
+}
+function setMicrosoftPendingVisual(lb, pending){
+  try{
+    const row=lb && lb.previousElementSibling;
+    const label=row && row.querySelector ? row.querySelector(".setup-pending-label") : null;
+    if(label) label.textContent=pending ? "Connexion en cours" : "Non connecté";
+  }catch(_){ }
 }
 function closeMsLoginWindow(){
   try{ if(msLoginWindow && !msLoginWindow.closed) msLoginWindow.close(); }catch(_){ }
   msLoginWindow = null;
 }
 function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
-  lb.innerHTML='<div class="banner info compact">La connexion Microsoft s’effectue dans une fenêtre séparée.</div>';
+  setMicrosoftLoginStatus(lb,'La connexion s’effectue dans une fenêtre séparée.','info');
   // v327: Das Fenster steht schon offen (synchron beim Klick geöffnet) – jetzt nur
   // noch weiterschicken. Nur falls das nicht klappte, ein zweiter Versuch.
   if(msLoginWindow && !msLoginWindow.closed){
@@ -6010,7 +6023,7 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
   // statt den Benutzer vor einer scheinbar arbeitenden App sitzen zu lassen.
   // Die Abfrage läuft weiter: meldet er sich über den Link an, ist die App fertig.
   if(!msLoginWindow){
-    lb.innerHTML=msPopupBlockedHtml(authUrl);
+    setMicrosoftLoginStatus(lb,msPopupBlockedHtml(authUrl),'warn');
   }
   if(pollTimer) clearInterval(pollTimer);
   const startedAt=Date.now();
@@ -6025,35 +6038,37 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
       closeMsLoginWindow();
       account=d.account;
       if(typeof applyChannelVisibility==="function") applyChannelVisibility();
-      lb.style.display="none";
-      lb.innerHTML="";
+      setMicrosoftLoginStatus(lb,"","info");
+      setMicrosoftPendingVisual(lb,false);
       if(inBtn) inBtn.disabled=false;
       renderAuth(); renderSetup(); renderMails();
     } else if(d && d.lastLoginError){
       clearInterval(pollTimer);
       closeMsLoginWindow();
-      lb.innerHTML=microsoftRetryHtml(d.lastLoginError);
+      setMicrosoftPendingVisual(lb,false);
+      setMicrosoftLoginStatus(lb,microsoftRetryHtml(d.lastLoginError),'err');
       bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
     } else if(msLoginWindow && msLoginWindow.closed){
-      // v349: Kurze Sicherheitsfrist für die OAuth-Rückleitung. Bei manuellem
+      // v350: Kurze Sicherheitsfrist für die OAuth-Rückleitung. Bei manuellem
       // Schließen danach direkt wieder nur den vorhandenen « Connecter »-Knopf zeigen.
       if(!closedSeenAt) closedSeenAt=Date.now();
       else if(Date.now()-closedSeenAt > 550){
         clearInterval(pollTimer);
         msLoginWindow=null;
-        lb.style.display="none";
-        lb.innerHTML="";
+        setMicrosoftLoginStatus(lb,"","info");
+        setMicrosoftPendingVisual(lb,false);
         if(inBtn) inBtn.disabled=false;
         renderSetup();
       }
     } else if(Date.now()-startedAt > 6*60*1000){
       clearInterval(pollTimer);
-      lb.innerHTML=microsoftRetryHtml('La connexion n’a pas abouti. Vous pouvez réessayer sans recharger la page.');
+      setMicrosoftPendingVisual(lb,false);
+      setMicrosoftLoginStatus(lb,microsoftRetryHtml('La connexion n’a pas abouti. Vous pouvez réessayer sans recharger la page.'),'err');
       bindMicrosoftRetryButtons(lb, loginBoxId, buttonId);
       if(inBtn) inBtn.disabled=false;
     }
-  // v349: alle 300 ms, damit ein manuell geschlossenes Microsoft-Fenster
+  // v350: alle 300 ms, damit ein manuell geschlossenes Microsoft-Fenster
   // innerhalb von deutlich unter einer Sekunde wieder den Connecter-Knopf freigibt.
   // Die Abfrage geht nur an den lokalen Helfer.
   },300);
@@ -6690,7 +6705,7 @@ function setEbStatus(msg, cls){
   if(el){ el.className="banner compact "+c; el.innerHTML=msg; }
   const live=document.getElementById("setupEbLiveStatus");
   if(live){
-    live.className="setup-eb-live-status "+c;
+    live.className="setup-connection-live-status "+c;
     live.style.display = msg ? "" : "none";
     live.innerHTML=msg;
   }
@@ -7163,7 +7178,9 @@ async function ebConnectFlow(){
   ebLoginPending=true;
   ebBrowserMissingCount=0;
   renderSetup();
-  setEbStatus("","info");
+  // v350: Den Hinweis sofort gemeinsam mit « Connexion en cours » anzeigen.
+  // Zuvor erschien er erst, nachdem das Loginfenster vollständig bereit war.
+  setEbStatus(ebWaitingStatusHtml("Ouverture de la fenêtre de connexion."),"info");
   ebStopAuto();
 
   // Le profil du navigateur est conservé pour éviter un démarrage à froid très lent.
