@@ -73,7 +73,9 @@ function Test-EntretienConnectPortOpen {
     try {
         $tcp = New-Object System.Net.Sockets.TcpClient
         $iar = $tcp.BeginConnect("127.0.0.1", $Port, $null, $null)
-        $ok = $iar.AsyncWaitHandle.WaitOne(350, $false)
+        # v346: Ein lokaler Listener antwortet praktisch sofort. Eine lange
+        # Wartezeit bremst nur den Normalfall, in dem noch kein Helfer läuft.
+        $ok = $iar.AsyncWaitHandle.WaitOne(80, $false)
         if ($ok) { $tcp.EndConnect($iar); $tcp.Close(); return $true }
         try { $tcp.Close() } catch {}
     } catch {}
@@ -88,7 +90,9 @@ function Wait-EntretienConnectPortClosed($msTotal) {
     return (-not (Test-EntretienConnectPortOpen))
 }
 function Get-ReusableEntretienConnectHelper {
-    # v345: Ein bereits laufender Helfer derselben Version und desselben Starter-
+    # v346: Nur aufrufen, wenn der Port bereits als offen bestätigt wurde. So
+    # wartet ein normaler Kaltstart nicht eine Sekunde auf eine HTTP-Zeitüberschreitung.
+    # Ein bereits laufender Helfer derselben Version und desselben Starter-
     # Ordners kann sofort weiterverwendet werden. Das spart PowerShell-Neustart,
     # Prozesssuche und erneutes Binden des Servers bei jedem App-Oeffnen.
     try {
@@ -584,8 +588,36 @@ function Get-DefaultBrowserExe {
     return $null
 }
 
+function Get-AppWindowPlacement {
+    # v346: Auf dem Bildschirm unter dem Mauszeiger etwa zwei Drittel der
+    # verfügbaren Arbeitsfläche nutzen und das Fenster sofort zentriert öffnen.
+    try {
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+        $screen = [System.Windows.Forms.Screen]::FromPoint([System.Windows.Forms.Cursor]::Position)
+        $area = $screen.WorkingArea
+        $width = [int][Math]::Min($area.Width, [Math]::Max(1100, [Math]::Round($area.Width * 0.67)))
+        $height = [int][Math]::Min($area.Height, [Math]::Max(720, [Math]::Round($area.Height * 0.67)))
+        $left = [int]($area.X + [Math]::Floor(($area.Width - $width) / 2))
+        $top = [int]($area.Y + [Math]::Floor(($area.Height - $height) / 2))
+        return [pscustomobject]@{
+            Width = $width
+            Height = $height
+            Left = $left
+            Top = $top
+        }
+    } catch {
+        return [pscustomobject]@{
+            Width = 1600
+            Height = 960
+            Left = 80
+            Top = 60
+        }
+    }
+}
+
 function Open-AppInBrowser($u) {
-    # v344: EntretienConnect startet in Chromium immer als eigenes, maximiertes
+    # v346: EntretienConnect startet in Chromium immer als eigenes, sofort
+    # passend dimensioniertes und zentriertes
     # Browser-App-Fenster - unabhaengig davon, ob der Browser schon laeuft. Dadurch
     # sind Darstellung und Bedienung immer gleich und es entsteht nie ein Leertab.
     # Firefox besitzt keinen entsprechenden App-Modus und bekommt stets ein eigenes
@@ -596,8 +628,11 @@ function Open-AppInBrowser($u) {
     if ($exe) { $leaf = (Split-Path $exe -Leaf).ToLower() }
     if ($exe -and ($leaf -match '^(msedge|chrome|brave|vivaldi|opera)\.exe$')) {
         try {
-            Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check","--window-size=1200,800",("--app=" + $u))
-            Log ("Browser direkt gestartet: App-Modus 1200x800 ohne Leertab (" + $leaf + ")")
+            $window = Get-AppWindowPlacement
+            $sizeArg = "--window-size=" + $window.Width + "," + $window.Height
+            $positionArg = "--window-position=" + $window.Left + "," + $window.Top
+            Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",$sizeArg,$positionArg,("--app=" + $u))
+            Log ("Browser direkt gestartet: App-Modus " + $window.Width + "x" + $window.Height + " bei " + $window.Left + "," + $window.Top + " ohne Leertab (" + $leaf + ")")
             return
         } catch {
             Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
@@ -1014,7 +1049,7 @@ function Handle-Request($stream, $req) {
         return
     }
     if ($path -eq "/api/graph/capabilities") {
-        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = $script:HelperVersion; port = $Port; instancePath = $ScriptDir }
+        Send-Json $stream @{ ok = $true; deferredSend = $true; platform = "windows-powershell"; appVersion = $script:HelperVersion; backendGeneration = $script:HelperVersion; port = $Port; instancePath = $ScriptDir }
         return
     }
     if ($path -eq "/api/graph/account") {
@@ -1281,7 +1316,11 @@ if ($UpdateUiOnly) {
     exit 0
 }
 
-$reusable = Get-ReusableEntretienConnectHelper
+$preferredPortOpen = Test-EntretienConnectPortOpen
+$reusable = $null
+if ($preferredPortOpen) {
+    $reusable = Get-ReusableEntretienConnectHelper
+}
 if ($reusable) {
     $url = "http://127.0.0.1:$($reusable.Port)/graph.html"
     Log ("Laufender v" + $reusable.Version + "-Helfer wird sofort wiederverwendet.")
@@ -1290,7 +1329,7 @@ if ($reusable) {
 }
 
 $cleanupStarted = Get-Date
-if (Test-EntretienConnectPortOpen) {
+if ($preferredPortOpen) {
     Stop-OldEntretienConnectHelpers
 } else {
     Log "Kein alter Helfer aktiv; langsame Prozesssuche uebersprungen."

@@ -1,18 +1,23 @@
-# EntretienConnect v345
+# EntretienConnect v346
 
-**Schneller und ohne Fenstersprung unter Windows.** Chromium öffnet das
-Browser-App-Fenster direkt mit 1200 × 800 Pixeln. Es wird nicht mehr verzögert
-maximiert und nur einmal nicht blockierend in den Vordergrund geholt. Die drei
-GitHub-Dateiprüfungen laufen erst nach dem sichtbaren Start im Hintergrund.
-Ein bereits laufender v345-Helfer desselben Starter-Ordners wird sofort
-weiterverwendet. Das Startprotokoll enthält nun Millisekundenwerte für
-PowerShell-Initialisierung, Helferbereinigung und Serverbereitschaft.
+**Schnellerer Windows-Kaltstart.** Bevor noch kein lokaler Helfer läuft, wird
+nicht mehr eine Sekunde auf eine aussichtslose HTTP-Anfrage gewartet. Die kurze
+Portprüfung entscheidet zuerst; nur bei einem tatsächlich offenen Port wird die
+laufende Version abgefragt. GitHub-Dateiprüfungen bleiben im Hintergrund.
 
-**Windows startet immer im Browser-App-Modus.** Edge, Chrome, Brave, Vivaldi
-und Opera öffnen EntretienConnect nun bei jedem Start als eigenes App-Fenster –
-auch wenn der Browser bereits läuft. Das Fenster wird maximiert, damit die
-verfügbare Bildschirmfläche genutzt und die Oberfläche nicht unnötig gekürzt
-wird. Firefox öffnet mangels App-Modus stets ein separates normales Fenster.
+**Browser-App-Fenster sofort in passender Größe.** Edge, Chrome, Brave, Vivaldi
+und Opera öffnen EntretienConnect weiterhin ohne leeren Tab und ohne
+Adressleiste. Das Fenster nutzt etwa zwei Drittel der Arbeitsfläche des aktuellen
+Bildschirms und wird direkt zentriert gestartet – auf 2560 × 1440 also ungefähr
+1715 × 950 Pixel. Es wird nicht nachträglich maximiert oder umpositioniert.
+Firefox besitzt keinen Browser-App-Modus und öffnet ein separates normales
+Fenster.
+
+**Keine falsche rote Versionswarnung bei e-Bichelchen.** Antwortet der
+PowerShell-Helfer während einer laufenden e-Bichelchen-Anfrage kurz nicht auf die
+zusätzliche Versionsabfrage, wird das nicht mehr als angeblich alter Helfer
+„v?“ gewertet. Eine Warnung erscheint nur noch, wenn tatsächlich eine
+abweichende Versionsnummer zurückkommt.
 
 **e-Bichelchen bleibt beim Moduswechsel angemeldet.** Der reine E-Mail-Modus
 deaktiviert lediglich den Kanal in der Oberfläche. Beim späteren Wechsel zu
@@ -20,16 +25,12 @@ deaktiviert lediglich den Kanal in der Oberfläche. Beim späteren Wechsel zu
 Sitzung nun automatisch und sofort wieder aufgenommen. Abgemeldet wird nur
 noch ausdrücklich über „Déconnecter“.
 
-**Windows-Kaltstart ohne leeren zweiten Tab.** Wenn noch kein sichtbares
-Edge-/Chrome-Fenster existiert, startet EntretienConnect im App-Modus als
-eigenständiges Browserfenster ohne Tab- und Adressleiste. Läuft der Browser
-bereits, öffnet sich EntretienConnect weiterhin als normaler neuer Tab.
+**Immer ohne leeren zweiten Tab.** Chromium startet EntretienConnect bei jedem
+Aufruf im App-Modus – unabhängig davon, ob bereits ein Browserfenster offen ist.
 
-**Windows-Fenster zuverlässig im Vordergrund.** Das neu gestartete Fenster wird
-kurz in die oberste Fensterebene gesetzt, aktiviert und anschließend wieder auf
-den normalen Fenstermodus zurückgesetzt. Zwei aufeinanderfolgende Prüfungen
-stellen sicher, dass Edge es während der Profilinitialisierung nicht wieder
-hinter den Explorer legt.
+**Windows-Fenster zuverlässig im Vordergrund.** Nach dem Öffnen laufen kurze,
+nicht blockierende Suchversuche. Sobald das App-Fenster einmal erfolgreich
+aktiviert wurde, enden sie; Größe und Position werden dabei nicht verändert.
 
 Die unter Windows geprüfte e-Bichelchen-Sitzungswiederaufnahme aus v339 bleibt
 unverändert erhalten. Bei einer noch gültigen gespeicherten Sitzung wird zudem
