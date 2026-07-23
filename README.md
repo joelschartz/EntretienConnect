@@ -1,4 +1,17 @@
-# EntretienConnect v352
+# EntretienConnect v353
+
+**App öffnet unter Windows wieder als normaler Browser-Tab.** Der Edge-`--app`-
+Fenstermodus hat sich als Sackgasse erwiesen: Weil Edge praktisch immer im
+Hintergrund läuft (Startup-Boost/Hintergrund-Apps), wird der App-Start an die
+bestehende Edge-Instanz übergeben und die Größenvorgaben werden verworfen — das
+Fenster öffnete klein. Eine nachträgliche native Größenkorrektur war die eigentliche
+Ursache des sichtbaren Fenstersprungs (per Diagnoseprotokoll eindeutig belegt). Ein
+frisch erzwungenes Edge wiederum vergrößerte das Microsoft-Login-Popup und blendete
+einen Übersetzungshinweis ein. v353 verzichtet deshalb ganz auf den `--app`-Modus und
+öffnet die Oberfläche als normalen Tab im Standardbrowser: **kein Fenstersprung mehr**,
+und das **Microsoft-Popup bleibt klein**. Preis dafür ist die sichtbare Adressleiste
+und eventuell ein zusätzlicher leerer Tab. (Nur Windows; der Mac nutzt WKWebView und war
+nie betroffen.)
 
 **Kein sichtbarer Fenstersprung mehr beim Start (Windows).** Chromium merkt sich
 im App-Modus seine zuletzt gespeicherte Fenstergeometrie und ignoriert die

@@ -732,47 +732,25 @@ public static class EntretienConnectAppWin32 {
 }
 
 function Open-AppInBrowser($u) {
-    # v351: Wieder das normale Browserprofil verwenden. Das eigene Profil aus v350
-    # veränderte das Microsoft-Popup, löste einen Übersetzungshinweis aus und
-    # beseitigte den sichtbaren Fenstersprung nicht zuverlässig.
-    # Firefox besitzt keinen entsprechenden App-Modus und bekommt stets ein eigenes
-    # normales Fenster.
-    # Registry nicht lesbar oder unbekannter Browser: Windows-Verknuepfung nutzen.
+    # v353: Zurueck zum normalen Browser-Tab. Der Edge --app-Modus hat sich als Sackgasse
+    # erwiesen:
+    #  - Ein bereits laufendes Edge (Hintergrundprozesse/Startup-Boost) verwirft die
+    #    --window-size/-position-Vorgaben -> App-Fenster oeffnete klein.
+    #  - Eine nachtraegliche native Groessenkorrektur verursachte den sichtbaren Sprung
+    #    (per EC_diag.txt eindeutig bestaetigt).
+    #  - Ein frisches Edge (eigenes Profil / alle Edge beenden) oeffnet zwar in Zielgroesse,
+    #    vergroessert aber das Microsoft-Login-Popup und blendet einen Uebersetzungshinweis ein.
+    # Ein normaler Tab im bereits laufenden Standardbrowser umgeht all das: kein Fenstersprung
+    # (es ist nur ein Tab), das Microsoft-Popup bleibt klein (normaler Browserkontext). Preis:
+    # Adressleiste sichtbar und evtl. ein zusaetzlicher leerer Tab - bewusst in Kauf genommen.
     $exe = Get-DefaultBrowserExe
-    $leaf = ""
-    if ($exe) { $leaf = (Split-Path $exe -Leaf).ToLower() }
-    if ($exe -and ($leaf -match '^(msedge|chrome|brave|vivaldi|opera)\.exe$')) {
-        try {
-            $window = Get-AppWindowPlacement
-            # v348: Edge stellt bei --app gelegentlich seine alte gespeicherte
-            # Fenstergeometrie wieder her. Die native Größenkorrektur ist bereits
-            # kompiliert, bevor das Fenster entsteht, und kann es beim ersten
-            # erkannten Handle ohne nachträgliche Wartephase korrigieren.
-            try { Initialize-EntretienConnectAppWin32 }
-            catch { Log ("Native Fenstervorbereitung fehlgeschlagen: " + $_.Exception.Message) }
-            $script:AppWindowPlacement = $window
-            $sizeArg = "--window-size=" + $window.Width + "," + $window.Height
-            $positionArg = "--window-position=" + $window.Left + "," + $window.Top
-            # Wie in v349 zunächst minimiert anfordern. Das Login-Popup bleibt damit
-            # wieder Teil des normalen Browserprofils und behält seine kleine Größe.
-            Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check","--start-minimized",$sizeArg,$positionArg,("--app=" + $u))
-            Log ("Browser direkt gestartet: App-Modus " + $window.Width + "x" + $window.Height + " bei " + $window.Left + "," + $window.Top + ", Windows-Skalierung " + $window.ScalePercent + "% ohne Leertab (" + $leaf + ")")
-            return
-        } catch {
-            Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
-        }
+    $leaf = if ($exe) { (Split-Path $exe -Leaf).ToLower() } else { "unbekannt" }
+    try {
+        Start-Process $u
+        Log ("Browser als normaler Tab geoeffnet (Standard-Browser: " + $leaf + ").")
+    } catch {
+        Log ("Oeffnen im Standardbrowser fehlgeschlagen: " + $_.Exception.Message)
     }
-    if ($exe -and $leaf -eq 'firefox.exe') {
-        try {
-            Start-Process -FilePath $exe -ArgumentList @("-new-window",$u)
-            Log "Firefox direkt gestartet: eigenes Fenster (kein Browser-App-Modus verfügbar)."
-            return
-        } catch {
-            Log ("Firefox-Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
-        }
-    }
-    Log ("Browser über die Windows-Verknüpfung geöffnet (Standard-Browser: " + $(if ($exe) { $leaf } else { "unbekannt" }) + ").")
-    try { Start-Process $u } catch {}
 }
 
 function Raise-AppWindowOnly {
@@ -795,28 +773,14 @@ function Raise-AppWindowOnly {
             $h = $proc.MainWindowHandle
             $resized = $false
             $iconic = [bool][EntretienConnectAppWin32]::IsIconic($h)
-            if ($script:AppWindowPlacement) {
-                $p = $script:AppWindowPlacement
-                if ($iconic) {
-                    # v352: Minimiertes Fenster in EINEM Schritt in Zielgröße einblenden.
-                    # SetWindowPlacement setzt Restore-Rechteck und Anzeigezustand zusammen,
-                    # sodass das erste sichtbare Bild schon die eigene Größe hat - kein Sprung
-                    # von der von Chromium gemerkten Standardgröße mehr.
-                    $resized = [bool][EntretienConnectAppWin32]::ShowAtBoundsPhysical(
-                        $h, [int]($p.Left), [int]($p.Top), [int]($p.Width), [int]($p.Height), $true
-                    )
-                } else {
-                    # Bereits sichtbares (nicht minimiertes) Fenster: nur Größe/Position setzen.
-                    # SWP_NOZORDER | SWP_NOACTIVATE.
-                    $resized = [bool][EntretienConnectAppWin32]::SetBoundsPhysical(
-                        $h, [int]($p.Left), [int]($p.Top), [int]($p.Width), [int]($p.Height)
-                    )
-                }
-            } elseif ($iconic) {
-                # v335: SW_RESTORE (9) NUR bei einem wirklich minimierten Fenster.
-                # Auf ein MAXIMIERTES Fenster angewandt stellt SW_RESTORE die vorherige,
-                # kleinere Größe wieder her. Das App-Fenster schrumpfte deshalb jedes Mal,
-                # wenn nach dem Login der Fokus zurückgeholt wurde.
+            # v353: GEOMETRIE NICHT MEHR ANFASSEN. EC_diag.txt hat gezeigt, dass Edge das
+            # Fenster selbst an der korrekten gemerkten Stelle platziert; unsere eigene
+            # Groessen-/Positionskorrektur erwischte es waehrend Edges Einricht-Phase an
+            # einer Uebergangsstelle und ERZEUGTE damit den sichtbaren Sprung. Wir holen das
+            # Fenster nur noch nach vorne (Explorer-Ordner/Konsole sollen nicht davor liegen)
+            # und ruehren Groesse und Position nicht mehr an. Ein wirklich minimiertes
+            # Fenster wird lediglich wiederhergestellt - ohne eigene Geometrie.
+            if ($iconic) {
                 [EntretienConnectAppWin32]::ShowWindowAsync($h, 9) | Out-Null
             }
             if ([EntretienConnectAppWin32]::IsForeground($h)) {
@@ -1491,9 +1455,11 @@ if (-not $NoAutoOpen) {
     # schwarz auf weiß, dass der zweite nicht von uns stammt.
     Log ("Browser wird EINMAL geöffnet mit: " + $url)
     Open-AppInBrowser $url
-    # v348: Sofort ab dem ersten vorhandenen Fensterhandle Größe, Position und Fokus
-    # in einem Schritt setzen. Danach wird nie wieder am Fenster gerüttelt.
-    $script:RaiseAppAt = Get-Date
+    # v353: NICHT mehr sofort eingreifen. Edge braucht einen Moment, um das App-Fenster
+    # an seiner gemerkten (korrekten) Stelle einzurichten. Wenn wir zu frueh nach vorne
+    # holen, erwischen wir es an einer Uebergangsstelle und verursachen genau den Sprung.
+    # Erst nach kurzer Ruhephase EINMAL nach vorne holen - ohne die Geometrie anzufassen.
+    $script:RaiseAppAt = (Get-Date).AddMilliseconds(700)
     $script:RaiseAppUntil = (Get-Date).AddSeconds(10)
     $script:RaiseAppDone = $false
 } else {
