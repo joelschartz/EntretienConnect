@@ -1,4 +1,12 @@
-# EntretienConnect v346
+# EntretienConnect v347
+
+**Fenstergröße jetzt unabhängig von der Windows-Anzeigeskalierung.** Bei
+125 %, 150 % oder einer anderen Skalierung werden die von Windows gemeldeten
+logischen Pixel in die von Chromium erwarteten physischen Pixel umgerechnet.
+Auf einem Bildschirm mit 2560 × 1440 Pixeln öffnet sich das App-Fenster dadurch
+wirklich mit ungefähr 1715 × 940 Pixeln und mittig – statt erneut nur ungefähr
+1200 Pixel breit links zu erscheinen. Die erkannte Skalierung wird im
+Startprotokoll festgehalten.
 
 **Schnellerer Windows-Kaltstart.** Bevor noch kein lokaler Helfer läuft, wird
 nicht mehr eine Sekunde auf eine aussichtslose HTTP-Anfrage gewartet. Die kurze

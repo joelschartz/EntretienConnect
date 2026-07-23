@@ -589,21 +589,36 @@ function Get-DefaultBrowserExe {
 }
 
 function Get-AppWindowPlacement {
-    # v346: Auf dem Bildschirm unter dem Mauszeiger etwa zwei Drittel der
-    # verfügbaren Arbeitsfläche nutzen und das Fenster sofort zentriert öffnen.
+    # v347: Windows Forms liefert bei 125/150 % Skalierung logische Pixel,
+    # Chromium erwartet für --window-size/--window-position auf diesem System
+    # jedoch physische Pixel. AppliedDPI gleicht beide Koordinatensysteme ab.
     try {
         Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
         $screen = [System.Windows.Forms.Screen]::FromPoint([System.Windows.Forms.Cursor]::Position)
         $area = $screen.WorkingArea
-        $width = [int][Math]::Min($area.Width, [Math]::Max(1100, [Math]::Round($area.Width * 0.67)))
-        $height = [int][Math]::Min($area.Height, [Math]::Max(720, [Math]::Round($area.Height * 0.67)))
-        $left = [int]($area.X + [Math]::Floor(($area.Width - $width) / 2))
-        $top = [int]($area.Y + [Math]::Floor(($area.Height - $height) / 2))
+        $dpi = 96
+        try {
+            $appliedDpi = (Get-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name AppliedDPI -ErrorAction Stop).AppliedDPI
+            if ([int]$appliedDpi -ge 96 -and [int]$appliedDpi -le 480) {
+                $dpi = [int]$appliedDpi
+            }
+        } catch {}
+        $scale = [double]$dpi / 96.0
+        $physicalX = [int][Math]::Round($area.X * $scale)
+        $physicalY = [int][Math]::Round($area.Y * $scale)
+        $physicalWidth = [int][Math]::Round($area.Width * $scale)
+        $physicalHeight = [int][Math]::Round($area.Height * $scale)
+        $width = [int][Math]::Min($physicalWidth, [Math]::Max(1100, [Math]::Round($physicalWidth * 0.67)))
+        $height = [int][Math]::Min($physicalHeight, [Math]::Max(720, [Math]::Round($physicalHeight * 0.67)))
+        $left = [int]($physicalX + [Math]::Floor(($physicalWidth - $width) / 2))
+        $top = [int]($physicalY + [Math]::Floor(($physicalHeight - $height) / 2))
         return [pscustomobject]@{
             Width = $width
             Height = $height
             Left = $left
             Top = $top
+            Dpi = $dpi
+            ScalePercent = [int][Math]::Round($scale * 100)
         }
     } catch {
         return [pscustomobject]@{
@@ -611,12 +626,14 @@ function Get-AppWindowPlacement {
             Height = 960
             Left = 80
             Top = 60
+            Dpi = 96
+            ScalePercent = 100
         }
     }
 }
 
 function Open-AppInBrowser($u) {
-    # v346: EntretienConnect startet in Chromium immer als eigenes, sofort
+    # v347: EntretienConnect startet in Chromium immer als eigenes, sofort
     # passend dimensioniertes und zentriertes
     # Browser-App-Fenster - unabhaengig davon, ob der Browser schon laeuft. Dadurch
     # sind Darstellung und Bedienung immer gleich und es entsteht nie ein Leertab.
@@ -632,7 +649,7 @@ function Open-AppInBrowser($u) {
             $sizeArg = "--window-size=" + $window.Width + "," + $window.Height
             $positionArg = "--window-position=" + $window.Left + "," + $window.Top
             Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",$sizeArg,$positionArg,("--app=" + $u))
-            Log ("Browser direkt gestartet: App-Modus " + $window.Width + "x" + $window.Height + " bei " + $window.Left + "," + $window.Top + " ohne Leertab (" + $leaf + ")")
+            Log ("Browser direkt gestartet: App-Modus " + $window.Width + "x" + $window.Height + " bei " + $window.Left + "," + $window.Top + ", Windows-Skalierung " + $window.ScalePercent + "% ohne Leertab (" + $leaf + ")")
             return
         } catch {
             Log ("Direktstart fehlgeschlagen (" + $_.Exception.Message + ") - zurück zur Windows-Verknüpfung.")
