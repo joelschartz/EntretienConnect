@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v347</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v348</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 347;
+const APP_VERSION = 348;
 
 window.addEventListener("error", function(ev){
   try{
@@ -5919,7 +5919,7 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   if(!lb) return;
   if(inBtn) inBtn.disabled=true;
   lb.style.display="block";
-  lb.innerHTML='<div class="banner info">Préparation de la connexion …</div>';
+  lb.innerHTML='<div class="banner info compact">Ouverture de Microsoft…</div>';
   // v327: Das Fenster MUSS hier aufgehen – synchron im Klick, vor jedem await.
   // Safari (und oft auch Chrome) erlauben ein Popup nur, solange die Nutzergeste
   // frisch ist. Danach wurde es blockiert. Die Adresse kennen wir noch nicht, also
@@ -5929,7 +5929,7 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
     if(msLoginWindow && msLoginWindow.document){
       msLoginWindow.document.write('<!doctype html><meta charset="utf-8"><title>Microsoft</title>'
         +'<body style="font:15px -apple-system,Segoe UI,Arial;padding:32px;text-align:center;color:#555">'
-        +'Connexion Microsoft en préparation …</body>');
+        +'Ouverture de Microsoft…</body>');
       msLoginWindow.document.close();
     }
   }catch(_){ }
@@ -5945,7 +5945,7 @@ async function startMicrosoftLogin(loginBoxId, buttonId){
   return startMicrosoftLoginDevice(loginBoxId, buttonId);
 }
 function microsoftRetryHtml(message){
-  return '<div class="banner err" style="line-height:1.7"><b>Connexion impossible.</b><br>'+esc(message||"La connexion n’a pas abouti.")+'<br><button type="button" class="ghost sm" data-ms-retry style="margin-top:8px">Réessayer</button> <button type="button" class="ghost sm" data-ms-reset style="margin-top:8px">Réinitialiser la connexion</button></div>';
+  return '<div class="banner err compact">'+esc(message||"Connexion interrompue.")+' <button type="button" class="ghost sm" data-ms-retry>Réessayer</button></div>';
 }
 function bindMicrosoftRetryButtons(lb, loginBoxId, buttonId){
   try{
@@ -5987,23 +5987,15 @@ function openMsLoginWindow(authUrl){
 // Minuten lang stumm zu warten. Der Knopf ist ein echter Link: ein Klick darauf
 // ist eine frische Nutzergeste und wird von keinem Blocker abgewiesen.
 function msPopupBlockedHtml(authUrl){
-  return '<div class="banner warn" style="line-height:1.7"><b>Votre navigateur a bloqué la fenêtre de connexion.</b><br>'
-    + '<a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>Ouvrir la connexion Microsoft</b></a>'
-    + ' — la connexion se terminera ici automatiquement.<br>'
-    + '<span class="muted">Vous pouvez aussi autoriser les fenêtres surgissantes pour cette page, ou '
-    + '<a href="#" id="deviceFlowFallback">utiliser la méthode classique avec code</a>.</span></div>';
+  return '<div class="banner warn compact">Fenêtre bloquée. '
+    + '<a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>Ouvrir Microsoft</b></a>.</div>';
 }
 function closeMsLoginWindow(){
   try{ if(msLoginWindow && !msLoginWindow.closed) msLoginWindow.close(); }catch(_){ }
   msLoginWindow = null;
 }
 function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
-  lb.innerHTML='<div class="banner info" style="line-height:1.7">Une fenêtre Microsoft s’ouvre — connectez-vous avec votre compte (IAM). <b>Aucun code à saisir.</b> Elle se referme toute seule et la connexion se termine ici.<br><span class="muted">Rien ne s’est ouvert ? Autorisez les fenêtres surgissantes, <a href="'+esc(authUrl)+'" target="_blank" rel="noopener"><b>ouvrez la page ici</b></a> — ou <a href="#" id="deviceFlowFallback">utilisez la méthode classique avec code</a>.</span></div>';
-  const bindDeviceFallback=()=>{
-    const fb=document.getElementById("deviceFlowFallback");
-    if(fb) fb.onclick=(e)=>{ e.preventDefault(); if(pollTimer) clearInterval(pollTimer); closeMsLoginWindow(); startMicrosoftLoginDevice(loginBoxId, buttonId); };
-  };
-  bindDeviceFallback();
+  lb.innerHTML='<div class="banner info compact">Connectez-vous dans la fenêtre Microsoft.</div>';
   // v327: Das Fenster steht schon offen (synchron beim Klick geöffnet) – jetzt nur
   // noch weiterschicken. Nur falls das nicht klappte, ein zweiter Versuch.
   if(msLoginWindow && !msLoginWindow.closed){
@@ -6017,7 +6009,6 @@ function runWebLoginFlow(lb, inBtn, authUrl, loginBoxId, buttonId){
   // Die Abfrage läuft weiter: meldet er sich über den Link an, ist die App fertig.
   if(!msLoginWindow){
     lb.innerHTML=msPopupBlockedHtml(authUrl);
-    bindDeviceFallback();
   }
   if(pollTimer) clearInterval(pollTimer);
   const startedAt=Date.now();
@@ -6709,8 +6700,9 @@ function setEbStatus(msg, cls){
 function ebWaitingStatusHtml(detail){
   const d=String(detail||"").trim();
   if(d) console.debug("e-Bichelchen en attente :", d);
-  // v290: lien « Annuler » toujours présent pour sortir d'une connexion interrompue.
-  return 'Connexion en cours… Terminez l’identification dans l’onglet e-Bichelchen. <a href="#" data-eb-cancel style="white-space:nowrap">Annuler</a>';
+  // v348: « Connexion en cours » und « Annuler » stehen bereits in der Statuszeile.
+  // Keine zweite, gleichlautende Anleitung darunter anzeigen.
+  return "";
 }
 function ebStudents(){ return (ebData && Array.isArray(ebData.students)) ? ebData.students : []; }
 function ebReady(){ return !!(ebData && ebData.group && ebData.messageSubject && ebData.messageSubject.id); }
@@ -7172,7 +7164,7 @@ async function ebConnectFlow(){
   ebLoginPending=true;
   ebBrowserMissingCount=0;
   renderSetup();
-  setEbStatus("Ouverture de la fenêtre de connexion e-Bichelchen…","info");
+  setEbStatus("","info");
   ebStopAuto();
 
   // Le profil du navigateur est conservé pour éviter un démarrage à froid très lent.
@@ -7194,8 +7186,7 @@ async function ebConnectFlow(){
     if(!j.ok) throw new Error(j.error||"Erreur");
     ebConnectBusy=false;
     renderSetup();
-    const msg="La fenêtre de connexion e-Bichelchen est ouverte. Terminez l’identification dans cette fenêtre.";
-    setEbStatus(ebWaitingStatusHtml(msg),"info");
+    setEbStatus(ebWaitingStatusHtml("Fenêtre de connexion ouverte."),"info");
     ebAutoStart=Date.now();
     // v288: zuerst nur leicht prüfen, ob IAM/e-Bichelchen wirklich bereit ist.
     // Die teure Klassen-/Schüleranalyse wird erst dann einmalig gestartet.

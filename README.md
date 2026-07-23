@@ -1,4 +1,21 @@
-# EntretienConnect v347
+# EntretienConnect v348
+
+**Fenstergeometrie wird sofort nativ durchgesetzt.** Chromium kann bei
+Browser-App-Fenstern seine früher gespeicherte Größe über die korrekten
+Startparameter stellen. v348 setzt deshalb Größe, Position und Vordergrund
+bereits beim ersten vorhandenen Fensterhandle gemeinsam – ohne Maximieren und
+ohne spätere zweite Größenänderung.
+
+**Geschlossenes e-Bichelchen-Login wird automatisch abgebrochen.** Unter
+Windows bleibt der vorgewärmte Hilfsbrowser unsichtbar aktiv, obwohl sein
+Loginfenster geschlossen wurde. Nun wird das echte Seitentarget geprüft. Nach
+dem Schließen kehrt die Oberfläche selbstständig zu „Non connecté / Connecter“
+zurück.
+
+**Kürzere Login-Anzeigen.** Die doppelte e-Bichelchen-Anleitung entfällt.
+Microsoft zeigt im normalen automatischen Anmeldeablauf nur noch einen kurzen
+einzeiligen Hinweis; Erklärungen zum alten Gerätecode erscheinen dort nicht
+mehr.
 
 **Fenstergröße jetzt unabhängig von der Windows-Anzeigeskalierung.** Bei
 125 %, 150 % oder einer anderen Skalierung werden die von Windows gemeldeten

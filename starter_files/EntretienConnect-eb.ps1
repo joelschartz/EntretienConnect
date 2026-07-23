@@ -219,6 +219,23 @@ function Get-EbTargets {
     } catch { return @() }
 }
 
+function Test-EbLoginWindowClosed {
+    # v348: Der kontrollierte Chromium-Prozess bleibt nach dem Schließen des
+    # sichtbaren App-Fensters absichtlich warm. Deshalb beweist ein erreichbarer
+    # DevTools-Port nicht, dass das Loginfenster noch existiert. Entscheidend ist
+    # mindestens ein echter sichtbarer Seitentarget (e-Bichelchen oder IAM).
+    try {
+        $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
+        $pages = @(Get-EbTargets | Where-Object {
+            $_.type -eq "page" -and
+            ([string]$_.url) -notmatch '^(about:blank|(chrome|edge)://newtab/?)$'
+        })
+        return ($pages.Count -eq 0)
+    } catch {
+        return $true
+    }
+}
+
 function Get-EbTargetsOnPort($port) {
     # Wie Get-EbTargets, nur fuer den unsichtbaren Hilfsbrowser auf eigenem Port.
     # Das Zwischenspeichern in $targets ist NICHT kosmetisch: Invoke-JsonUrl reicht
@@ -1445,11 +1462,7 @@ try {
 } catch {
     $browserClosed = $false
     if ($Action -in @("read","ready")) {
-        try {
-            $null = Invoke-JsonUrl "http://127.0.0.1:$EbCdpPort/json/version" "GET" 1
-        } catch {
-            $browserClosed = $true
-        }
+        $browserClosed = [bool](Test-EbLoginWindowClosed)
     }
     @{ ok=$false; action=$Action; error=$_.Exception.Message; browserClosed=$browserClosed } | ConvertTo-Json -Depth 10 -Compress
     exit 1

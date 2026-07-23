@@ -632,6 +632,60 @@ function Get-AppWindowPlacement {
     }
 }
 
+function Initialize-EntretienConnectAppWin32 {
+    if ("EntretienConnectAppWin32" -as [type]) { return }
+    Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class EntretienConnectAppWin32 {
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr pid);
+  [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+  [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint flags);
+  [DllImport("user32.dll")] public static extern void SwitchToThisWindow(IntPtr hWnd, bool altTab);
+  [DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr dpiContext);
+
+  public static bool IsForeground(IntPtr hWnd) { return GetForegroundWindow() == hWnd; }
+
+  public static bool SetBoundsPhysical(IntPtr hWnd, int x, int y, int width, int height) {
+    IntPtr previous = IntPtr.Zero;
+    try { previous = SetThreadDpiAwarenessContext(new IntPtr(-4)); } catch {}
+    try { return SetWindowPos(hWnd, IntPtr.Zero, x, y, width, height, 0x0014); }
+    finally {
+      if (previous != IntPtr.Zero) {
+        try { SetThreadDpiAwarenessContext(previous); } catch {}
+      }
+    }
+  }
+
+  public static bool ForceForeground(IntPtr hWnd) {
+    if (GetForegroundWindow() == hWnd) return true;
+    IntPtr fg = GetForegroundWindow();
+    uint fgThread = (fg == IntPtr.Zero) ? 0 : GetWindowThreadProcessId(fg, IntPtr.Zero);
+    uint me = GetCurrentThreadId();
+    bool attached = false;
+    if (fgThread != 0 && fgThread != me) { attached = AttachThreadInput(fgThread, me, true); }
+    SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, 0x0043);
+    BringWindowToTop(hWnd);
+    bool ok = SetForegroundWindow(hWnd);
+    SetWindowPos(hWnd, new IntPtr(-2), 0, 0, 0, 0, 0x0043);
+    if (attached) { AttachThreadInput(fgThread, me, false); }
+    if (!ok) { ok = (GetForegroundWindow() == hWnd); }
+    if (!ok) {
+      SwitchToThisWindow(hWnd, true);
+      ok = (GetForegroundWindow() == hWnd);
+    }
+    return ok;
+  }
+}
+"@
+}
+
 function Open-AppInBrowser($u) {
     # v347: EntretienConnect startet in Chromium immer als eigenes, sofort
     # passend dimensioniertes und zentriertes
@@ -646,6 +700,13 @@ function Open-AppInBrowser($u) {
     if ($exe -and ($leaf -match '^(msedge|chrome|brave|vivaldi|opera)\.exe$')) {
         try {
             $window = Get-AppWindowPlacement
+            # v348: Edge stellt bei --app gelegentlich seine alte gespeicherte
+            # Fenstergeometrie wieder her. Die native Größenkorrektur ist bereits
+            # kompiliert, bevor das Fenster entsteht, und kann es beim ersten
+            # erkannten Handle ohne nachträgliche Wartephase korrigieren.
+            try { Initialize-EntretienConnectAppWin32 }
+            catch { Log ("Native Fenstervorbereitung fehlgeschlagen: " + $_.Exception.Message) }
+            $script:AppWindowPlacement = $window
             $sizeArg = "--window-size=" + $window.Width + "," + $window.Height
             $positionArg = "--window-position=" + $window.Left + "," + $window.Top
             Start-Process -FilePath $exe -ArgumentList @("--no-first-run","--no-default-browser-check",$sizeArg,$positionArg,("--app=" + $u))
@@ -676,60 +737,24 @@ function Raise-AppWindowOnly {
     $candidates = @()
     try {
         $candidates = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
-            $_.MainWindowHandle -ne 0 -and ([string]$_.MainWindowTitle) -like "*EntretienConnect*"
-        })
+            $_.MainWindowHandle -ne 0 -and
+            ([string]$_.ProcessName) -match '^(msedge|chrome|brave|vivaldi|opera|firefox)$' -and
+            ([string]$_.MainWindowTitle) -like "*EntretienConnect*"
+        } | Sort-Object StartTime -Descending)
     } catch {}
 
     foreach ($proc in $candidates) {
         try {
-            if (-not ("EntretienConnectAppWin32" -as [type])) {
-                Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public static class EntretienConnectAppWin32 {
-  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
-  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
-  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
-  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr pid);
-  [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
-  [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
-  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint flags);
-  [DllImport("user32.dll")] public static extern void SwitchToThisWindow(IntPtr hWnd, bool altTab);
-
-  public static bool IsForeground(IntPtr hWnd) { return GetForegroundWindow() == hWnd; }
-
-  // v338: Windows verweigert SetForegroundWindow einem Prozess, der nicht selbst
-  // im Vordergrund ist - deshalb blieb der Explorer-Ordner vorne. Haengt man die
-  // Eingabewarteschlange kurz an den aktuellen Vordergrund-Thread an, gilt der
-  // Aufruf als von dort kommend und wird ausgefuehrt.
-  public static bool ForceForeground(IntPtr hWnd) {
-    if (GetForegroundWindow() == hWnd) return true;
-    IntPtr fg = GetForegroundWindow();
-    uint fgThread = (fg == IntPtr.Zero) ? 0 : GetWindowThreadProcessId(fg, IntPtr.Zero);
-    uint me = GetCurrentThreadId();
-    bool attached = false;
-    if (fgThread != 0 && fgThread != me) { attached = AttachThreadInput(fgThread, me, true); }
-    // Kurz in die oberste Z-Ebene setzen und sofort wieder auf normal stellen.
-    // Das aktiviert kein dauerhaftes "Immer im Vordergrund", ueberwindet aber
-    // den Fall, dass Explorer trotz AttachThreadInput vor dem neuen Edge bleibt.
-    SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, 0x0043);
-    BringWindowToTop(hWnd);
-    bool ok = SetForegroundWindow(hWnd);
-    SetWindowPos(hWnd, new IntPtr(-2), 0, 0, 0, 0, 0x0043);
-    if (attached) { AttachThreadInput(fgThread, me, false); }
-    if (!ok) { ok = (GetForegroundWindow() == hWnd); }
-    if (!ok) {
-      SwitchToThisWindow(hWnd, true);
-      ok = (GetForegroundWindow() == hWnd);
-    }
-    return ok;
-  }
-}
-"@
-            }
+            Initialize-EntretienConnectAppWin32
             $h = $proc.MainWindowHandle
+            $resized = $false
+            if ($script:AppWindowPlacement) {
+                $p = $script:AppWindowPlacement
+                # SWP_NOZORDER | SWP_NOACTIVATE: nur Größe und Position setzen.
+                $resized = [bool][EntretienConnectAppWin32]::SetBoundsPhysical(
+                    $h, [int]($p.Left), [int]($p.Top), [int]($p.Width), [int]($p.Height)
+                )
+            }
             # v335: SW_RESTORE (9) NUR bei einem wirklich minimierten Fenster.
             # Auf ein MAXIMIERTES Fenster angewandt stellt SW_RESTORE die vorherige,
             # kleinere Größe wieder her. Das App-Fenster schrumpfte deshalb jedes Mal,
@@ -738,24 +763,21 @@ public static class EntretienConnectAppWin32 {
                 [EntretienConnectAppWin32]::ShowWindowAsync($h, 9) | Out-Null
             }
             if ([EntretienConnectAppWin32]::IsForeground($h)) {
-                return @{ focused=$true; method="already-front"; processId=$proc.Id; title=$proc.MainWindowTitle }
+                return @{ focused=$true; resized=$resized; method="already-front"; processId=$proc.Id; title=$proc.MainWindowTitle }
             }
             try {
                 $shell = New-Object -ComObject WScript.Shell
                 $null = $shell.AppActivate($proc.Id)
             } catch {}
             $ok = [bool][EntretienConnectAppWin32]::ForceForeground($h)
-            return @{ focused=$ok; method="windows-user32"; processId=$proc.Id; title=$proc.MainWindowTitle }
+            return @{ focused=$ok; resized=$resized; method="windows-user32"; processId=$proc.Id; title=$proc.MainWindowTitle }
         } catch {}
     }
 
-    try {
-        $shell = New-Object -ComObject WScript.Shell
-        $ok = [bool]$shell.AppActivate("EntretienConnect")
-        return @{ focused=$ok; method="wscript-title" }
-    } catch {
-        return @{ focused=$false; method="none"; error=$_.Exception.Message }
-    }
+    # Kein AppActivate per Teilstring: Ein geöffneter Ordner
+    # "EntretienConnect_Starter..." oder die Logdatei würde sonst als App gelten,
+    # den Suchlauf vorzeitig beenden und die echte Edge-Größenkorrektur verhindern.
+    return @{ focused=$false; method="no-browser-window-yet" }
 }
 
 
@@ -1386,9 +1408,9 @@ if (-not $NoAutoOpen) {
     # schwarz auf weiß, dass der zweite nicht von uns stammt.
     Log ("Browser wird EINMAL geöffnet mit: " + $url)
     Open-AppInBrowser $url
-    # v345: Nur noch eine erfolgreiche Vordergrundaktivierung, ohne Groessenaenderung
-    # und ohne doppelte Bestaetigung. Die kurzen Suchversuche laufen nicht blockierend.
-    $script:RaiseAppAt = (Get-Date).AddMilliseconds(250)
+    # v348: Sofort ab dem ersten vorhandenen Fensterhandle Größe, Position und Fokus
+    # in einem Schritt setzen. Danach wird nie wieder am Fenster gerüttelt.
+    $script:RaiseAppAt = Get-Date
     $script:RaiseAppUntil = (Get-Date).AddSeconds(10)
     $script:RaiseAppDone = $false
 } else {
@@ -1406,7 +1428,10 @@ while (-not $script:ShutdownRequested) {
             $req = Read-Request $stream
             if ($req) { Handle-Request $stream $req }
         } else {
-            Start-Sleep -Milliseconds 250
+            # Während Edge sein Fenster erzeugt, kurz und reaktionsschnell prüfen.
+            # Nach der einmaligen Korrektur bleibt der ruhige 250-ms-Serverzyklus.
+            if (-not $script:RaiseAppDone) { Start-Sleep -Milliseconds 25 }
+            else { Start-Sleep -Milliseconds 250 }
         }
     } catch {
         # einzelne fehlerhafte Anfrage ignorieren, Server weiterlaufen lassen
@@ -1416,7 +1441,7 @@ while (-not $script:ShutdownRequested) {
 
     # App-Fenster einmal nach vorne holen; danach nie wieder den Fokus wegnehmen.
     if (-not $script:RaiseAppDone -and (Get-Date) -ge $script:RaiseAppAt) {
-        $script:RaiseAppAt = (Get-Date).AddMilliseconds(250)
+        $script:RaiseAppAt = (Get-Date).AddMilliseconds(25)
         $raised = $null
         try { $raised = Raise-AppWindowOnly } catch { Log ("Fenster nach vorne holen fehlgeschlagen: " + $_.Exception.Message) }
         if ($raised -and $raised.focused) {
