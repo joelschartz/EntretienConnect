@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v356</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v357</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,7 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 356;
+const APP_VERSION = 357;
 
 window.addEventListener("error", function(ev){
   try{
@@ -5966,7 +5966,31 @@ function bindMicrosoftRetryButtons(lb, loginBoxId, buttonId){
 // auf das window.close() der Rückleitseite, bliebe bei blockiertem Selbstschließen
 // ein Fenster stehen. Das Ziel ist Microsofts eigene Anmeldeseite, kein fremdes.
 let msLoginWindow = null;
+function isNativeMacAppShell(){
+  try{ return new URLSearchParams(location.search||"").get("nativeShell")==="mac"; }catch(_){ return false; }
+}
+function openNativeMicrosoftLogin(authUrl){
+  const handle={closed:false,document:null};
+  const locationProxy={};
+  Object.defineProperty(locationProxy,"href",{set:function(value){
+    const url=String(value||"");
+    if(!url || url==="about:blank") return;
+    try{
+      fetch("/api/app/open-external",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({url:url}),
+        cache:"no-store"
+      }).catch(function(){});
+    }catch(_){}
+  }});
+  handle.location=locationProxy;
+  handle.close=function(){ handle.closed=true; };
+  if(authUrl && authUrl!=="about:blank") locationProxy.href=authUrl;
+  return handle;
+}
 function openMsLoginWindow(authUrl){
+  if(isNativeMacAppShell()) return openNativeMicrosoftLogin(authUrl);
   const w = 520, h = 720;
   let feat = "width="+w+",height="+h+",menubar=no,toolbar=no,status=no,resizable=yes,scrollbars=yes";
   try{

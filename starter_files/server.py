@@ -54,7 +54,7 @@ def _initial_port():
 
 PORT = _initial_port()
 # v334: Eine einzige Stelle für die Generation, die graph.html erwartet.
-BACKEND_GENERATION = 356
+BACKEND_GENERATION = 357
 last_heartbeat_time = None
 server_started_time = time.time()
 HEARTBEAT_TIMEOUT_SECONDS = 180  # v204: Browser-Heartbeat; Helper beendet sich ca. 3 Minuten nach geschlossenem Tab
@@ -764,6 +764,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.split("?",1)[0] == "/api/app/shutdown":
             threading.Thread(target=self.server.shutdown, daemon=True).start()
             return self._json(200, {"ok": True, "shuttingDown": True})
+        if self.path.split("?",1)[0] == "/api/app/open-external":
+            return self.handle_app_open_external()
         if self.path.split("?",1)[0] == "/api/app/storage":
             return self.handle_app_storage_get()
         if self.path.split("?",1)[0] == "/api/app/local-csv":
@@ -808,6 +810,38 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception:
             mtime = 0
         return self._json(200, {"ok": True, "state": st, "updatedAt": mtime, "path": STATE_FILE})
+
+    def handle_app_open_external(self):
+        data = self._read_json()
+        url = str(data.get("url") or "").strip() if isinstance(data, dict) else ""
+        try:
+            parsed = urllib.parse.urlparse(url)
+            host = (parsed.hostname or "").lower()
+            allowed = (
+                parsed.scheme == "https"
+                and (
+                    host == "login.microsoftonline.com"
+                    or host.endswith(".login.microsoftonline.com")
+                    or host == "login.microsoft.com"
+                    or host.endswith(".login.microsoft.com")
+                )
+            )
+            if not allowed:
+                return self._json(400, {"ok": False, "error": "Adresse de connexion non autorisée."})
+            if sys.platform == "darwin":
+                subprocess.Popen(
+                    ["/usr/bin/open", url],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+            elif sys.platform.startswith("win"):
+                os.startfile(url)  # type: ignore[attr-defined]
+            else:
+                webbrowser.open(url)
+            return self._json(200, {"ok": True})
+        except Exception as exc:
+            return self._json(500, {"ok": False, "error": str(exc)})
 
     def handle_app_storage_post(self):
         data = self._read_json()
@@ -1285,6 +1319,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.split("?",1)[0] == "/api/app/shutdown":
             threading.Thread(target=self.server.shutdown, daemon=True).start()
             return self._json(200, {"ok": True, "shuttingDown": True})
+        if self.path.split("?",1)[0] == "/api/app/open-external":
+            return self.handle_app_open_external()
         if self.path.split("?",1)[0] == "/api/app/storage":
             return self.handle_app_storage_post()
         if self.path.split("?",1)[0] == "/api/app/session-status":
@@ -1439,6 +1475,7 @@ HELPER_ALLOWED_TARGETS = {
     "EntretienConnect-Start.bat",
     "EntretienConnect-Start-Hidden.bat",
     "EntretienConnect-WKWebView.js",
+    "EntretienConnect-AppWindow.js",
     "cacert.pem",
     "VERSION.txt",
 }
@@ -1769,7 +1806,8 @@ def main():
         # Benutzers. e-Bichelchen wird erst beim Klick auf « Connecter » in einem
         # separaten, app-artigen Loginfenster geöffnet. Dadurch ist EntretienConnect
         # weder an Firefox noch an Chrome/Safari als Standardbrowser gebunden.
-        threading.Timer(0.45, lambda: _open_in_browser(url)).start()
+        if os.environ.get("ENTRETIENCONNECT_NO_AUTO_OPEN", "").strip().lower() not in ("1", "true", "yes"):
+            threading.Timer(0.45, lambda: _open_in_browser(url)).start()
         def _watchdog():
             global last_heartbeat_time
             last_tick = time.time()

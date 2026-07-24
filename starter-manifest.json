@@ -1,11 +1,11 @@
 {
-  "version": "v356",
+  "version": "v357",
   "files": [
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "affec3c4734c29091580513db42c4299a0131ef61dec1decc35a5f035fcdbe96",
-      "size": 78639
+      "sha256": "ba59f534e815931a1d204d3122000a0fb1ff397e0026643ff184d50e1885b9aa",
+      "size": 80372
     },
     {
       "target": "ebichelchen.py",
@@ -44,9 +44,15 @@
       "size": 16522
     },
     {
+      "target": "EntretienConnect-AppWindow.js",
+      "url": "starter_files/EntretienConnect-AppWindow.js",
+      "sha256": "d17ba258bfe70957cc463e9c5bc9fee627363b4e9e68b8fdfe5adb435f681002",
+      "size": 5983
+    },
+    {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "c71bf08945cb121925ec59304dc3726a54c8ff7c668c290128adfb2ab3ee3f7f",
+      "sha256": "3a6abcba3e863712a62c60d5bde7a77c5b169e129bdf0e75f3e9bc8b3ccf1881",
       "size": 5
     },
     {

@@ -1,5 +1,19 @@
-# EntretienConnect v356
+# EntretienConnect v357
 
+
+
+**Eigenes App-Fenster auf Mac und Windows.** Der Mac-Starter hält die
+Hauptoberfläche nun selbst in einem nativen WKWebView-Fenster; Safari wird beim
+normalen Start nicht mehr geöffnet. Unter Windows bleibt die portable
+WebView2-Hülle aus v356 erhalten. Damit erscheinen auf beiden Systemen weder
+Adressleiste noch Tabs oder die lokale Adresse `127.0.0.1`.
+
+Microsoft- und e-Bichelchen-Anmeldungen bleiben bewusst getrennt von der
+Hauptoberfläche. CSV-, Speicher-, Versand- und GitHub-Update-Logik bleiben
+unverändert. Die App wird weiterhin nur vollständig entpackt und per Doppelklick
+gestartet – ohne Installation und ohne Administratorrechte.
+
+## v356
 
 **Eigenes Windows-App-Fenster ohne Browser-Tab.** Die Windows-Starterdatei
 öffnet EntretienConnect jetzt in einer eigenen portablen Desktop-Hülle auf Basis
