@@ -3,7 +3,7 @@ ObjC.import('WebKit');
 ObjC.import('Foundation');
 
 /*
- * EntretienConnect v361 – native macOS main window.
+ * EntretienConnect v362 – native macOS main window.
  *
  * This script is launched by EntretienConnect_MAC.app through the system JXA
  * runtime. It embeds the local EntretienConnect interface in WKWebView without
@@ -123,7 +123,8 @@ function run(argv) {
     const style = $.NSWindowStyleMaskTitled |
       $.NSWindowStyleMaskClosable |
       $.NSWindowStyleMaskMiniaturizable |
-      $.NSWindowStyleMaskResizable;
+      $.NSWindowStyleMaskResizable |
+      $.NSWindowStyleMaskFullSizeContentView;
     EC_WINDOW = $.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer(
       rect,
       style,
@@ -131,6 +132,12 @@ function run(argv) {
       false
     );
     EC_WINDOW.setTitle($('EntretienConnect'));
+    // v362: Die macOS-Fensterknöpfe bleiben erhalten, Titeltext und abgesetzter
+    // heller Balken verschwinden. Der Webinhalt läuft wie bei GrilleÉval bis
+    // unter die transparente Titelleiste.
+    try { EC_WINDOW.setTitleVisibility($.NSWindowTitleHidden); } catch (_) {}
+    try { EC_WINDOW.setTitlebarAppearsTransparent(true); } catch (_) {}
+    try { EC_WINDOW.setTitlebarSeparatorStyle($.NSTitlebarSeparatorStyleNone); } catch (_) {}
     EC_WINDOW.setReleasedWhenClosed(false);
     EC_WINDOW.setMinSize($.NSMakeSize(980, 650));
 

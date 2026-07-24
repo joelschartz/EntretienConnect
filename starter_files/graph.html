@@ -706,6 +706,12 @@
   .maintenance-modal .confirm-word{font-weight:900;color:var(--ink);letter-spacing:.06em}
   .maintenance-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
   .maintenance-modal input{width:100%;height:42px;border-radius:11px;padding:8px 12px;font-weight:800;letter-spacing:.05em}
+  .disconnect-modal-backdrop{position:fixed;inset:0;z-index:10055;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.32);padding:22px}
+  .disconnect-modal-backdrop.open{display:flex}
+  .disconnect-modal{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 70px rgba(20,30,60,.24);padding:22px}
+  .disconnect-modal h3{margin:0 0 9px;font-size:18px}
+  .disconnect-modal p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5}
+  .disconnect-modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 
   /* v236: Performance-Test gegen v220.
      Das große Karten-Grading aus v234 ist deaktiviert, weil es beim Scrollen/Tippen
@@ -1297,7 +1303,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v361</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v362</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1313,6 +1319,17 @@
     <div class="maintenance-modal-actions">
       <button type="button" class="ghost sm" id="factoryResetCancel">Annuler</button>
       <button type="button" id="factoryResetDo" disabled>Réinitialiser</button>
+    </div>
+  </div>
+</div>
+
+<div id="disconnectModal" class="disconnect-modal-backdrop" aria-hidden="true">
+  <div class="disconnect-modal" role="dialog" aria-modal="true" aria-labelledby="disconnectModalTitle">
+    <h3 id="disconnectModalTitle">Se déconnecter ?</h3>
+    <p id="disconnectModalText">La connexion enregistrée dans EntretienConnect sera supprimée.</p>
+    <div class="disconnect-modal-actions">
+      <button type="button" class="ghost" id="disconnectModalCancel">Annuler</button>
+      <button type="button" id="disconnectModalConfirm">Se déconnecter</button>
     </div>
   </div>
 </div>
@@ -1588,7 +1605,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 361;
+const APP_VERSION = 362;
 
 function nativeMacBridgeSync(action,message,defaultValue){
   try{
@@ -3444,11 +3461,47 @@ function renderSetup(){
   document.querySelectorAll('[data-setup-eb-disconnect]').forEach(btn=>btn.onclick=ebDisconnectFlow);
   document.querySelectorAll('[data-setup-ms-disconnect]').forEach(btn=>btn.onclick=msDisconnectFlow);
 }
+let pendingDisconnectConfirmation=null;
+function finishDisconnectConfirmation(confirmed){
+  const modal=document.getElementById("disconnectModal");
+  if(modal){
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden","true");
+  }
+  const resolve=pendingDisconnectConfirmation;
+  pendingDisconnectConfirmation=null;
+  if(resolve) resolve(!!confirmed);
+}
+function askDisconnectConfirmation(title){
+  const modal=document.getElementById("disconnectModal");
+  const titleNode=document.getElementById("disconnectModalTitle");
+  if(!modal || !titleNode) return Promise.resolve(confirm(String(title||"Se déconnecter ?")));
+  if(pendingDisconnectConfirmation) finishDisconnectConfirmation(false);
+  titleNode.textContent=String(title||"Se déconnecter ?");
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden","false");
+  return new Promise(resolve=>{
+    pendingDisconnectConfirmation=resolve;
+    setTimeout(()=>{ const btn=document.getElementById("disconnectModalCancel"); if(btn) btn.focus(); },30);
+  });
+}
+(function bindDisconnectConfirmation(){
+  const modal=document.getElementById("disconnectModal");
+  const cancel=document.getElementById("disconnectModalCancel");
+  const confirmBtn=document.getElementById("disconnectModalConfirm");
+  if(cancel) cancel.onclick=()=>finishDisconnectConfirmation(false);
+  if(confirmBtn) confirmBtn.onclick=()=>finishDisconnectConfirmation(true);
+  if(modal) modal.addEventListener("click",ev=>{ if(ev.target===modal) finishDisconnectConfirmation(false); });
+  document.addEventListener("keydown",ev=>{
+    if(ev.key==="Escape" && modal && modal.classList.contains("open")) finishDisconnectConfirmation(false);
+  });
+})();
+
 // v337: Abmelden von e-Bichelchen. Gleiche Aufräumarbeit wie beim abgebrochenen
 // Login, nur bewusst ausgelöst: die gelesene Klasse wird verworfen und die
 // Sitzung serverseitig verworfen, damit die nächste Anmeldung sauber startet.
 async function ebDisconnectFlow(){
-  if(!confirm("Se déconnecter d’e-Bichelchen ?\n\nLa classe et les élèves importés depuis e-Bichelchen seront retirés. Vos modèles et votre signature ne sont pas touchés.")) return;
+  if(!await askDisconnectConfirmation("Se déconnecter d’e-Bichelchen ?")) return;
   try{ ebStopAuto(); }catch(_){ }
   ebConnectBusy=false;
   ebLoginPending=false;
@@ -3466,10 +3519,9 @@ async function ebDisconnectFlow(){
   renderMails();
   setEbStatus("Déconnecté d’e-Bichelchen.","info");
 }
-// v337: Abmelden von Microsoft. Löscht die lokal gespeicherten Token. Die
-// Anmeldung im Browser selbst bleibt bestehen – darauf wird hingewiesen.
+// v337: Abmelden von Microsoft. Löscht die lokal gespeicherten Token.
 async function msDisconnectFlow(){
-  if(!confirm("Se déconnecter de Microsoft 365 ?\n\nLes jetons enregistrés localement seront supprimés. Votre session Microsoft dans le navigateur reste ouverte : la prochaine connexion pourra donc se faire sans mot de passe.")) return;
+  if(!await askDisconnectConfirmation("Se déconnecter de Microsoft 365 ?")) return;
   try{ await api("/api/graph/logout"); }catch(_){ }
   account=null;
   renderAuth();

@@ -1,5 +1,5 @@
 /*
- * EntretienConnect v361 – native macOS dialogs and file selection.
+ * EntretienConnect v362 – native macOS dialogs and file selection.
  *
  * This script is invoked by the local helper. It gives the WKWebView app shell
  * the same confirmations, prompts, alerts and file picker behavior that Safari

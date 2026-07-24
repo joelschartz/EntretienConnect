@@ -1,4 +1,17 @@
-# EntretienConnect v361
+# EntretienConnect v362
+
+**Klare Abmeldung und rahmenloses Mac-Hauptfenster.** Microsoft 365 und
+e-Bichelchen verwenden jetzt denselben kurzen Abmeldetext mit den eindeutigen
+Schaltflächen „Annuler“ und „Se déconnecter“. Technische Token- und
+Browser-Erklärungen entfallen. Der frühere Hinweis, die aus e-Bichelchen
+importierten Schüler würden beim Abmelden entfernt, wurde berichtigt: Die
+Schülerliste bleibt erhalten.
+
+Auf macOS bleiben die drei Fensterknöpfe sichtbar, während der abgesetzte helle
+Titelleistenbalken und der dort wiederholte App-Name verschwinden. Die Oberfläche
+reicht wie bei GrilleÉval bis unter die transparente Titelleiste.
+
+## v361
 
 **Kompakte Schülerliste und geordnete Importaktionen.** Die in v359 ergänzte
 sichtbare e-Bichelchen-Zuordnungszeile mit Auswahlfeld und „lié“ ist wieder
