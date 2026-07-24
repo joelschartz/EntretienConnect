@@ -1,4 +1,19 @@
-# EntretienConnect v355
+# EntretienConnect v356
+
+
+**Eigenes Windows-App-Fenster ohne Browser-Tab.** Die Windows-Starterdatei
+öffnet EntretienConnect jetzt in einer eigenen portablen Desktop-Hülle auf Basis
+von Microsoft Edge WebView2. Beim normalen Start wird kein Standardbrowser mehr
+aufgerufen; Adressleiste und leerer zweiter Tab entfallen. Der lokale
+PowerShell-Helfer sowie Microsoft-, e-Bichelchen-, CSV-, Speicher- und
+Update-Funktionen bleiben unverändert. Die App wird weiterhin nur entpackt und
+per Doppelklick gestartet – ohne Installation und ohne Administratorrechte.
+
+Falls WebView2 auf einem einzelnen PC fehlt oder blockiert ist, zeigt die
+Starterdatei einen Hinweis und öffnet die lokale Oberfläche als
+Kompatibilitäts-Fallback im Standardbrowser.
+
+## v355
 
 **Chromium startet ohne `--new-window`.** Der v354-Diagnoselog hat gezeigt, dass Edge bei geschlossenem Browser selbst eine leere Startseite zusätzlich zur EntretienConnect-Adresse erzeugt hat. Deshalb wird Chromium nun ausschließlich mit der EntretienConnect-URL gestartet. Normaler Browsermodus, Standardprofil, Fenstergeometrie und Login-Popups bleiben unverändert.
 
