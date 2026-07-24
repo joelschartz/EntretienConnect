@@ -1,10 +1,10 @@
 {
-  "version": "v360",
+  "version": "v361",
   "files": [
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "9642666247105100bfd4fffd0b4f8a1cefc421838fa92d8188b0c6b61e812f1d",
+      "sha256": "4cc9f03ce46a9767fcc3c9b3fe887004d887ade189702b0e926e625b94aedf65",
       "size": 86704
     },
     {
@@ -46,25 +46,25 @@
     {
       "target": "EntretienConnect-AppWindow.js",
       "url": "starter_files/EntretienConnect-AppWindow.js",
-      "sha256": "b5b729da94d305d99e4b0b1e3b6f713cc2a3ed5ff852e0679fabaa1e8fa97d47",
+      "sha256": "191f29dd8a59cda38aed863ae01c112d23ed65eeee39c12b64181b7ce18571b4",
       "size": 6147
     },
     {
       "target": "EntretienConnect-NativeBridge.js",
       "url": "starter_files/EntretienConnect-NativeBridge.js",
-      "sha256": "fefa5d8a42b8170b72c231f9523cdd0990c16a4e6fb64ed5498a5d03c19a5848",
+      "sha256": "95d14891690d5cd90e151a61224982ebec1e4719fbeddb5344efd0aba7f26630",
       "size": 2472
     },
     {
       "target": "EntretienConnect-MicrosoftWindow.js",
       "url": "starter_files/EntretienConnect-MicrosoftWindow.js",
-      "sha256": "541b032a59d6f497d076cfdcf52ec1093acd5e0458500ff86454a2c246200cb9",
+      "sha256": "d28d0f6b77ec9607c38d4c9f17398d1c7a4fc94181aed68d80122247aacb3768",
       "size": 6186
     },
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "fb8c069a9351da07603c2e447d47b1b20ec3c00f43d422b132d742b71d95fc2c",
+      "sha256": "8b6fd2dc3f3495fec8d85d7a2a2cb9269a39a64f7240f8e78ade4158ee6c9e98",
       "size": 5
     },
     {

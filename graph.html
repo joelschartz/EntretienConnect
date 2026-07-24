@@ -601,7 +601,7 @@
   .setup-reminder-choice{margin-top:14px}.setup-reminder-card{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fff,#fbfbfe);padding:14px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}.setup-reminder-card h3{font-size:13px;margin:0 0 4px;color:var(--ink);text-transform:none;letter-spacing:0}.setup-reminder-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.4}.setup-reminder-card .reminder-main{box-shadow:none}
   .send-setup-card .send-mode-summary{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}.send-reminder-settings{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}.send-reminder-settings .reminder-controls{margin-top:8px}
   .student-source-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}.student-mode-note{margin-bottom:12px}.students-eb-only #studentTable{margin-top:16px}
-  .student-name-stack{display:flex;flex-direction:column;gap:7px;min-width:0}.student-eb-link{display:flex;align-items:center;gap:7px;padding-left:30px;min-width:0}.student-eb-link select{height:30px;min-width:0;max-width:260px;padding:4px 28px 4px 8px;border-radius:9px;font-size:12px;background:#fff}.student-eb-link-status{font-size:11px;font-weight:800;white-space:nowrap}.student-eb-link-status.ok{color:var(--ok)}.student-eb-link-status.miss{color:var(--err)}
+  .student-import-stack{display:flex;flex-direction:column;align-items:flex-end;gap:8px}.student-csv-row{display:flex;align-items:center;justify-content:flex-end;gap:8px}
   .source-pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:4px 8px;font-size:11.5px;font-weight:780;color:var(--muted)}
   @media (max-width:900px){.setup-hero{grid-template-columns:1fr}.setup-mode-grid{grid-template-columns:1fr}.setup-mode-card{min-height:0}}
   /* e-Bichelchen-Kanal */
@@ -1297,7 +1297,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v360</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v361</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1377,15 +1377,19 @@
         </select>
       </div>
       <div id="studentTable"></div>
-      <div class="toolbar" style="margin-top:14px">
+      <div class="toolbar" style="margin-top:14px;align-items:flex-start">
         <button id="addStudent">+ Ajouter un élève</button>
-        <button class="ghost sm" id="importEbStudentsBtn" type="button" style="display:none">Importer depuis e-Bichelchen</button>
         <div class="spacer"></div>
-        <button class="ghost sm" id="importCsvBtn">Importer un CSV</button>
-        <span class="tip tip-left csv-hint" tabindex="0" data-tip="Format CSV — 1 élève par ligne :
+        <div class="student-import-stack">
+          <div class="student-csv-row">
+            <button class="ghost sm" id="importCsvBtn">Importer un CSV</button>
+            <span class="tip tip-left csv-hint" tabindex="0" data-tip="Format CSV — 1 élève par ligne :
 Élève, contact1@…, langue1, contact2@…, langue2
 Langues : FR, DE, EN, LU">?</span>
-        <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
+            <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
+          </div>
+          <button class="ghost sm" id="importEbStudentsBtn" type="button" style="display:none">Importer depuis e-Bichelchen</button>
+        </div>
       </div>
     </div>
   </section>
@@ -1584,7 +1588,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 360;
+const APP_VERSION = 361;
 
 function nativeMacBridgeSync(action,message,defaultValue){
   try{
@@ -3671,23 +3675,6 @@ function ebMessageEdited(msg){
   if(!o) return false;
   return String(o.title||"")!==String(msg.defaultEbTitle||"") || String(o.desc||"")!==String(msg.defaultEbDesc||"");
 }
-function studentEbLinkHtml(stu){
-  if(!ebichelchenEnabled() || !ebReady() || !stu || !String(stu.name||"").trim()) return "";
-  const cur=ebMatchedIdFor(stu);
-  const opts=ebStudents();
-  const options='<option value="">— non lié —</option>'+opts.map(e=>{
-    const eid=String(e.id||"");
-    const label=String(e.fullName||e.name||e.id||"");
-    return '<option value="'+esc(eid)+'"'+(eid===String(cur)?' selected':'')+'>'+esc(label)+'</option>';
-  }).join("");
-  const status=cur
-    ? '<span class="student-eb-link-status ok">lié ✓</span>'
-    : '<span class="student-eb-link-status miss">non lié</span>';
-  return '<div class="student-eb-link"><select class="st-eb-map" title="Élève correspondant dans e-Bichelchen">'+options+'</select>'+status+'</div>';
-}
-function studentNameCellHtml(stu, idx){
-  return '<div class="student-name-stack"><div class="student-name-inline"><span class="student-index">'+(idx+1)+'</span><input class="st-name" value="'+esc(stu.name)+'" placeholder="Prénom et nom de l’élève"></div>'+studentEbLinkHtml(stu)+'</div>';
-}
 function renderStudents(){
   const wrap=document.getElementById("studentTable");
   const card=wrap ? wrap.closest(".card") : null;
@@ -3763,7 +3750,7 @@ function renderStudents(){
     let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th>Élève</th><th class="contact-group" style="width:80px">Langue</th><th style="width:36px"></th></tr></thead><tbody>';
     state.students.forEach((s,idx)=>{
       if(!s.langEb) s.langEb=s.lang1||"fr";
-      html += `<tr data-id="${s.id}"><td>${studentNameCellHtml(s,idx)}</td>`+
+      html += `<tr data-id="${s.id}"><td><div class="student-name-inline"><span class="student-index">${idx+1}</span><input class="st-name" value="${esc(s.name)}" placeholder="Prénom et nom de l’élève"></div></td>`+
         `<td class="contact-cell"><select class="st-leb lang-select" title="Langue du message e-Bichelchen">${langOptionsHtml(s.langEb, true)}</select></td>`+
         `<td class="actions-cell"><button class="st-del" type="button" title="Supprimer cet élève">✕</button></td></tr>`;
     });
@@ -3776,7 +3763,7 @@ function renderStudents(){
     state.students.forEach((s,idx)=>{
       if(!s.lang1) s.lang1=state.options.defaultLang||"fr";
       if(!s.lang2) s.lang2=state.options.defaultLang||"fr";
-      html += `<tr data-id="${s.id}"><td>${studentNameCellHtml(s,idx)}</td>`+
+      html += `<tr data-id="${s.id}"><td><div class="student-name-inline"><span class="student-index">${idx+1}</span><input class="st-name" value="${esc(s.name)}" placeholder="Prénom et nom de l’élève"></div></td>`+
         `<td class="contact-cell"><div class="contact-inline"><input class="st-e1" value="${esc(s.email1)}" placeholder="contact1@..."><select class="st-l1 lang-select" title="Langue du contact 1">${langOptionsHtml(s.lang1, true)}</select></div></td>`+
         `<td class="contact-cell contact2-start"><div class="contact-inline"><input class="st-e2" value="${esc(s.email2)}" placeholder="contact2@..."><select class="st-l2 lang-select" title="Langue du contact 2">${langOptionsHtml(s.lang2, true)}</select></div></td>`+
         `<td class="actions-cell"><button class="st-del" type="button" title="Supprimer cet élève">✕</button></td></tr>`;
@@ -3802,12 +3789,6 @@ function renderStudents(){
     });
     const ebLangSel=tr.querySelector(".st-leb");
     if(ebLangSel) ebLangSel.onchange=e=>{ st.langEb=normalizeLang(e.target.value); saveState(); renderMails(); };
-    const ebMapSel=tr.querySelector(".st-eb-map");
-    if(ebMapSel) ebMapSel.onchange=e=>{
-      state.ebichelchenMap=state.ebichelchenMap||{};
-      state.ebichelchenMap[id]=e.target.value?Number(e.target.value):"";
-      saveState(); renderStudents(); renderMails(); applyChannelVisibility();
-    };
     const del=tr.querySelector(".st-del");
     if(del) del.onclick=()=>{ state.students=state.students.filter(x=>x.id!==id); if(state.ebichelchenMap) delete state.ebichelchenMap[id]; if(state.reminderAttachments) delete state.reminderAttachments[id]; Object.keys(state.assignments).forEach(k=>{ if(state.assignments[k]===id) delete state.assignments[k]; }); saveState(); renderStudents(); renderSetup(); renderMails(); };
   });

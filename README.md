@@ -1,4 +1,15 @@
-# EntretienConnect v360
+# EntretienConnect v361
+
+**Kompakte Schülerliste und geordnete Importaktionen.** Die in v359 ergänzte
+sichtbare e-Bichelchen-Zuordnungszeile mit Auswahlfeld und „lié“ ist wieder
+vollständig entfernt. Namen und Kontakte erscheinen wieder kompakt in einer
+Zeile; automatische Zuordnung und Versandkontrolle bleiben im Hintergrund
+erhalten.
+
+„Importer un CSV“ steht rechts oben. Wenn bei einer aktiven e-Bichelchen-Sitzung
+Schüler fehlen, erscheint der e-Bichelchen-Import direkt darunter.
+
+## v360
 
 **Größeres Mac-Fenster, selbstschließende Microsoft-Anmeldung und erneuter
 e-Bichelchen-Import.** Das native Hauptfenster nutzt nun ähnlich wie GrilleÉval

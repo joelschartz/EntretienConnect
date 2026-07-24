@@ -3,7 +3,7 @@ ObjC.import('WebKit');
 ObjC.import('Foundation');
 
 /*
- * EntretienConnect v360 – native macOS Microsoft login window.
+ * EntretienConnect v361 – native macOS Microsoft login window.
  *
  * The login stays in a separate WKWebView window. Once the local OAuth
  * callback has finished and displays the success page, this process closes its

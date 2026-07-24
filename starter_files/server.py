@@ -54,7 +54,7 @@ def _initial_port():
 
 PORT = _initial_port()
 # v334: Eine einzige Stelle für die Generation, die graph.html erwartet.
-BACKEND_GENERATION = 360
+BACKEND_GENERATION = 361
 last_heartbeat_time = None
 server_started_time = time.time()
 # v359: In der nativen App bestimmt das App-Fenster die Lebensdauer des Helpers
