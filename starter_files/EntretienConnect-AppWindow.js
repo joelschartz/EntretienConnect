@@ -3,7 +3,7 @@ ObjC.import('WebKit');
 ObjC.import('Foundation');
 
 /*
- * EntretienConnect v359 – native macOS main window.
+ * EntretienConnect v360 – native macOS main window.
  *
  * This script is launched by EntretienConnect_MAC.app through the system JXA
  * runtime. It embeds the local EntretienConnect interface in WKWebView without
@@ -111,8 +111,10 @@ function run(argv) {
       const visible = $.NSScreen.mainScreen.visibleFrame;
       const screenWidth = Number(visible.size.width);
       const screenHeight = Number(visible.size.height);
-      width = Math.min(Math.max(Math.round(screenWidth * 0.72), 1050), screenWidth - 40);
-      height = Math.min(Math.max(Math.round(screenHeight * 0.72), 700), screenHeight - 50);
+      // v360: ähnlich GrilleÉval deutlich bildschirmfüllender öffnen. Die
+      // verfügbaren macOS-Ränder (Menüleiste/Dock) werden weiterhin respektiert.
+      width = Math.min(Math.max(Math.round(screenWidth * 0.90), 1200), screenWidth - 24);
+      height = Math.min(Math.max(Math.round(screenHeight * 0.90), 780), screenHeight - 24);
       left = Number(visible.origin.x) + Math.max(0, Math.round((screenWidth - width) / 2));
       bottom = Number(visible.origin.y) + Math.max(0, Math.round((screenHeight - height) / 2));
     } catch (_) {}

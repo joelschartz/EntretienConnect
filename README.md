@@ -1,4 +1,18 @@
-# EntretienConnect v359
+# EntretienConnect v360
+
+**Größeres Mac-Fenster, selbstschließende Microsoft-Anmeldung und erneuter
+e-Bichelchen-Import.** Das native Hauptfenster nutzt nun ähnlich wie GrilleÉval
+mehr von der verfügbaren Bildschirmfläche. Die Oberfläche darf breiter werden;
+Kontoname und E-Mail werden bei ausreichendem Platz vollständig angezeigt und
+können sonst umbrechen.
+
+Microsoft öffnet auf dem Mac in einem eigenen nativen EntretienConnect-Fenster,
+das sich nach der erfolgreichen OAuth-Rückleitung selbst schließt. Ist eine
+e-Bichelchen-Sitzung aktiv, erscheint der Import fehlender Schüler unabhängig
+vom gewählten Versandmodus. Damit lässt sich eine manuell gelöschte Klasse auch
+im E-Mail-Modus erneut aus e-Bichelchen einlesen.
+
+## v359
 
 **Stabil nach Inaktivität und konsistente Schülerverwaltung.** Das native
 Mac-App-Fenster bestimmt jetzt selbst die Lebensdauer des lokalen Helfers.

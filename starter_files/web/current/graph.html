@@ -52,13 +52,13 @@
   header{
     background:transparent;
     color:var(--ink);
-    padding:34px max(22px,calc((100vw - 1180px)/2 + 22px)) 16px;
+    padding:34px max(22px,calc((100vw - 1440px)/2 + 22px)) 16px;
   }
   header h1{margin:0;font-size:28px;font-weight:750;letter-spacing:-.03em}
   header p{margin:5px 0 0;color:var(--muted);font-size:14px;max-width:1120px;white-space:nowrap}
   .tabs{
     display:flex;
-    padding:10px max(16px,calc((100vw - 1180px)/2 + 16px));
+    padding:10px max(16px,calc((100vw - 1440px)/2 + 16px));
     background:rgba(246,246,249,.8);
     backdrop-filter:saturate(180%) blur(18px);
     -webkit-backdrop-filter:saturate(180%) blur(18px);
@@ -80,7 +80,7 @@
   }
   .tab:hover{color:var(--ink)}
   .tab.active{color:var(--ink);background:#fff;box-shadow:0 1px 5px rgba(28,28,45,.14);font-weight:750}
-  .wrap{max-width:1180px;margin:0 auto;padding:24px 18px 90px}
+  .wrap{max-width:1440px;margin:0 auto;padding:24px 18px 90px}
   .panel{display:none}.panel.active{display:block}
   .card{
     background:rgba(255,255,255,.9);
@@ -600,7 +600,8 @@
   .setup-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}.setup-current{margin-top:10px}
   .setup-reminder-choice{margin-top:14px}.setup-reminder-card{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fff,#fbfbfe);padding:14px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}.setup-reminder-card h3{font-size:13px;margin:0 0 4px;color:var(--ink);text-transform:none;letter-spacing:0}.setup-reminder-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.4}.setup-reminder-card .reminder-main{box-shadow:none}
   .send-setup-card .send-mode-summary{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}.send-reminder-settings{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}.send-reminder-settings .reminder-controls{margin-top:8px}
-  .student-source-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}.student-mode-note{margin-bottom:12px}.students-eb-only .email-only{display:none!important}.students-eb-only #studentTable{margin-top:16px}.students-eb-only .csv-hint{display:none!important}.students-eb-only .student-lang-default{display:none!important}
+  .student-source-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}.student-mode-note{margin-bottom:12px}.students-eb-only #studentTable{margin-top:16px}
+  .student-name-stack{display:flex;flex-direction:column;gap:7px;min-width:0}.student-eb-link{display:flex;align-items:center;gap:7px;padding-left:30px;min-width:0}.student-eb-link select{height:30px;min-width:0;max-width:260px;padding:4px 28px 4px 8px;border-radius:9px;font-size:12px;background:#fff}.student-eb-link-status{font-size:11px;font-weight:800;white-space:nowrap}.student-eb-link-status.ok{color:var(--ok)}.student-eb-link-status.miss{color:var(--err)}
   .source-pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:4px 8px;font-size:11.5px;font-weight:780;color:var(--muted)}
   @media (max-width:900px){.setup-hero{grid-template-columns:1fr}.setup-mode-grid{grid-template-columns:1fr}.setup-mode-card{min-height:0}}
   /* e-Bichelchen-Kanal */
@@ -1050,6 +1051,17 @@
   .setup-mode-card[data-mode="ebichelchen"].active:after{background:var(--ok)!important}
   .setup-mode-card[data-mode="email"].active:after{background:var(--accent)!important}
   .setup-mode-card[data-mode="both"].active:after{background:#c98a2e!important}
+  /* v360: Kontoname und E-Mail nicht mehr mit … abschneiden. Die Zeile darf
+     innerhalb der Karte wachsen bzw. umbrechen; erst der Bildschirm begrenzt sie. */
+  .setup-mode-connect-slot .setup-status-row{width:100%!important;max-width:none!important;flex-wrap:wrap!important}
+  .setup-mode-connect-slot .status-main{flex:1 1 210px!important;max-width:none!important;min-width:0}
+  .setup-mode-connect-slot .status-detail{
+    max-width:none!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    overflow-wrap:anywhere
+  }
   /* Verbindungszeilen sitzen im Drittel der Karte, mit feiner Trennlinie und hellem Sockel,
      damit der Farbton der Karte ringsum durchscheint. */
   .setup-mode-card.active .setup-mode-connect-slot{
@@ -1285,7 +1297,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v357</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v360</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1369,8 +1381,8 @@
         <button id="addStudent">+ Ajouter un élève</button>
         <button class="ghost sm" id="importEbStudentsBtn" type="button" style="display:none">Importer depuis e-Bichelchen</button>
         <div class="spacer"></div>
-        <button class="ghost sm email-only" id="importCsvBtn">Importer un CSV</button>
-        <span class="tip tip-left email-only csv-hint" tabindex="0" data-tip="Format CSV — 1 élève par ligne :
+        <button class="ghost sm" id="importCsvBtn">Importer un CSV</button>
+        <span class="tip tip-left csv-hint" tabindex="0" data-tip="Format CSV — 1 élève par ligne :
 Élève, contact1@…, langue1, contact2@…, langue2
 Langues : FR, DE, EN, LU">?</span>
         <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
@@ -1572,7 +1584,48 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 357;
+const APP_VERSION = 360;
+
+function nativeMacBridgeSync(action,message,defaultValue){
+  try{
+    const xhr=new XMLHttpRequest();
+    xhr.open("POST","/api/app/native-dialog",false);
+    xhr.setRequestHeader("Content-Type","application/json");
+    xhr.send(JSON.stringify({action:String(action||""),message:String(message||""),defaultValue:String(defaultValue||"")}));
+    if(xhr.status<200 || xhr.status>=300) return {ok:false};
+    return JSON.parse(xhr.responseText||"{}");
+  }catch(_){ return {ok:false}; }
+}
+async function nativeChooseFile(kind){
+  try{
+    const res=await fetch("/api/app/choose-file",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({kind:String(kind||"")}),
+      cache:"no-store"
+    });
+    const data=await res.json();
+    if(!res.ok && !data.error) data.error="La sélection du fichier a échoué.";
+    return data;
+  }catch(e){
+    return {ok:false,error:String(e&&e.message||e||"La sélection du fichier a échoué.")};
+  }
+}
+(function installNativeMacDialogs(){
+  if(!isNativeMacAppShell()) return;
+  window.alert=function(message){
+    nativeMacBridgeSync("alert",message,"");
+  };
+  window.confirm=function(message){
+    const result=nativeMacBridgeSync("confirm",message,"");
+    return !!(result && result.ok && result.value===true);
+  };
+  window.prompt=function(message,defaultValue){
+    const result=nativeMacBridgeSync("prompt",message,defaultValue==null?"":defaultValue);
+    if(!result || !result.ok || result.cancelled) return null;
+    return result.value==null ? "" : String(result.value);
+  };
+})();
 
 window.addEventListener("error", function(ev){
   try{
@@ -3618,6 +3671,23 @@ function ebMessageEdited(msg){
   if(!o) return false;
   return String(o.title||"")!==String(msg.defaultEbTitle||"") || String(o.desc||"")!==String(msg.defaultEbDesc||"");
 }
+function studentEbLinkHtml(stu){
+  if(!ebichelchenEnabled() || !ebReady() || !stu || !String(stu.name||"").trim()) return "";
+  const cur=ebMatchedIdFor(stu);
+  const opts=ebStudents();
+  const options='<option value="">— non lié —</option>'+opts.map(e=>{
+    const eid=String(e.id||"");
+    const label=String(e.fullName||e.name||e.id||"");
+    return '<option value="'+esc(eid)+'"'+(eid===String(cur)?' selected':'')+'>'+esc(label)+'</option>';
+  }).join("");
+  const status=cur
+    ? '<span class="student-eb-link-status ok">lié ✓</span>'
+    : '<span class="student-eb-link-status miss">non lié</span>';
+  return '<div class="student-eb-link"><select class="st-eb-map" title="Élève correspondant dans e-Bichelchen">'+options+'</select>'+status+'</div>';
+}
+function studentNameCellHtml(stu, idx){
+  return '<div class="student-name-stack"><div class="student-name-inline"><span class="student-index">'+(idx+1)+'</span><input class="st-name" value="'+esc(stu.name)+'" placeholder="Prénom et nom de l’élève"></div>'+studentEbLinkHtml(stu)+'</div>';
+}
 function renderStudents(){
   const wrap=document.getElementById("studentTable");
   const card=wrap ? wrap.closest(".card") : null;
@@ -3629,7 +3699,7 @@ function renderStudents(){
   const note=document.getElementById("studentModeNote");
   const importEbBtn=document.getElementById("importEbStudentsBtn");
   const addStudentBtn=document.getElementById("addStudent");
-  if(addStudentBtn){ addStudentBtn.style.display = eb ? "none" : "inline-block"; }
+  if(addStudentBtn){ addStudentBtn.style.display = "inline-block"; }
   if(title) title.textContent = eb && !em ? "Élèves e-Bichelchen" : "Liste des élèves";
   if(intro){
     // v218: en mode e-mail seul, pas de phrase d'intro — les champs se suffisent.
@@ -3661,8 +3731,11 @@ function renderStudents(){
   const resetStudentsRow=document.getElementById("resetStudentsRow");
   if(resetStudentsRow) resetStudentsRow.style.display = state.students.length>0 ? "" : "none";
   if(importEbBtn){
-    const missingCount = eb ? ebMissingImportCount() : 0;
-    const canImportMissing = eb && ebReady() && missingCount>0;
+    // v360: Die Schülerquelle ist unabhängig vom Versandmodus. Sobald eine
+    // e-Bichelchen-Sitzung verfügbar ist, können fehlende Schüler erneut
+    // importiert werden – auch wenn momentan „E-mail“ gewählt ist.
+    const missingCount = ebReady() ? ebMissingImportCount() : 0;
+    const canImportMissing = ebReady() && missingCount>0;
     importEbBtn.style.display = canImportMissing ? "inline-block" : "none";
     importEbBtn.disabled = false;
     importEbBtn.textContent = missingCount===1 ? "Importer 1 élève depuis e-Bichelchen" : "Importer "+missingCount+" élèves depuis e-Bichelchen";
@@ -3674,8 +3747,8 @@ function renderStudents(){
     let emptyMsg;
     if(eb && !em){
       emptyMsg = ebReady()
-        ? "Aucun élève pour l’instant. Utilisez le bouton « Importer … depuis e-Bichelchen » ci-dessous."
-        : "Aucun élève pour l’instant. Connectez e-Bichelchen dans l’onglet « 1 · Démarrage » — la classe sera importée automatiquement.";
+        ? "Aucun élève pour l’instant. Importez la classe e-Bichelchen, ajoutez un élève ou importez un CSV."
+        : "Aucun élève pour l’instant. Ajoutez un élève ou importez un CSV. Vous pourrez aussi importer et vérifier la classe après la connexion e-Bichelchen.";
     } else if(eb && em){
       emptyMsg = ebReady()
         ? "Aucun élève pour l’instant. Importez les élèves depuis e-Bichelchen ou par CSV, puis complétez les adresses e-mail."
@@ -3690,7 +3763,7 @@ function renderStudents(){
     let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th>Élève</th><th class="contact-group" style="width:80px">Langue</th><th style="width:36px"></th></tr></thead><tbody>';
     state.students.forEach((s,idx)=>{
       if(!s.langEb) s.langEb=s.lang1||"fr";
-      html += `<tr data-id="${s.id}"><td><div class="student-name-inline"><span class="student-index">${idx+1}</span><input class="st-name" value="${esc(s.name)}" placeholder="Prénom et nom de l’élève"></div></td>`+
+      html += `<tr data-id="${s.id}"><td>${studentNameCellHtml(s,idx)}</td>`+
         `<td class="contact-cell"><select class="st-leb lang-select" title="Langue du message e-Bichelchen">${langOptionsHtml(s.langEb, true)}</select></td>`+
         `<td class="actions-cell"><button class="st-del" type="button" title="Supprimer cet élève">✕</button></td></tr>`;
     });
@@ -3703,7 +3776,7 @@ function renderStudents(){
     state.students.forEach((s,idx)=>{
       if(!s.lang1) s.lang1=state.options.defaultLang||"fr";
       if(!s.lang2) s.lang2=state.options.defaultLang||"fr";
-      html += `<tr data-id="${s.id}"><td><div class="student-name-inline"><span class="student-index">${idx+1}</span><input class="st-name" value="${esc(s.name)}" placeholder="Prénom et nom de l’élève"></div></td>`+
+      html += `<tr data-id="${s.id}"><td>${studentNameCellHtml(s,idx)}</td>`+
         `<td class="contact-cell"><div class="contact-inline"><input class="st-e1" value="${esc(s.email1)}" placeholder="contact1@..."><select class="st-l1 lang-select" title="Langue du contact 1">${langOptionsHtml(s.lang1, true)}</select></div></td>`+
         `<td class="contact-cell contact2-start"><div class="contact-inline"><input class="st-e2" value="${esc(s.email2)}" placeholder="contact2@..."><select class="st-l2 lang-select" title="Langue du contact 2">${langOptionsHtml(s.lang2, true)}</select></div></td>`+
         `<td class="actions-cell"><button class="st-del" type="button" title="Supprimer cet élève">✕</button></td></tr>`;
@@ -3729,6 +3802,12 @@ function renderStudents(){
     });
     const ebLangSel=tr.querySelector(".st-leb");
     if(ebLangSel) ebLangSel.onchange=e=>{ st.langEb=normalizeLang(e.target.value); saveState(); renderMails(); };
+    const ebMapSel=tr.querySelector(".st-eb-map");
+    if(ebMapSel) ebMapSel.onchange=e=>{
+      state.ebichelchenMap=state.ebichelchenMap||{};
+      state.ebichelchenMap[id]=e.target.value?Number(e.target.value):"";
+      saveState(); renderStudents(); renderMails(); applyChannelVisibility();
+    };
     const del=tr.querySelector(".st-del");
     if(del) del.onclick=()=>{ state.students=state.students.filter(x=>x.id!==id); if(state.ebichelchenMap) delete state.ebichelchenMap[id]; if(state.reminderAttachments) delete state.reminderAttachments[id]; Object.keys(state.assignments).forEach(k=>{ if(state.assignments[k]===id) delete state.assignments[k]; }); saveState(); renderStudents(); renderSetup(); renderMails(); };
   });
@@ -3769,10 +3848,6 @@ function validateStudentEmailsUI(opts={}){
   }
 }
 document.getElementById("addStudent").onclick=()=>{
-  if(ebichelchenEnabled()){
-    alert("Dans les modes e-Bichelchen, la liste des élèves vient de la classe e-Bichelchen. Changez de mode si vous voulez gérer les élèves manuellement.");
-    return;
-  }
   const dl=normalizeLang(state.options.defaultLang||"fr");
   state.students.push({id:uid(),name:"",email1:"",email2:"",lang1:dl,lang2:dl,langEb:dl});
   saveState(); renderStudents(); renderSetup();
@@ -3854,22 +3929,32 @@ async function maybeAutoLoadLocalCsv(reason){
     }
   }catch(e){}
 }
-document.getElementById("importCsvBtn").onclick=()=>document.getElementById("csvFile").click();
+function applyManualCsvText(text){
+  const res=importCsvText(text,{auto:false});
+  if(res.merged||res.added){
+    const parts=[];
+    if(res.added) parts.push(res.added+" élève(s) importé(s)");
+    if(res.merged) parts.push(res.merged+" complété(s)");
+    showToast(parts.join(", ")+" par CSV.");
+  } else {
+    showToast("Aucun élève reconnu dans ce fichier CSV. Vérifiez le format (voir « ? »).");
+  }
+}
+document.getElementById("importCsvBtn").onclick=async()=>{
+  if(isNativeMacAppShell()){
+    const data=await nativeChooseFile("csv");
+    if(data && data.cancelled) return;
+    if(!data || !data.ok){ alert((data&&data.error)||"Impossible de lire ce fichier CSV."); return; }
+    applyManualCsvText(data.content||"");
+    return;
+  }
+  document.getElementById("csvFile").click();
+};
 document.getElementById("csvFile").onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=()=>{
-    const res=importCsvText(r.result,{auto:false});
-    if(res.merged||res.added){
-      const parts=[];
-      if(res.added) parts.push(res.added+" élève(s) importé(s)");
-      if(res.merged) parts.push(res.merged+" complété(s)");
-      showToast(parts.join(", ")+" par CSV.");
-    } else {
-      // v217: plus d'échec silencieux — dire clairement que rien n'a été reconnu.
-      showToast("Aucun élève reconnu dans ce fichier CSV. Vérifiez le format (voir « ? »).");
-    }
-  };
+  r.onload=()=>applyManualCsvText(r.result);
+  r.onerror=()=>alert("Impossible de lire ce fichier CSV.");
   r.readAsText(f); e.target.value="";
 };
 
@@ -5294,11 +5379,41 @@ function updateTemplateSignatureView(body, renderTemplateCollapseState){
 }
 // v163: sélecteur de PDF partagé — la cible (élève + carte ouverte) est mémorisée avant l'ouverture.
 let pendingAttachStudentId=null, pendingAttachOpenId=null;
-function openReminderPdfPicker(studentId, openId){
+function storeReminderPdfPayload(payload,studentId,openId){
+  if(!payload || !studentId) return;
+  const name=String(payload.name||"rappel.pdf");
+  const size=Number(payload.size||0);
+  const contentBytes=String(payload.contentBytes||"");
+  if(!/\.pdf$/i.test(name)){ alert("Veuillez choisir un fichier PDF."); return; }
+  if(size>REMINDER_ATTACHMENT_MAX_BYTES){ alert("Le PDF est trop lourd. Maximum conseillé : 3 Mo."); return; }
+  const map=reminderAttachmentsMap();
+  const prev=map[studentId]||null;
+  const next=sanitizeReminderAttachment({name:name,mime:"application/pdf",size:size,contentBytes:contentBytes});
+  if(!next){ alert("Impossible d’attacher ce PDF."); return; }
+  map[studentId]=next;
+  if(!saveState()){
+    if(prev) map[studentId]=prev; else delete map[studentId];
+    saveState();
+    alert("Le PDF est trop lourd pour être conservé dans l’application (mémoire pleine). Essayez un fichier plus léger ou retirez d’autres PDF.");
+    renderMails(openId||undefined);
+    return;
+  }
+  renderMails(openId||undefined);
+  showToast("PDF joint au rappel ✓");
+}
+async function openReminderPdfPicker(studentId, openId){
   const input=document.getElementById("reminderPdfInput");
   if(!input || !studentId) return;
   pendingAttachStudentId=studentId;
   pendingAttachOpenId=openId||null;
+  if(isNativeMacAppShell()){
+    const data=await nativeChooseFile("pdf");
+    pendingAttachStudentId=null; pendingAttachOpenId=null;
+    if(data && data.cancelled) return;
+    if(!data || !data.ok){ alert((data&&data.error)||"Impossible de lire ce PDF."); return; }
+    storeReminderPdfPayload(data,studentId,openId||null);
+    return;
+  }
   input.click();
 }
 function removeReminderPdfFor(studentId, openId){
@@ -5317,28 +5432,15 @@ function bindReminderAttachmentControls(){
     const studentId=pendingAttachStudentId, openId=pendingAttachOpenId;
     pendingAttachStudentId=null; pendingAttachOpenId=null;
     if(!file || !studentId) return;
-    const isPdf=(file.type==="application/pdf") || /\.pdf$/i.test(file.name||"");
-    if(!isPdf){ alert("Veuillez choisir un fichier PDF."); return; }
-    if(file.size>REMINDER_ATTACHMENT_MAX_BYTES){ alert("Le PDF est trop lourd. Maximum conseillé : 3 Mo."); return; }
     const reader=new FileReader();
     reader.onerror=()=>alert("Impossible de lire ce PDF.");
     reader.onload=()=>{
       const dataUrl=String(reader.result||"");
-      const contentBytes=dataUrl.includes(",") ? dataUrl.split(",").pop() : "";
-      const map=reminderAttachmentsMap();
-      const prev=map[studentId]||null;
-      const next=sanitizeReminderAttachment({name:file.name||"rappel.pdf", mime:"application/pdf", size:file.size, contentBytes});
-      if(!next){ alert("Impossible d’attacher ce PDF."); return; }
-      map[studentId]=next;
-      if(!saveState()){
-        if(prev) map[studentId]=prev; else delete map[studentId];
-        saveState();
-        alert("Le PDF est trop lourd pour être conservé dans l’application (mémoire pleine). Essayez un fichier plus léger ou retirez d’autres PDF.");
-        renderMails(openId||undefined);
-        return;
-      }
-      renderMails(openId||undefined);
-      showToast("PDF joint au rappel ✓");
+      storeReminderPdfPayload({
+        name:file.name||"rappel.pdf",
+        size:file.size,
+        contentBytes:dataUrl.includes(",") ? dataUrl.split(",").pop() : ""
+      },studentId,openId);
     };
     reader.readAsDataURL(file);
   };
@@ -5622,10 +5724,29 @@ function bindSettings(){
   const logoFile=document.getElementById("logoFile");
   const logoModeSelect=document.getElementById("logoModeSelect");
   let logoModeBeforeUpload=state.options.logoMode || "unesco";
-  function openCustomLogoPickerFromSignature(){
+  function applyCustomLogoPayload(dataUrl,mime){
+    commitEditor(body);
+    logoModeBeforeUpload="custom";
+    state.options.logoMode="custom";
+    state.options.includeLogo=true;
+    setLogoFromDataUrl(String(dataUrl||""),mime||"image/png",true,"custom");
+  }
+  async function openCustomLogoPickerFromSignature(){
     if(!logoFile) return;
     commitEditor(body);
     logoModeBeforeUpload=state.options.logoMode || "unesco";
+    if(isNativeMacAppShell()){
+      const data=await nativeChooseFile("image");
+      if(data && data.cancelled){
+        state.options.logoMode=logoModeBeforeUpload;
+        state.options.includeLogo=logoModeBeforeUpload!=="none";
+        renderLogoPreview();
+        return;
+      }
+      if(!data || !data.ok){ alert((data&&data.error)||"Impossible de lire cette image."); return; }
+      applyCustomLogoPayload(data.dataUrl||"",data.mime||"image/png");
+      return;
+    }
     logoFile.click();
   }
   if(body && !body.dataset.logoClickWired){
@@ -5673,12 +5794,9 @@ function bindSettings(){
     }
     const isImage=(f.type||"").startsWith("image/") || /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name||"");
     if(!isImage){ alert("Veuillez choisir une image."); e.target.value=""; return; }
-    commitEditor(body);
-    logoModeBeforeUpload="custom";
-    state.options.logoMode="custom";
-    state.options.includeLogo=true;
     const r=new FileReader();
-    r.onload=()=>setLogoFromDataUrl(String(r.result), f.type||"image/png", true, "custom");
+    r.onerror=()=>alert("Impossible de lire cette image.");
+    r.onload=()=>applyCustomLogoPayload(String(r.result),f.type||"image/png");
     r.readAsDataURL(f); e.target.value="";
   };
   renderTemplatePreview(); renderLogoPreview(); renderSigMissing(); if((state.options.logoMode||"unesco")==="unesco") loadUnescoLogo(false);
@@ -6875,7 +6993,7 @@ function applyChannelVisibility(){
     if(eb && !ebReady() && ebNeedsGroupSelection()){
       bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+ebGroupChoiceHtml()+'</div>');
     }
-    if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
+    if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Corrigez la correspondance dans « Élèves » avant l’envoi.</div>');
     hint.innerHTML=bits.join("");
   }
   // v236: refléter le mode partout — classe sur <body> (mode rapide sans grand grading)
@@ -7487,6 +7605,14 @@ document.getElementById("sendAll").onclick=async()=>{
   if(!em && !eb){ alert("Aucun canal d’envoi actif. Choisissez un mode dans « Démarrage »."); return; }
   currentMsgs=buildMessages();
   if(currentMsgs.length===0){ alert("Aucun envoi prêt. Attribuez des élèves dans l’onglet « Calendrier »."); return; }
+  const unmatchedEbMsgs=currentMsgs.filter(m=>m.kind==="eb" && !m.matchedId && !isMsgDone(m) && !excludedSet.has(m.id));
+  if(eb && ebReady() && unmatchedEbMsgs.length){
+    const names=[...new Set(unmatchedEbMsgs.map(m=>m.studentDisplay||displayStudentName(m.student)))];
+    const shown=names.slice(0,5).join(", ")+(names.length>5?"…":"");
+    alert("Envoi e-Bichelchen bloqué : "+unmatchedEbMsgs.length+" rendez-vous concerne"+(unmatchedEbMsgs.length===1?"":"nt")+" un élève non lié.\n\n"+shown+"\n\nCorrigez la correspondance e-Bichelchen dans l’onglet « Élèves ».");
+    goTab("students");
+    return;
+  }
   pendingSend=currentMsgs.filter(m=>!isMsgDone(m) && !excludedSet.has(m.id) && !(m.kind==="eb" && !m.matchedId));
   if(pendingSend.length===0){
     alert("Aucun destinataire sélectionné (ou déjà envoyé).\nCochez ci-dessous les élèves à contacter.");

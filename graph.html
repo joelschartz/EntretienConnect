@@ -52,13 +52,13 @@
   header{
     background:transparent;
     color:var(--ink);
-    padding:34px max(22px,calc((100vw - 1180px)/2 + 22px)) 16px;
+    padding:34px max(22px,calc((100vw - 1440px)/2 + 22px)) 16px;
   }
   header h1{margin:0;font-size:28px;font-weight:750;letter-spacing:-.03em}
   header p{margin:5px 0 0;color:var(--muted);font-size:14px;max-width:1120px;white-space:nowrap}
   .tabs{
     display:flex;
-    padding:10px max(16px,calc((100vw - 1180px)/2 + 16px));
+    padding:10px max(16px,calc((100vw - 1440px)/2 + 16px));
     background:rgba(246,246,249,.8);
     backdrop-filter:saturate(180%) blur(18px);
     -webkit-backdrop-filter:saturate(180%) blur(18px);
@@ -80,7 +80,7 @@
   }
   .tab:hover{color:var(--ink)}
   .tab.active{color:var(--ink);background:#fff;box-shadow:0 1px 5px rgba(28,28,45,.14);font-weight:750}
-  .wrap{max-width:1180px;margin:0 auto;padding:24px 18px 90px}
+  .wrap{max-width:1440px;margin:0 auto;padding:24px 18px 90px}
   .panel{display:none}.panel.active{display:block}
   .card{
     background:rgba(255,255,255,.9);
@@ -1051,6 +1051,17 @@
   .setup-mode-card[data-mode="ebichelchen"].active:after{background:var(--ok)!important}
   .setup-mode-card[data-mode="email"].active:after{background:var(--accent)!important}
   .setup-mode-card[data-mode="both"].active:after{background:#c98a2e!important}
+  /* v360: Kontoname und E-Mail nicht mehr mit … abschneiden. Die Zeile darf
+     innerhalb der Karte wachsen bzw. umbrechen; erst der Bildschirm begrenzt sie. */
+  .setup-mode-connect-slot .setup-status-row{width:100%!important;max-width:none!important;flex-wrap:wrap!important}
+  .setup-mode-connect-slot .status-main{flex:1 1 210px!important;max-width:none!important;min-width:0}
+  .setup-mode-connect-slot .status-detail{
+    max-width:none!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    overflow-wrap:anywhere
+  }
   /* Verbindungszeilen sitzen im Drittel der Karte, mit feiner Trennlinie und hellem Sockel,
      damit der Farbton der Karte ringsum durchscheint. */
   .setup-mode-card.active .setup-mode-connect-slot{
@@ -1286,7 +1297,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v359</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v360</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1573,7 +1584,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 359;
+const APP_VERSION = 360;
 
 function nativeMacBridgeSync(action,message,defaultValue){
   try{
@@ -3720,8 +3731,11 @@ function renderStudents(){
   const resetStudentsRow=document.getElementById("resetStudentsRow");
   if(resetStudentsRow) resetStudentsRow.style.display = state.students.length>0 ? "" : "none";
   if(importEbBtn){
-    const missingCount = eb ? ebMissingImportCount() : 0;
-    const canImportMissing = eb && ebReady() && missingCount>0;
+    // v360: Die Schülerquelle ist unabhängig vom Versandmodus. Sobald eine
+    // e-Bichelchen-Sitzung verfügbar ist, können fehlende Schüler erneut
+    // importiert werden – auch wenn momentan „E-mail“ gewählt ist.
+    const missingCount = ebReady() ? ebMissingImportCount() : 0;
+    const canImportMissing = ebReady() && missingCount>0;
     importEbBtn.style.display = canImportMissing ? "inline-block" : "none";
     importEbBtn.disabled = false;
     importEbBtn.textContent = missingCount===1 ? "Importer 1 élève depuis e-Bichelchen" : "Importer "+missingCount+" élèves depuis e-Bichelchen";

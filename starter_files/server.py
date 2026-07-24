@@ -54,7 +54,7 @@ def _initial_port():
 
 PORT = _initial_port()
 # v334: Eine einzige Stelle für die Generation, die graph.html erwartet.
-BACKEND_GENERATION = 359
+BACKEND_GENERATION = 360
 last_heartbeat_time = None
 server_started_time = time.time()
 # v359: In der nativen App bestimmt das App-Fenster die Lebensdauer des Helpers
@@ -920,12 +920,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not allowed:
                 return self._json(400, {"ok": False, "error": "Adresse de connexion non autorisée."})
             if sys.platform == "darwin":
-                subprocess.Popen(
-                    ["/usr/bin/open", url],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                )
+                # v360: Im nativen Mac-App-Modus läuft Microsoft in einem eigenen
+                # WKWebView-Fenster. Dieses erkennt die fertige lokale OAuth-
+                # Rückleitung und schließt sich selbst. Ein über `open` gestarteter
+                # Safari-Tab darf window.close() dagegen nicht ausführen.
+                native_script = os.path.join(DATA_DIR, "EntretienConnect-MicrosoftWindow.js")
+                if APP_SHELL_ACTIVE and os.path.isfile(native_script):
+                    subprocess.Popen(
+                        ["/usr/bin/osascript", "-l", "JavaScript", native_script, url],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        start_new_session=True,
+                    )
+                else:
+                    subprocess.Popen(
+                        ["/usr/bin/open", url],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        start_new_session=True,
+                    )
             elif sys.platform.startswith("win"):
                 os.startfile(url)  # type: ignore[attr-defined]
             else:
@@ -1572,6 +1585,7 @@ HELPER_ALLOWED_TARGETS = {
     "EntretienConnect-WKWebView.js",
     "EntretienConnect-AppWindow.js",
     "EntretienConnect-NativeBridge.js",
+    "EntretienConnect-MicrosoftWindow.js",
     "cacert.pem",
     "VERSION.txt",
 }
