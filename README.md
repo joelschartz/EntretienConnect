@@ -1,6 +1,23 @@
-# EntretienConnect v357
+# EntretienConnect v358
 
 
+
+
+**Vollständige Dialog- und Dateiauswahl-Unterstützung im Mac-App-Fenster.**
+Bestätigungen, Hinweise und Eingabefelder werden in v358 als native
+macOS-Dialoge angezeigt. CSV-Import, PDF-Anhang und eigenes Logo verwenden eine
+native Dateiauswahl. Damit funktionieren auch Aktionen wie
+`Déconnecter Microsoft`, die zuvor an einem unsichtbaren
+`window.confirm` hängen konnten.
+
+Der Windows-App-Host wird in v358 mit der kompatiblen Basis-Laufzeit für ältere
+Prozessoren gebaut. Dadurch beendet sich die portable EXE auf älteren Schul-PCs
+nicht mehr vor dem eigentlichen Programmstart. Zusätzlich wird
+`%LOCALAPPDATA%\EntretienConnect\EntretienConnect-AppHost-log.txt` gleich
+beim Start angelegt. Installation und Administratorrechte sind weiterhin nicht
+erforderlich.
+
+## v357
 
 **Eigenes App-Fenster auf Mac und Windows.** Der Mac-Starter hält die
 Hauptoberfläche nun selbst in einem nativen WKWebView-Fenster; Safari wird beim

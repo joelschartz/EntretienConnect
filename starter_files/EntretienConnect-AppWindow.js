@@ -3,7 +3,7 @@ ObjC.import('WebKit');
 ObjC.import('Foundation');
 
 /*
- * EntretienConnect v357 – native macOS main window.
+ * EntretienConnect v358 – native macOS main window.
  *
  * This script is launched by EntretienConnect_MAC.app through the system JXA
  * runtime. It embeds the local EntretienConnect interface in WKWebView without

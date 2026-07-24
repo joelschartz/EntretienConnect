@@ -54,7 +54,7 @@ def _initial_port():
 
 PORT = _initial_port()
 # v334: Eine einzige Stelle für die Generation, die graph.html erwartet.
-BACKEND_GENERATION = 357
+BACKEND_GENERATION = 358
 last_heartbeat_time = None
 server_started_time = time.time()
 HEARTBEAT_TIMEOUT_SECONDS = 180  # v204: Browser-Heartbeat; Helper beendet sich ca. 3 Minuten nach geschlossenem Tab
@@ -766,6 +766,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(200, {"ok": True, "shuttingDown": True})
         if self.path.split("?",1)[0] == "/api/app/open-external":
             return self.handle_app_open_external()
+        if self.path.split("?",1)[0] == "/api/app/native-dialog":
+            return self.handle_app_native_dialog()
+        if self.path.split("?",1)[0] == "/api/app/choose-file":
+            return self.handle_app_choose_file()
         if self.path.split("?",1)[0] == "/api/app/storage":
             return self.handle_app_storage_get()
         if self.path.split("?",1)[0] == "/api/app/local-csv":
@@ -810,6 +814,88 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception:
             mtime = 0
         return self._json(200, {"ok": True, "state": st, "updatedAt": mtime, "path": STATE_FILE})
+
+    def _run_native_bridge(self, *args):
+        if sys.platform != "darwin":
+            return {"ok": False, "error": "Fonction disponible uniquement sur macOS."}
+        script = os.path.join(DATA_DIR, "EntretienConnect-NativeBridge.js")
+        if not os.path.isfile(script):
+            return {"ok": False, "error": "Le module de dialogue macOS est introuvable."}
+        try:
+            proc = subprocess.run(
+                ["/usr/bin/osascript", "-l", "JavaScript", script] + [str(x or "") for x in args],
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            if proc.returncode != 0:
+                return {"ok": False, "error": (proc.stderr or "Erreur macOS").strip()}
+            lines = [line.strip() for line in (proc.stdout or "").splitlines() if line.strip()]
+            return json.loads(lines[-1]) if lines else {"ok": False, "error": "Réponse macOS vide."}
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "error": "Le dialogue macOS a expiré."}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
+    def handle_app_native_dialog(self):
+        data = self._read_json()
+        if not isinstance(data, dict):
+            return self._json(400, {"ok": False, "error": "Requête non valable."})
+        action = str(data.get("action") or "")
+        if action not in ("alert", "confirm", "prompt"):
+            return self._json(400, {"ok": False, "error": "Type de dialogue non autorisé."})
+        message = str(data.get("message") or "")[:5000]
+        default_value = str(data.get("defaultValue") or "")[:500]
+        result = self._run_native_bridge(action, message, default_value)
+        return self._json(200 if result.get("ok") else 500, result)
+
+    def handle_app_choose_file(self):
+        data = self._read_json()
+        kind = str(data.get("kind") or "") if isinstance(data, dict) else ""
+        if kind not in ("csv", "pdf", "image"):
+            return self._json(400, {"ok": False, "error": "Type de fichier non autorisé."})
+        chosen = self._run_native_bridge("choose-" + kind, "", "")
+        if chosen.get("cancelled"):
+            return self._json(200, {"ok": True, "cancelled": True})
+        if not chosen.get("ok"):
+            return self._json(500, chosen)
+        file_path = os.path.abspath(os.path.expanduser(str(chosen.get("path") or "")))
+        if not os.path.isfile(file_path):
+            return self._json(400, {"ok": False, "error": "Le fichier sélectionné est introuvable."})
+        name = os.path.basename(file_path)
+        ext = os.path.splitext(name)[1].lower()
+        try:
+            size = os.path.getsize(file_path)
+            if kind == "csv":
+                if ext not in (".csv", ".txt", ".tsv") or size > 10 * 1024 * 1024:
+                    return self._json(400, {"ok": False, "error": "Veuillez choisir un fichier CSV valable."})
+                raw = open(file_path, "rb").read()
+                content = None
+                for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+                    try:
+                        content = raw.decode(encoding)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                return self._json(200, {"ok": True, "name": name, "size": size, "content": content or ""})
+            if kind == "pdf":
+                if ext != ".pdf" or size > 3 * 1024 * 1024:
+                    return self._json(400, {"ok": False, "error": "Veuillez choisir un PDF de 3 Mo maximum."})
+                import base64
+                content = base64.b64encode(open(file_path, "rb").read()).decode("ascii")
+                return self._json(200, {"ok": True, "name": name, "size": size, "mime": "application/pdf", "contentBytes": content})
+            image_mimes = {
+                ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml",
+            }
+            mime = image_mimes.get(ext)
+            if not mime or size > 8 * 1024 * 1024:
+                return self._json(400, {"ok": False, "error": "Veuillez choisir une image valable de 8 Mo maximum."})
+            import base64
+            content = base64.b64encode(open(file_path, "rb").read()).decode("ascii")
+            return self._json(200, {"ok": True, "name": name, "size": size, "mime": mime, "dataUrl": "data:" + mime + ";base64," + content})
+        except Exception as exc:
+            return self._json(500, {"ok": False, "error": str(exc)})
 
     def handle_app_open_external(self):
         data = self._read_json()
@@ -1321,6 +1407,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(200, {"ok": True, "shuttingDown": True})
         if self.path.split("?",1)[0] == "/api/app/open-external":
             return self.handle_app_open_external()
+        if self.path.split("?",1)[0] == "/api/app/native-dialog":
+            return self.handle_app_native_dialog()
+        if self.path.split("?",1)[0] == "/api/app/choose-file":
+            return self.handle_app_choose_file()
         if self.path.split("?",1)[0] == "/api/app/storage":
             return self.handle_app_storage_post()
         if self.path.split("?",1)[0] == "/api/app/session-status":
@@ -1476,6 +1566,7 @@ HELPER_ALLOWED_TARGETS = {
     "EntretienConnect-Start-Hidden.bat",
     "EntretienConnect-WKWebView.js",
     "EntretienConnect-AppWindow.js",
+    "EntretienConnect-NativeBridge.js",
     "cacert.pem",
     "VERSION.txt",
 }

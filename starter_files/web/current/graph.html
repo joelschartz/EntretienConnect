@@ -1285,7 +1285,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v358</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v357</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1572,48 +1572,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 358;
-
-function nativeMacBridgeSync(action,message,defaultValue){
-  try{
-    const xhr=new XMLHttpRequest();
-    xhr.open("POST","/api/app/native-dialog",false);
-    xhr.setRequestHeader("Content-Type","application/json");
-    xhr.send(JSON.stringify({action:String(action||""),message:String(message||""),defaultValue:String(defaultValue||"")}));
-    if(xhr.status<200 || xhr.status>=300) return {ok:false};
-    return JSON.parse(xhr.responseText||"{}");
-  }catch(_){ return {ok:false}; }
-}
-async function nativeChooseFile(kind){
-  try{
-    const res=await fetch("/api/app/choose-file",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({kind:String(kind||"")}),
-      cache:"no-store"
-    });
-    const data=await res.json();
-    if(!res.ok && !data.error) data.error="La sélection du fichier a échoué.";
-    return data;
-  }catch(e){
-    return {ok:false,error:String(e&&e.message||e||"La sélection du fichier a échoué.")};
-  }
-}
-(function installNativeMacDialogs(){
-  if(!isNativeMacAppShell()) return;
-  window.alert=function(message){
-    nativeMacBridgeSync("alert",message,"");
-  };
-  window.confirm=function(message){
-    const result=nativeMacBridgeSync("confirm",message,"");
-    return !!(result && result.ok && result.value===true);
-  };
-  window.prompt=function(message,defaultValue){
-    const result=nativeMacBridgeSync("prompt",message,defaultValue==null?"":defaultValue);
-    if(!result || !result.ok || result.cancelled) return null;
-    return result.value==null ? "" : String(result.value);
-  };
-})();
+const APP_VERSION = 357;
 
 window.addEventListener("error", function(ev){
   try{
@@ -3895,32 +3854,22 @@ async function maybeAutoLoadLocalCsv(reason){
     }
   }catch(e){}
 }
-function applyManualCsvText(text){
-  const res=importCsvText(text,{auto:false});
-  if(res.merged||res.added){
-    const parts=[];
-    if(res.added) parts.push(res.added+" élève(s) importé(s)");
-    if(res.merged) parts.push(res.merged+" complété(s)");
-    showToast(parts.join(", ")+" par CSV.");
-  } else {
-    showToast("Aucun élève reconnu dans ce fichier CSV. Vérifiez le format (voir « ? »).");
-  }
-}
-document.getElementById("importCsvBtn").onclick=async()=>{
-  if(isNativeMacAppShell()){
-    const data=await nativeChooseFile("csv");
-    if(data && data.cancelled) return;
-    if(!data || !data.ok){ alert((data&&data.error)||"Impossible de lire ce fichier CSV."); return; }
-    applyManualCsvText(data.content||"");
-    return;
-  }
-  document.getElementById("csvFile").click();
-};
+document.getElementById("importCsvBtn").onclick=()=>document.getElementById("csvFile").click();
 document.getElementById("csvFile").onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=()=>applyManualCsvText(r.result);
-  r.onerror=()=>alert("Impossible de lire ce fichier CSV.");
+  r.onload=()=>{
+    const res=importCsvText(r.result,{auto:false});
+    if(res.merged||res.added){
+      const parts=[];
+      if(res.added) parts.push(res.added+" élève(s) importé(s)");
+      if(res.merged) parts.push(res.merged+" complété(s)");
+      showToast(parts.join(", ")+" par CSV.");
+    } else {
+      // v217: plus d'échec silencieux — dire clairement que rien n'a été reconnu.
+      showToast("Aucun élève reconnu dans ce fichier CSV. Vérifiez le format (voir « ? »).");
+    }
+  };
   r.readAsText(f); e.target.value="";
 };
 
@@ -5345,41 +5294,11 @@ function updateTemplateSignatureView(body, renderTemplateCollapseState){
 }
 // v163: sélecteur de PDF partagé — la cible (élève + carte ouverte) est mémorisée avant l'ouverture.
 let pendingAttachStudentId=null, pendingAttachOpenId=null;
-function storeReminderPdfPayload(payload,studentId,openId){
-  if(!payload || !studentId) return;
-  const name=String(payload.name||"rappel.pdf");
-  const size=Number(payload.size||0);
-  const contentBytes=String(payload.contentBytes||"");
-  if(!/\.pdf$/i.test(name)){ alert("Veuillez choisir un fichier PDF."); return; }
-  if(size>REMINDER_ATTACHMENT_MAX_BYTES){ alert("Le PDF est trop lourd. Maximum conseillé : 3 Mo."); return; }
-  const map=reminderAttachmentsMap();
-  const prev=map[studentId]||null;
-  const next=sanitizeReminderAttachment({name:name,mime:"application/pdf",size:size,contentBytes:contentBytes});
-  if(!next){ alert("Impossible d’attacher ce PDF."); return; }
-  map[studentId]=next;
-  if(!saveState()){
-    if(prev) map[studentId]=prev; else delete map[studentId];
-    saveState();
-    alert("Le PDF est trop lourd pour être conservé dans l’application (mémoire pleine). Essayez un fichier plus léger ou retirez d’autres PDF.");
-    renderMails(openId||undefined);
-    return;
-  }
-  renderMails(openId||undefined);
-  showToast("PDF joint au rappel ✓");
-}
-async function openReminderPdfPicker(studentId, openId){
+function openReminderPdfPicker(studentId, openId){
   const input=document.getElementById("reminderPdfInput");
   if(!input || !studentId) return;
   pendingAttachStudentId=studentId;
   pendingAttachOpenId=openId||null;
-  if(isNativeMacAppShell()){
-    const data=await nativeChooseFile("pdf");
-    pendingAttachStudentId=null; pendingAttachOpenId=null;
-    if(data && data.cancelled) return;
-    if(!data || !data.ok){ alert((data&&data.error)||"Impossible de lire ce PDF."); return; }
-    storeReminderPdfPayload(data,studentId,openId||null);
-    return;
-  }
   input.click();
 }
 function removeReminderPdfFor(studentId, openId){
@@ -5398,15 +5317,28 @@ function bindReminderAttachmentControls(){
     const studentId=pendingAttachStudentId, openId=pendingAttachOpenId;
     pendingAttachStudentId=null; pendingAttachOpenId=null;
     if(!file || !studentId) return;
+    const isPdf=(file.type==="application/pdf") || /\.pdf$/i.test(file.name||"");
+    if(!isPdf){ alert("Veuillez choisir un fichier PDF."); return; }
+    if(file.size>REMINDER_ATTACHMENT_MAX_BYTES){ alert("Le PDF est trop lourd. Maximum conseillé : 3 Mo."); return; }
     const reader=new FileReader();
     reader.onerror=()=>alert("Impossible de lire ce PDF.");
     reader.onload=()=>{
       const dataUrl=String(reader.result||"");
-      storeReminderPdfPayload({
-        name:file.name||"rappel.pdf",
-        size:file.size,
-        contentBytes:dataUrl.includes(",") ? dataUrl.split(",").pop() : ""
-      },studentId,openId);
+      const contentBytes=dataUrl.includes(",") ? dataUrl.split(",").pop() : "";
+      const map=reminderAttachmentsMap();
+      const prev=map[studentId]||null;
+      const next=sanitizeReminderAttachment({name:file.name||"rappel.pdf", mime:"application/pdf", size:file.size, contentBytes});
+      if(!next){ alert("Impossible d’attacher ce PDF."); return; }
+      map[studentId]=next;
+      if(!saveState()){
+        if(prev) map[studentId]=prev; else delete map[studentId];
+        saveState();
+        alert("Le PDF est trop lourd pour être conservé dans l’application (mémoire pleine). Essayez un fichier plus léger ou retirez d’autres PDF.");
+        renderMails(openId||undefined);
+        return;
+      }
+      renderMails(openId||undefined);
+      showToast("PDF joint au rappel ✓");
     };
     reader.readAsDataURL(file);
   };
@@ -5690,29 +5622,10 @@ function bindSettings(){
   const logoFile=document.getElementById("logoFile");
   const logoModeSelect=document.getElementById("logoModeSelect");
   let logoModeBeforeUpload=state.options.logoMode || "unesco";
-  function applyCustomLogoPayload(dataUrl,mime){
-    commitEditor(body);
-    logoModeBeforeUpload="custom";
-    state.options.logoMode="custom";
-    state.options.includeLogo=true;
-    setLogoFromDataUrl(String(dataUrl||""),mime||"image/png",true,"custom");
-  }
-  async function openCustomLogoPickerFromSignature(){
+  function openCustomLogoPickerFromSignature(){
     if(!logoFile) return;
     commitEditor(body);
     logoModeBeforeUpload=state.options.logoMode || "unesco";
-    if(isNativeMacAppShell()){
-      const data=await nativeChooseFile("image");
-      if(data && data.cancelled){
-        state.options.logoMode=logoModeBeforeUpload;
-        state.options.includeLogo=logoModeBeforeUpload!=="none";
-        renderLogoPreview();
-        return;
-      }
-      if(!data || !data.ok){ alert((data&&data.error)||"Impossible de lire cette image."); return; }
-      applyCustomLogoPayload(data.dataUrl||"",data.mime||"image/png");
-      return;
-    }
     logoFile.click();
   }
   if(body && !body.dataset.logoClickWired){
@@ -5760,9 +5673,12 @@ function bindSettings(){
     }
     const isImage=(f.type||"").startsWith("image/") || /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name||"");
     if(!isImage){ alert("Veuillez choisir une image."); e.target.value=""; return; }
+    commitEditor(body);
+    logoModeBeforeUpload="custom";
+    state.options.logoMode="custom";
+    state.options.includeLogo=true;
     const r=new FileReader();
-    r.onerror=()=>alert("Impossible de lire cette image.");
-    r.onload=()=>applyCustomLogoPayload(String(r.result),f.type||"image/png");
+    r.onload=()=>setLogoFromDataUrl(String(r.result), f.type||"image/png", true, "custom");
     r.readAsDataURL(f); e.target.value="";
   };
   renderTemplatePreview(); renderLogoPreview(); renderSigMissing(); if((state.options.logoMode||"unesco")==="unesco") loadUnescoLogo(false);
