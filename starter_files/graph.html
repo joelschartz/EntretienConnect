@@ -600,7 +600,8 @@
   .setup-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}.setup-current{margin-top:10px}
   .setup-reminder-choice{margin-top:14px}.setup-reminder-card{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fff,#fbfbfe);padding:14px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}.setup-reminder-card h3{font-size:13px;margin:0 0 4px;color:var(--ink);text-transform:none;letter-spacing:0}.setup-reminder-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.4}.setup-reminder-card .reminder-main{box-shadow:none}
   .send-setup-card .send-mode-summary{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}.send-reminder-settings{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}.send-reminder-settings .reminder-controls{margin-top:8px}
-  .student-source-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}.student-mode-note{margin-bottom:12px}.students-eb-only .email-only{display:none!important}.students-eb-only #studentTable{margin-top:16px}.students-eb-only .csv-hint{display:none!important}.students-eb-only .student-lang-default{display:none!important}
+  .student-source-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}.student-mode-note{margin-bottom:12px}.students-eb-only #studentTable{margin-top:16px}
+  .student-name-stack{display:flex;flex-direction:column;gap:7px;min-width:0}.student-eb-link{display:flex;align-items:center;gap:7px;padding-left:30px;min-width:0}.student-eb-link select{height:30px;min-width:0;max-width:260px;padding:4px 28px 4px 8px;border-radius:9px;font-size:12px;background:#fff}.student-eb-link-status{font-size:11px;font-weight:800;white-space:nowrap}.student-eb-link-status.ok{color:var(--ok)}.student-eb-link-status.miss{color:var(--err)}
   .source-pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:4px 8px;font-size:11.5px;font-weight:780;color:var(--muted)}
   @media (max-width:900px){.setup-hero{grid-template-columns:1fr}.setup-mode-grid{grid-template-columns:1fr}.setup-mode-card{min-height:0}}
   /* e-Bichelchen-Kanal */
@@ -1285,7 +1286,7 @@
 </head>
 <body>
 <header>
-  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v358</span></h1>
+  <h1>EntretienConnect <span id="appVersionBtn" class="version-btn" title="Maintenance">v359</span></h1>
 </header>
 <div id="maintenanceMenu" class="maintenance-menu" aria-hidden="true">
   <div class="maintenance-menu-title">Maintenance</div>
@@ -1369,8 +1370,8 @@
         <button id="addStudent">+ Ajouter un élève</button>
         <button class="ghost sm" id="importEbStudentsBtn" type="button" style="display:none">Importer depuis e-Bichelchen</button>
         <div class="spacer"></div>
-        <button class="ghost sm email-only" id="importCsvBtn">Importer un CSV</button>
-        <span class="tip tip-left email-only csv-hint" tabindex="0" data-tip="Format CSV — 1 élève par ligne :
+        <button class="ghost sm" id="importCsvBtn">Importer un CSV</button>
+        <span class="tip tip-left csv-hint" tabindex="0" data-tip="Format CSV — 1 élève par ligne :
 Élève, contact1@…, langue1, contact2@…, langue2
 Langues : FR, DE, EN, LU">?</span>
         <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
@@ -1572,7 +1573,7 @@ window.__EC_BOOT_ERROR="";
 window.addEventListener("error",function(e){ window.__EC_BOOT_ERROR=(e&&e.message)||"Erreur JavaScript"; try{ var b=document.getElementById("setupCurrent"); if(b){ b.innerHTML='<div class="banner warn compact">Erreur JavaScript : '+String(window.__EC_BOOT_ERROR).replace(/[<>&]/g,function(c){return {"<":"&lt;",">":"&gt;","&":"&amp;"}[c];})+'</div>'; } }catch(_){} });
 window.addEventListener("unhandledrejection",function(e){ window.__EC_BOOT_ERROR=(e&&e.reason&&e.reason.message)||String((e&&e.reason)||"Erreur JavaScript"); });
 const LS_KEY = "elterntermine_graph_v1";
-const APP_VERSION = 358;
+const APP_VERSION = 359;
 
 function nativeMacBridgeSync(action,message,defaultValue){
   try{
@@ -3659,6 +3660,23 @@ function ebMessageEdited(msg){
   if(!o) return false;
   return String(o.title||"")!==String(msg.defaultEbTitle||"") || String(o.desc||"")!==String(msg.defaultEbDesc||"");
 }
+function studentEbLinkHtml(stu){
+  if(!ebichelchenEnabled() || !ebReady() || !stu || !String(stu.name||"").trim()) return "";
+  const cur=ebMatchedIdFor(stu);
+  const opts=ebStudents();
+  const options='<option value="">— non lié —</option>'+opts.map(e=>{
+    const eid=String(e.id||"");
+    const label=String(e.fullName||e.name||e.id||"");
+    return '<option value="'+esc(eid)+'"'+(eid===String(cur)?' selected':'')+'>'+esc(label)+'</option>';
+  }).join("");
+  const status=cur
+    ? '<span class="student-eb-link-status ok">lié ✓</span>'
+    : '<span class="student-eb-link-status miss">non lié</span>';
+  return '<div class="student-eb-link"><select class="st-eb-map" title="Élève correspondant dans e-Bichelchen">'+options+'</select>'+status+'</div>';
+}
+function studentNameCellHtml(stu, idx){
+  return '<div class="student-name-stack"><div class="student-name-inline"><span class="student-index">'+(idx+1)+'</span><input class="st-name" value="'+esc(stu.name)+'" placeholder="Prénom et nom de l’élève"></div>'+studentEbLinkHtml(stu)+'</div>';
+}
 function renderStudents(){
   const wrap=document.getElementById("studentTable");
   const card=wrap ? wrap.closest(".card") : null;
@@ -3670,7 +3688,7 @@ function renderStudents(){
   const note=document.getElementById("studentModeNote");
   const importEbBtn=document.getElementById("importEbStudentsBtn");
   const addStudentBtn=document.getElementById("addStudent");
-  if(addStudentBtn){ addStudentBtn.style.display = eb ? "none" : "inline-block"; }
+  if(addStudentBtn){ addStudentBtn.style.display = "inline-block"; }
   if(title) title.textContent = eb && !em ? "Élèves e-Bichelchen" : "Liste des élèves";
   if(intro){
     // v218: en mode e-mail seul, pas de phrase d'intro — les champs se suffisent.
@@ -3715,8 +3733,8 @@ function renderStudents(){
     let emptyMsg;
     if(eb && !em){
       emptyMsg = ebReady()
-        ? "Aucun élève pour l’instant. Utilisez le bouton « Importer … depuis e-Bichelchen » ci-dessous."
-        : "Aucun élève pour l’instant. Connectez e-Bichelchen dans l’onglet « 1 · Démarrage » — la classe sera importée automatiquement.";
+        ? "Aucun élève pour l’instant. Importez la classe e-Bichelchen, ajoutez un élève ou importez un CSV."
+        : "Aucun élève pour l’instant. Ajoutez un élève ou importez un CSV. Vous pourrez aussi importer et vérifier la classe après la connexion e-Bichelchen.";
     } else if(eb && em){
       emptyMsg = ebReady()
         ? "Aucun élève pour l’instant. Importez les élèves depuis e-Bichelchen ou par CSV, puis complétez les adresses e-mail."
@@ -3731,7 +3749,7 @@ function renderStudents(){
     let html='<table class="student-grid student-contact-grid"><thead><tr class="group-head"><th>Élève</th><th class="contact-group" style="width:80px">Langue</th><th style="width:36px"></th></tr></thead><tbody>';
     state.students.forEach((s,idx)=>{
       if(!s.langEb) s.langEb=s.lang1||"fr";
-      html += `<tr data-id="${s.id}"><td><div class="student-name-inline"><span class="student-index">${idx+1}</span><input class="st-name" value="${esc(s.name)}" placeholder="Prénom et nom de l’élève"></div></td>`+
+      html += `<tr data-id="${s.id}"><td>${studentNameCellHtml(s,idx)}</td>`+
         `<td class="contact-cell"><select class="st-leb lang-select" title="Langue du message e-Bichelchen">${langOptionsHtml(s.langEb, true)}</select></td>`+
         `<td class="actions-cell"><button class="st-del" type="button" title="Supprimer cet élève">✕</button></td></tr>`;
     });
@@ -3744,7 +3762,7 @@ function renderStudents(){
     state.students.forEach((s,idx)=>{
       if(!s.lang1) s.lang1=state.options.defaultLang||"fr";
       if(!s.lang2) s.lang2=state.options.defaultLang||"fr";
-      html += `<tr data-id="${s.id}"><td><div class="student-name-inline"><span class="student-index">${idx+1}</span><input class="st-name" value="${esc(s.name)}" placeholder="Prénom et nom de l’élève"></div></td>`+
+      html += `<tr data-id="${s.id}"><td>${studentNameCellHtml(s,idx)}</td>`+
         `<td class="contact-cell"><div class="contact-inline"><input class="st-e1" value="${esc(s.email1)}" placeholder="contact1@..."><select class="st-l1 lang-select" title="Langue du contact 1">${langOptionsHtml(s.lang1, true)}</select></div></td>`+
         `<td class="contact-cell contact2-start"><div class="contact-inline"><input class="st-e2" value="${esc(s.email2)}" placeholder="contact2@..."><select class="st-l2 lang-select" title="Langue du contact 2">${langOptionsHtml(s.lang2, true)}</select></div></td>`+
         `<td class="actions-cell"><button class="st-del" type="button" title="Supprimer cet élève">✕</button></td></tr>`;
@@ -3770,6 +3788,12 @@ function renderStudents(){
     });
     const ebLangSel=tr.querySelector(".st-leb");
     if(ebLangSel) ebLangSel.onchange=e=>{ st.langEb=normalizeLang(e.target.value); saveState(); renderMails(); };
+    const ebMapSel=tr.querySelector(".st-eb-map");
+    if(ebMapSel) ebMapSel.onchange=e=>{
+      state.ebichelchenMap=state.ebichelchenMap||{};
+      state.ebichelchenMap[id]=e.target.value?Number(e.target.value):"";
+      saveState(); renderStudents(); renderMails(); applyChannelVisibility();
+    };
     const del=tr.querySelector(".st-del");
     if(del) del.onclick=()=>{ state.students=state.students.filter(x=>x.id!==id); if(state.ebichelchenMap) delete state.ebichelchenMap[id]; if(state.reminderAttachments) delete state.reminderAttachments[id]; Object.keys(state.assignments).forEach(k=>{ if(state.assignments[k]===id) delete state.assignments[k]; }); saveState(); renderStudents(); renderSetup(); renderMails(); };
   });
@@ -3810,10 +3834,6 @@ function validateStudentEmailsUI(opts={}){
   }
 }
 document.getElementById("addStudent").onclick=()=>{
-  if(ebichelchenEnabled()){
-    alert("Dans les modes e-Bichelchen, la liste des élèves vient de la classe e-Bichelchen. Changez de mode si vous voulez gérer les élèves manuellement.");
-    return;
-  }
   const dl=normalizeLang(state.options.defaultLang||"fr");
   state.students.push({id:uid(),name:"",email1:"",email2:"",lang1:dl,lang2:dl,langEb:dl});
   saveState(); renderStudents(); renderSetup();
@@ -6959,7 +6979,7 @@ function applyChannelVisibility(){
     if(eb && !ebReady() && ebNeedsGroupSelection()){
       bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+ebGroupChoiceHtml()+'</div>');
     }
-    if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Les messages e-Bichelchen pour ces élèves seront ignorés.</div>');
+    if(unmatchedEb>0) bits.push('<div class="banner warn compact" style="margin:10px 0 0">'+unmatchedEb+' élève'+(unmatchedEb===1?'':'s')+' non lié'+(unmatchedEb===1?'':'s')+' à e-Bichelchen. Corrigez la correspondance dans « Élèves » avant l’envoi.</div>');
     hint.innerHTML=bits.join("");
   }
   // v236: refléter le mode partout — classe sur <body> (mode rapide sans grand grading)
@@ -7571,6 +7591,14 @@ document.getElementById("sendAll").onclick=async()=>{
   if(!em && !eb){ alert("Aucun canal d’envoi actif. Choisissez un mode dans « Démarrage »."); return; }
   currentMsgs=buildMessages();
   if(currentMsgs.length===0){ alert("Aucun envoi prêt. Attribuez des élèves dans l’onglet « Calendrier »."); return; }
+  const unmatchedEbMsgs=currentMsgs.filter(m=>m.kind==="eb" && !m.matchedId && !isMsgDone(m) && !excludedSet.has(m.id));
+  if(eb && ebReady() && unmatchedEbMsgs.length){
+    const names=[...new Set(unmatchedEbMsgs.map(m=>m.studentDisplay||displayStudentName(m.student)))];
+    const shown=names.slice(0,5).join(", ")+(names.length>5?"…":"");
+    alert("Envoi e-Bichelchen bloqué : "+unmatchedEbMsgs.length+" rendez-vous concerne"+(unmatchedEbMsgs.length===1?"":"nt")+" un élève non lié.\n\n"+shown+"\n\nCorrigez la correspondance e-Bichelchen dans l’onglet « Élèves ».");
+    goTab("students");
+    return;
+  }
   pendingSend=currentMsgs.filter(m=>!isMsgDone(m) && !excludedSet.has(m.id) && !(m.kind==="eb" && !m.matchedId));
   if(pendingSend.length===0){
     alert("Aucun destinataire sélectionné (ou déjà envoyé).\nCochez ci-dessous les élèves à contacter.");

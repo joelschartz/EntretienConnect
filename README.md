@@ -1,4 +1,17 @@
-# EntretienConnect v358
+# EntretienConnect v359
+
+**Stabil nach Inaktivität und konsistente Schülerverwaltung.** Das native
+Mac-App-Fenster bestimmt jetzt selbst die Lebensdauer des lokalen Helfers.
+JavaScript-Drosselung nach längerer Inaktivität beendet ihn daher nicht mehr.
+Schüler lassen sich in jedem Kommunikationsmodus manuell oder per CSV
+vorbereiten, auch ohne Anmeldung. Nach der e-Bichelchen-Anmeldung steht die
+Zuordnung direkt beim Schüler; fehlende Zuordnungen werden markiert und
+blockieren den e-Bichelchen-Versand mit einer klaren Korrekturanweisung.
+
+Die portable Windows-App wird passend zu v359 neu ausgeliefert. Entpacken und
+Doppelklick genügen weiterhin, ohne Installation und ohne Administratorrechte.
+
+## v358
 
 
 

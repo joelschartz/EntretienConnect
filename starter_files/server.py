@@ -54,11 +54,16 @@ def _initial_port():
 
 PORT = _initial_port()
 # v334: Eine einzige Stelle für die Generation, die graph.html erwartet.
-BACKEND_GENERATION = 358
+BACKEND_GENERATION = 359
 last_heartbeat_time = None
 server_started_time = time.time()
-HEARTBEAT_TIMEOUT_SECONDS = 180  # v204: Browser-Heartbeat; Helper beendet sich ca. 3 Minuten nach geschlossenem Tab
-STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS = 300  # wenn der Browser gar nicht startet: nach ca. 5 Minuten beenden
+# v359: In der nativen App bestimmt das App-Fenster die Lebensdauer des Helpers
+# und ruft beim Schliessen /api/app/shutdown auf. WKWebView darf JavaScript nach
+# längerer Inaktivität drosseln; ein ausbleibender Browser-Heartbeat darf die
+# weiterhin geöffnete App deshalb nicht mehr vom lokalen Helper trennen.
+APP_SHELL_ACTIVE = os.environ.get("ENTRETIENCONNECT_APP_SHELL", "").strip().lower() in ("1", "true", "yes")
+HEARTBEAT_TIMEOUT_SECONDS = 0 if APP_SHELL_ACTIVE else 180
+STARTUP_NO_HEARTBEAT_TIMEOUT_SECONDS = 0 if APP_SHELL_ACTIVE else 300
 
 
 def _helper_version():

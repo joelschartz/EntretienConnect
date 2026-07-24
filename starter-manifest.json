@@ -1,11 +1,11 @@
 {
-  "version": "v358",
+  "version": "v359",
   "files": [
     {
       "target": "server.py",
       "url": "starter_files/server.py",
-      "sha256": "91772e3fd1178662b8c9f91370f049b66d266dda08bcb286125231a089dbc2d6",
-      "size": 85503
+      "sha256": "8b74727b13ac0f99b06ee173ed835910a242301bc725b872ae289f09b9de34a1",
+      "size": 85829
     },
     {
       "target": "ebichelchen.py",
@@ -46,19 +46,19 @@
     {
       "target": "EntretienConnect-AppWindow.js",
       "url": "starter_files/EntretienConnect-AppWindow.js",
-      "sha256": "c367092fa23d0f458bc65a0d7dbbb74f5dfe718c76bac7eca120280e2c036db4",
+      "sha256": "7c89b200b30c7e10acea9fdbff01c64073455abff5cedc91aa0031cf323b53d6",
       "size": 5983
     },
     {
       "target": "EntretienConnect-NativeBridge.js",
       "url": "starter_files/EntretienConnect-NativeBridge.js",
-      "sha256": "685ef887addff6780da7c3e2d28959289d5d92709fb16bdabd619fd87fd3db5e",
+      "sha256": "56319bbce1dceaa434e8a8371bd5542e3fc87c7050b2d8e8129d8b4ed0c94bd7",
       "size": 2472
     },
     {
       "target": "VERSION.txt",
       "url": "starter_files/VERSION.txt",
-      "sha256": "d7790c62ec0ce3027c0691e862951ff53a1440538a63e0d571d86ad6cf00b2f7",
+      "sha256": "b776ead0ab0dd1a457ca5a531948c4e3fc26829cd0589639927eb210040590d6",
       "size": 5
     },
     {
